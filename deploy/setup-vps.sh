@@ -276,7 +276,15 @@ if systemctl is-active --quiet nginx; then
 else
     systemctl enable --now nginx
 fi
-systemctl enable --now "php${PHP_VER}-fpm" >/dev/null 2>&1 || true
+# Перезапускаем (не reload и не enable --now, который на уже работающий
+# сервис ничего не делает) обязательно КАЖДЫЙ прогон: OPcache держит
+# скомпилированный код всех .php файлов в разделяемой памяти мастер-процесса,
+# и живёт дольше одного деплоя. Единственный более ранний restart в этом
+# скрипте — сразу после установки расширений, до того как код вообще
+# появился на диске — так что без этого шага воркеры годами обслуживали бы
+# запросы байт-кодом от предыдущих деплоев вперемешку с новым.
+systemctl enable "php${PHP_VER}-fpm" >/dev/null 2>&1 || true
+systemctl restart "php${PHP_VER}-fpm"
 
 log "Готово"
 echo "Приложение:  ${APP_DIR}"

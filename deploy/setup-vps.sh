@@ -103,6 +103,15 @@ for ext in soap pdo_mysql mbstring xml curl zip bcmath; do
     php -m | grep -qix "$ext" || warn "Расширение ${ext} не активировалось — проверь вручную."
 done
 
+log "Поднимаю лимиты загрузки файлов (админка аддонов грузит ZIP-пакеты)"
+cat > "/etc/php/${PHP_VER}/fpm/conf.d/99-uploads.ini" <<'INI'
+upload_max_filesize = 120M
+post_max_size = 130M
+max_execution_time = 120
+max_input_time = 120
+INI
+systemctl restart "php${PHP_VER}-fpm" >/dev/null 2>&1 || true
+
 if ! command -v composer >/dev/null 2>&1; then
     log "Ставлю Composer"
     curl -fsSL https://getcomposer.org/installer -o /tmp/composer-setup.php

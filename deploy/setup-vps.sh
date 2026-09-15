@@ -198,29 +198,29 @@ grep -q '^APP_KEY=base64:' .env || { log "Генерирую APP_KEY"; php artis
 log "Применяю миграции"
 php artisan migrate --force
 
-log "Права на приложение"
-# nginx/php-fpm работают от www-data и должны иметь доступ ко всему дереву проекта
-# (vendor/, .env и т.д.), а не только к storage/bootstrap/cache — иначе
-# public/index.php не сможет подключить vendor/autoload.php.
-chown -R www-data:www-data "${APP_DIR}"
-chmod 600 "${APP_DIR}/.env"
-find "${APP_DIR}/storage" "${APP_DIR}/bootstrap/cache" -type d -exec chmod 775 {} \;
-# .git теперь тоже принадлежит www-data — без этого следующий `git pull` от root
-# откажется работать с "detected dubious ownership in repository".
-git config --global --add safe.directory "${APP_DIR}"
-
 log "Кэширую конфигурацию"
 php artisan config:cache
 php artisan route:cache
 php artisan view:cache
 
 log "Публикую storage-симлинк"
-# Скрипт целиком выполняется от root, поэтому просто создаём симлинк и сразу
-# поправляем его владельца — sudo на минимальном образе может не быть.
 if [ ! -L "${APP_DIR}/public/storage" ]; then
     php artisan storage:link
-    chown -h www-data:www-data "${APP_DIR}/public/storage"
 fi
+
+log "Права на приложение"
+# Всё, что artisan создал выше (bootstrap/cache/*.php, public/storage и т.п.),
+# ещё принадлежит root — chown должен идти ПОСЛЕДНИМ шагом, иначе следующая
+# artisan-команда пересоздаст файл заново от root и www-data опять не сможет
+# его прочитать. nginx/php-fpm работают от www-data и должны иметь доступ ко
+# всему дереву проекта (vendor/, .env и т.д.), а не только к storage/cache —
+# иначе public/index.php не сможет подключить vendor/autoload.php.
+chown -R www-data:www-data "${APP_DIR}"
+chmod 600 "${APP_DIR}/.env"
+find "${APP_DIR}/storage" "${APP_DIR}/bootstrap/cache" -type d -exec chmod 775 {} \;
+# .git теперь тоже принадлежит www-data — без этого следующий `git pull` от root
+# откажется работать с "detected dubious ownership in repository".
+git config --global --add safe.directory "${APP_DIR}"
 
 # ------------------------------------------------------------------ scheduler
 # routes/console.php сейчас ничего не планирует через Schedule::, но команда

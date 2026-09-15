@@ -25,23 +25,37 @@ die()  { printf '\033[1;31m[x] %s\033[0m\n' "$*" >&2; exit 1; }
 [ "$(id -u)" -eq 0 ] || die "Запускать от root."
 [ -f "${APP_DIR}/artisan" ] || [ -f ./artisan ] || die "Не вижу artisan. Сначала помести код проекта в ${APP_DIR}."
 
-# ---------------------------------------------------------------- PHP version
-log "Определяю версию PHP"
-PHP_VER="${PHP_VER:-$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;' 2>/dev/null || true)}"
-[ -n "$PHP_VER" ] || die "PHP не найден. Стек LEMP должен был его поставить."
-php -r 'exit(PHP_VERSION_ID < 80200 ? 1 : 0);' || die "PHP ${PHP_VER} слишком старый — Laravel 12 требует 8.2+."
-echo "PHP ${PHP_VER}"
-
-# ------------------------------------------------------------------- packages
-log "Ставлю расширения PHP и утилиты"
+# ------------------------------------------------------------- base packages
 export DEBIAN_FRONTEND=noninteractive
+log "Обновляю списки пакетов"
 apt-get update -qq
+
+log "Ставлю nginx"
+if ! command -v nginx >/dev/null 2>&1; then
+    apt-get install -y -qq nginx
+fi
+
+log "Ставлю MariaDB"
+if ! command -v mysql >/dev/null 2>&1; then
+    apt-get install -y -qq mariadb-server
+    systemctl enable --now mariadb >/dev/null 2>&1 || true
+fi
+
+# ---------------------------------------------------------------- PHP version
+# Ubuntu 24.04 (noble) несёт PHP 8.3 в штатных репозиториях — отдельный PPA не нужен.
+PHP_VER="${PHP_VER:-8.3}"
+
+log "Ставлю PHP ${PHP_VER} и расширения"
 # soap обязателен: его требуют sped-nfe, sped-common и sped-gtin
 apt-get install -y -qq \
     "php${PHP_VER}-fpm" "php${PHP_VER}-cli" "php${PHP_VER}-soap" "php${PHP_VER}-mysql" \
     "php${PHP_VER}-mbstring" "php${PHP_VER}-xml" "php${PHP_VER}-curl" "php${PHP_VER}-zip" \
     "php${PHP_VER}-bcmath" "php${PHP_VER}-intl" "php${PHP_VER}-gd" \
     git unzip curl
+
+command -v php >/dev/null 2>&1 || die "PHP не установился — проверь вывод apt-get выше."
+php -r 'exit(PHP_VERSION_ID < 80200 ? 1 : 0);' || die "PHP $(php -r 'echo PHP_VERSION;') слишком старый — Laravel 12 требует 8.2+."
+echo "PHP $(php -r 'echo PHP_VERSION;')"
 
 for ext in soap pdo_mysql mbstring xml curl zip bcmath; do
     php -m | grep -qix "$ext" || warn "Расширение ${ext} не активировалось — проверь вручную."

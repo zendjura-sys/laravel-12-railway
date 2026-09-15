@@ -232,6 +232,12 @@ grep -q '^APP_KEY=base64:' .env || { log "Генерирую APP_KEY"; php artis
 log "Применяю миграции"
 php artisan migrate --force
 
+log "Сею RBAC (право addons.manage + роль admin)"
+# Идемпотентно (firstOrCreate) — не выдаёт роль никому, только гарантирует,
+# что само право и роль существуют. Назначение роли конкретному
+# пользователю — отдельный ручной шаг.
+php artisan db:seed --class="Database\\Seeders\\AddonPermissionsSeeder" --force
+
 log "Кэширую конфигурацию"
 php artisan config:cache
 php artisan route:cache

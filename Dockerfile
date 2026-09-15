@@ -1,38 +1,32 @@
-FROM php:8.4-fpm-alpine
+FROM php:8.4-fpm
 
-# Install nginx and supervisor
-RUN apk add --no-cache nginx supervisor nodejs npm
+# Instala as ferramentas básicas do sistema
+RUN apt-get update && apt-get install -y \
+    git \
+    curl \
+    libpng-dev \
+    libonig-dev \
+    libxml2-dev \
+    zip \
+    unzip
 
-# Install PHP extensions
-RUN docker-php-ext-install pdo pdo_mysql opcache
+# Instala o componente que permite adicionar extensões ao PHP
+COPY --from=mlocati/php-extension-installer /usr/bin/install-php-extensions /usr/local/bin/
 
-# Install composer
+# AQUI ESTÁ A SOLUÇÃO: Instalamos o SOAP que a SEFAZ exige
+RUN install-php-extensions ctype curl dom fileinfo filter hash mbstring openssl pcre pdo session tokenizer xml pdo_mysql soap
+
+# Instala o Composer (Gerenciador de bibliotecas)
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-WORKDIR /var/www/html
-
-# Copy application files first
+WORKDIR /app
 COPY . .
 
-# Install composer dependencies
-RUN composer install --no-dev --optimize-autoloader
+# Instala as bibliotecas ( sped-nfe etc )
+RUN composer install --optimize-autoloader --no-scripts --no-interaction
 
-# Install npm dependencies and build
-RUN npm install
+# Ajusta as permissões para o servidor não dar erro de acesso
+RUN chown -R www-data:www-data /app/storage /app/bootstrap/cache
 
-# Build frontend assets
-RUN npm run build
-
-# Copy config files
-COPY docker/nginx.conf /etc/nginx/nginx.conf
-COPY docker/supervisord.conf /etc/supervisord.conf
-COPY docker/start.sh /start.sh
-
-# Set permissions and prepare for SQLite
-RUN chown -R www-data:www-data /var/www/html \
-    && chmod -R 755 storage bootstrap/cache \
-    && chmod +x /start.sh
-
-EXPOSE 80
-
-CMD ["/start.sh"]
+EXPOSE 8080
+CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8080"]

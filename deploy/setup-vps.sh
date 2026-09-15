@@ -205,7 +205,13 @@ ln -sf /etc/nginx/sites-available/laravel /etc/nginx/sites-enabled/laravel
 rm -f /etc/nginx/sites-enabled/default
 
 nginx -t || die "Конфиг nginx не прошёл проверку."
-systemctl reload nginx
+# При первой установке apache2 занимал порт 80, поэтому nginx мог ни разу не запуститься —
+# reload тогда бессилен (сервис не активен), нужен именно start.
+if systemctl is-active --quiet nginx; then
+    systemctl reload nginx
+else
+    systemctl enable --now nginx
+fi
 systemctl enable --now "php${PHP_VER}-fpm" >/dev/null 2>&1 || true
 
 log "Готово"

@@ -59,6 +59,23 @@ if ! command -v node >/dev/null 2>&1 || [ "$(node -v | sed -E 's/^v([0-9]+).*/\1
     apt-get install -y -qq nodejs
 fi
 
+log "Ставлю Postfix (только исходящая почта)"
+# MAIL_MAILER=sendmail в Laravel вызывает /usr/sbin/sendmail — на Ubuntu эту
+# команду предоставляет Postfix. Настраиваем его как send-only спутник:
+# не принимает входящую почту, не слушает публичные интерфейсы, только
+# инжектит письма наружу через локальный сокет.
+if ! command -v sendmail >/dev/null 2>&1 && ! command -v /usr/sbin/sendmail >/dev/null 2>&1; then
+    MAIL_DOMAIN="${APP_DOMAIN%% *}"
+    [ "$MAIL_DOMAIN" = "_" ] && MAIL_DOMAIN="$(hostname -f 2>/dev/null || hostname)"
+    debconf-set-selections <<< "postfix postfix/main_mailer_type select Internet Site"
+    debconf-set-selections <<< "postfix postfix/mailname string ${MAIL_DOMAIN}"
+    apt-get install -y -qq postfix
+    postconf -e "inet_interfaces = loopback-only"
+    postconf -e "mydestination = localhost"
+    postconf -e "myhostname = ${MAIL_DOMAIN}"
+    systemctl restart postfix
+fi
+
 # ---------------------------------------------------------------- PHP version
 # Ubuntu 24.04 (noble) несёт PHP 8.3 в штатных репозиториях — отдельный PPA не нужен.
 PHP_VER="${PHP_VER:-8.3}"
@@ -158,7 +175,9 @@ if [ ! -f .env ]; then
     else
         APP_URL_VALUE="http://${PRIMARY_DOMAIN}"
     fi
-    export APP_URL_VALUE DB_NAME DB_USER DB_PASSWORD
+    MAIL_FROM_VALUE="noreply@${PRIMARY_DOMAIN}"
+    [ "$PRIMARY_DOMAIN" = "_" ] && MAIL_FROM_VALUE="noreply@localhost"
+    export APP_URL_VALUE DB_NAME DB_USER DB_PASSWORD MAIL_FROM_VALUE
     php -r '
         $f = ".env"; $s = file_get_contents($f);
         $set = function ($k, $v) use (&$s) {
@@ -176,6 +195,10 @@ if [ ! -f .env ]; then
         $set("DB_DATABASE", getenv("DB_NAME"));
         $set("DB_USERNAME", getenv("DB_USER"));
         $set("DB_PASSWORD", getenv("DB_PASSWORD"));
+        // Postfix (send-only) поставлен рядом — sendmail подключает его напрямую,
+        // без хоста/порта/логина, в отличие от smtp-драйвера.
+        $set("MAIL_MAILER", "sendmail");
+        $set("MAIL_FROM_ADDRESS", getenv("MAIL_FROM_VALUE"));
         file_put_contents($f, $s);
     ' 
 else

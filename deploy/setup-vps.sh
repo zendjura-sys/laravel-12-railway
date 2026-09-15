@@ -51,10 +51,12 @@ fi
 
 log "Ставлю Node.js"
 # Нужен только для сборки фронтенда (Vite/Vue) во время деплоя — в рантайме
-# сайту Node не требуется. Ubuntu 24.04 несёт Node 18 в штатных репозиториях,
-# этого достаточно для Vite 6.
-if ! command -v npm >/dev/null 2>&1; then
-    apt-get install -y -qq nodejs npm
+# сайту Node не требуется. Ubuntu 24.04 несёт в штатных репозиториях Node 18,
+# а @vitejs/plugin-vue 6.x требует Node >=20.19 (использует crypto.hash,
+# которого в 18-й ветке нет) — ставим 20 LTS через NodeSource.
+if ! command -v node >/dev/null 2>&1 || [ "$(node -v | sed -E 's/^v([0-9]+).*/\1/')" -lt 20 ]; then
+    curl -fsSL https://deb.nodesource.com/setup_20.x | bash - >/dev/null 2>&1
+    apt-get install -y -qq nodejs
 fi
 
 # ---------------------------------------------------------------- PHP version

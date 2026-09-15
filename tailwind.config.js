@@ -13,7 +13,30 @@ export default {
     theme: {
         extend: {
             fontFamily: {
-                sans: ['Figtree', ...defaultTheme.fontFamily.sans],
+                sans: ['Manrope', ...defaultTheme.fontFamily.sans],
+                display: ['"Cormorant Garamond"', 'serif'],
+            },
+            colors: {
+                obsidian: {
+                    950: '#060605',
+                    900: '#0b0a09',
+                    800: '#141210',
+                    700: '#1e1b18',
+                },
+                gold: {
+                    200: '#f1e2b8',
+                    300: '#e4cd8f',
+                    400: '#d4af37',
+                    500: '#c9a24b',
+                    600: '#a9822f',
+                },
+                ember: {
+                    500: '#c4381f',
+                    600: '#9c2a17',
+                },
+            },
+            boxShadow: {
+                gold: '0 0 40px -10px rgba(212, 175, 55, 0.35)',
             },
         },
     },

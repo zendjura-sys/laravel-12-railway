@@ -198,6 +198,45 @@ php artisan config:cache
 php artisan route:cache
 php artisan view:cache
 
+log "Публикую storage-симлинк"
+# Скрипт целиком выполняется от root, поэтому просто создаём симлинк и сразу
+# поправляем его владельца — sudo на минимальном образе может не быть.
+if [ ! -L "${APP_DIR}/public/storage" ]; then
+    php artisan storage:link
+    chown -h www-data:www-data "${APP_DIR}/public/storage"
+fi
+
+# ------------------------------------------------------------------ scheduler
+# routes/console.php сейчас ничего не планирует через Schedule::, но команда
+# безвредна и стандартна для Laravel — заранее готовим, чтобы не забыть,
+# когда появится первая запланированная задача.
+log "Настраиваю cron для планировщика"
+CRON_LINE="* * * * * cd ${APP_DIR} && php artisan schedule:run >> /dev/null 2>&1"
+( crontab -u www-data -l 2>/dev/null | grep -vF "schedule:run"; echo "$CRON_LINE" ) | crontab -u www-data -
+
+# --------------------------------------------------------------- queue worker
+log "Настраиваю systemd-сервис очереди"
+cat > /etc/systemd/system/laravel-worker.service <<UNIT
+[Unit]
+Description=Laravel queue worker (${APP_DOMAIN})
+After=network.target mariadb.service
+
+[Service]
+User=www-data
+Group=www-data
+Restart=always
+RestartSec=5
+WorkingDirectory=${APP_DIR}
+# --max-time перезапускает воркер раз в час, чтобы не копилась память на
+# долгоживущем PHP-процессе — Restart=always поднимет его обратно сразу.
+ExecStart=/usr/bin/php artisan queue:work --sleep=3 --tries=3 --max-time=3600
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+systemctl daemon-reload
+systemctl enable --now laravel-worker >/dev/null 2>&1 || warn "Не удалось запустить laravel-worker — проверь: systemctl status laravel-worker"
+
 # ---------------------------------------------------------------------- nginx
 log "Настраиваю nginx"
 PHP_SOCK="/run/php/php${PHP_VER}-fpm.sock"

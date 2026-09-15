@@ -99,6 +99,14 @@ fi
 # ------------------------------------------------------------------- database
 log "Готовлю базу данных"
 if command -v mysql >/dev/null 2>&1; then
+    # .env пишется только при первом запуске и дальше не трогается, поэтому пароль
+    # для БД нужно фиксировать так же: если он уже выдавался раньше (credentials-файл
+    # существует), берём тот же самый, а не генерируем новый — иначе на втором запуске
+    # ALTER USER меняет пароль в MariaDB, а .env остаётся со старым, и приложение
+    # перестаёт подключаться.
+    if [ -z "$DB_PASSWORD" ] && [ -f "$CRED_FILE" ]; then
+        DB_PASSWORD="$(grep -m1 '^DB_PASSWORD=' "$CRED_FILE" | cut -d= -f2-)"
+    fi
     if [ -z "$DB_PASSWORD" ]; then
         DB_PASSWORD="$(head -c 18 /dev/urandom | base64 | tr -d '/+=' | head -c 24)"
     fi

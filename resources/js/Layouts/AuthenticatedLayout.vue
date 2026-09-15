@@ -39,6 +39,13 @@ const showingNavigationDropdown = ref(false);
                                 >
                                     Dashboard
                                 </NavLink>
+                                <NavLink
+                                    v-if="$page.props.can?.manageAddons"
+                                    :href="route('admin.addons.index')"
+                                    :active="route().current('admin.addons.*')"
+                                >
+                                    Аддоны
+                                </NavLink>
                             </div>
                         </div>
 
@@ -145,6 +152,13 @@ const showingNavigationDropdown = ref(false);
                             :active="route().current('dashboard')"
                         >
                             Dashboard
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink
+                            v-if="$page.props.can?.manageAddons"
+                            :href="route('admin.addons.index')"
+                            :active="route().current('admin.addons.*')"
+                        >
+                            Аддоны
                         </ResponsiveNavLink>
                     </div>
 

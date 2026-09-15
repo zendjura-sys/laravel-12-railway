@@ -1,6 +1,8 @@
 <?php
 
+use App\Http\Controllers\Admin\AddonController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ThemeAssetController;
 use Illuminate\Foundation\Application;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -26,6 +28,25 @@ Route::middleware('auth')->group(function () {
 });
 
 require __DIR__.'/auth.php';
+
+// Статика активной темы (Design-пакета) — публично, без auth.
+Route::get('/theme-assets/{path}', [ThemeAssetController::class, 'show'])
+    ->where('path', '.*')
+    ->name('theme.asset');
+
+Route::middleware(['auth', 'verified', 'permission:addons.manage'])
+    ->prefix('admin/addons')
+    ->name('admin.addons.')
+    ->group(function () {
+        Route::get('/', [AddonController::class, 'index'])->name('index');
+        Route::post('/{type}/upload', [AddonController::class, 'upload'])
+            ->where('type', 'core|module|plugin|theme')
+            ->name('upload');
+        Route::post('/{addon}/activate', [AddonController::class, 'activate'])->name('activate');
+        Route::post('/{addon}/deactivate', [AddonController::class, 'deactivate'])->name('deactivate');
+        Route::post('/{addon}/migrate', [AddonController::class, 'migrate'])->name('migrate');
+        Route::delete('/{addon}', [AddonController::class, 'destroy'])->name('destroy');
+    });
 
 // Rota que o Base44 vai acessar
 Route::any('/api/nfe/emitir', function (Request $request) {

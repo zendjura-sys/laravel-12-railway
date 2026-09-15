@@ -30,6 +30,14 @@ export DEBIAN_FRONTEND=noninteractive
 log "Обновляю списки пакетов"
 apt-get update -qq
 
+# Некоторые образы хостера несут apache2 из коробки — он держит порт 80
+# и не даёт nginx стартовать.
+if systemctl list-unit-files 2>/dev/null | grep -q '^apache2\.service'; then
+    log "Отключаю apache2 (держит порт 80)"
+    systemctl stop apache2 2>/dev/null || true
+    systemctl disable apache2 2>/dev/null || true
+fi
+
 log "Ставлю nginx"
 if ! command -v nginx >/dev/null 2>&1; then
     apt-get install -y -qq nginx
@@ -56,6 +64,13 @@ apt-get install -y -qq \
 command -v php >/dev/null 2>&1 || die "PHP не установился — проверь вывод apt-get выше."
 php -r 'exit(PHP_VERSION_ID < 80200 ? 1 : 0);' || die "PHP $(php -r 'echo PHP_VERSION;') слишком старый — Laravel 12 требует 8.2+."
 echo "PHP $(php -r 'echo PHP_VERSION;')"
+
+# У части пакетов post-install триггер включает модуль не сразу,
+# поэтому явно доключаем и перечитываем список загруженных расширений.
+for ext in soap pdo_mysql mbstring xml curl zip bcmath; do
+    phpenmod -v "$PHP_VER" "$ext" >/dev/null 2>&1 || true
+done
+systemctl restart "php${PHP_VER}-fpm" >/dev/null 2>&1 || true
 
 for ext in soap pdo_mysql mbstring xml curl zip bcmath; do
     php -m | grep -qix "$ext" || warn "Расширение ${ext} не активировалось — проверь вручную."

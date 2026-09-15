@@ -1,16 +1,31 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\ProfileController;
+use Illuminate\Foundation\Application;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Route;
+use Inertia\Inertia;
 
-// Rota para testar se o servidor realmente atualizou
 Route::get('/', function () {
-    return response()->json([
-        'status' => 'online', 
-        'motor' => 'Neuraif Bypass Ativado',
-        'check' => 'Se voce ve esta mensagem, o código foi trocado com sucesso!'
+    return Inertia::render('Welcome', [
+        'canLogin' => Route::has('login'),
+        'canRegister' => Route::has('register'),
+        'laravelVersion' => Application::VERSION,
+        'phpVersion' => PHP_VERSION,
     ]);
 });
+
+Route::get('/dashboard', function () {
+    return Inertia::render('Dashboard');
+})->middleware(['auth', 'verified'])->name('dashboard');
+
+Route::middleware('auth')->group(function () {
+    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+});
+
+require __DIR__.'/auth.php';
 
 // Rota que o Base44 vai acessar
 Route::any('/api/nfe/emitir', function (Request $request) {
@@ -22,9 +37,9 @@ Route::any('/api/nfe/emitir', function (Request $request) {
 
         if (!class_exists('NFePHP\NFe\Tools')) {
             return response()->json([
-                'status' => 'erro', 
+                'status' => 'erro',
                 'mensagem' => 'A biblioteca sped-nfe nao foi instalada no servidor.'
-            ], 200); 
+            ], 200);
         }
 
         $certificadoBase64 = $request->input('certificado_base64');
@@ -33,7 +48,7 @@ Route::any('/api/nfe/emitir', function (Request $request) {
 
         if (!$certificadoBase64 || !$senhaCertificado || !$xmlRecebido) {
             return response()->json([
-                'status' => 'erro', 
+                'status' => 'erro',
                 'mensagem' => 'Aguardando dados do Base44. Teste de rota OK!'
             ], 200);
         }
@@ -56,9 +71,9 @@ Route::any('/api/nfe/emitir', function (Request $request) {
 
         return response()->json(['status' => 'sucesso', 'retorno' => $respostaSefaz], 200);
 
-    } catch (\Throwable $e) { 
+    } catch (\Throwable $e) {
         return response()->json([
-            'status' => 'erro', 
+            'status' => 'erro',
             'mensagem' => 'ERRO NO PHP: ' . $e->getMessage() . ' na linha ' . $e->getLine()
         ], 200);
     }

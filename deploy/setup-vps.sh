@@ -49,6 +49,14 @@ if ! command -v mysql >/dev/null 2>&1; then
     systemctl enable --now mariadb >/dev/null 2>&1 || true
 fi
 
+log "Ставлю Node.js"
+# Нужен только для сборки фронтенда (Vite/Vue) во время деплоя — в рантайме
+# сайту Node не требуется. Ubuntu 24.04 несёт Node 18 в штатных репозиториях,
+# этого достаточно для Vite 6.
+if ! command -v npm >/dev/null 2>&1; then
+    apt-get install -y -qq nodejs npm
+fi
+
 # ---------------------------------------------------------------- PHP version
 # Ubuntu 24.04 (noble) несёт PHP 8.3 в штатных репозиториях — отдельный PPA не нужен.
 PHP_VER="${PHP_VER:-8.3}"
@@ -176,6 +184,14 @@ log "Устанавливаю зависимости (без dev)"
 export COMPOSER_ALLOW_SUPERUSER=1
 export COMPOSER_MEMORY_LIMIT=-1
 composer install --no-dev --optimize-autoloader --no-interaction
+
+if [ -f "${APP_DIR}/package.json" ]; then
+    log "Собираю фронтенд (npm)"
+    # npm ci чувствителен к памяти на маленьких VPS — если упадёт по OOM,
+    # смотри `dmesg | tail`, а не считай это ошибкой конфигурации.
+    npm ci --no-audit --no-fund
+    npm run build
+fi
 
 grep -q '^APP_KEY=base64:' .env || { log "Генерирую APP_KEY"; php artisan key:generate --force; }
 

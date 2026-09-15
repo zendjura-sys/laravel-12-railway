@@ -182,9 +182,16 @@ grep -q '^APP_KEY=base64:' .env || { log "Генерирую APP_KEY"; php artis
 log "Применяю миграции"
 php artisan migrate --force
 
-log "Права на storage и bootstrap/cache"
-chown -R www-data:www-data "${APP_DIR}/storage" "${APP_DIR}/bootstrap/cache"
+log "Права на приложение"
+# nginx/php-fpm работают от www-data и должны иметь доступ ко всему дереву проекта
+# (vendor/, .env и т.д.), а не только к storage/bootstrap/cache — иначе
+# public/index.php не сможет подключить vendor/autoload.php.
+chown -R www-data:www-data "${APP_DIR}"
+chmod 600 "${APP_DIR}/.env"
 find "${APP_DIR}/storage" "${APP_DIR}/bootstrap/cache" -type d -exec chmod 775 {} \;
+# .git теперь тоже принадлежит www-data — без этого следующий `git pull` от root
+# откажется работать с "detected dubious ownership in repository".
+git config --global --add safe.directory "${APP_DIR}"
 
 log "Кэширую конфигурацию"
 php artisan config:cache

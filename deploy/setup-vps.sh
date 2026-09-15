@@ -122,11 +122,14 @@ cd "$APP_DIR"
 if [ ! -f .env ]; then
     log "Создаю .env"
     cp .env.example .env
-    # php ниже читает эти значения через getenv(), поэтому их обязательно экспортировать
-    if [ "$APP_DOMAIN" = "_" ]; then
+    # php ниже читает эти значения через getenv(), поэтому их обязательно экспортировать.
+    # APP_DOMAIN может содержать несколько доменов через пробел (для nginx server_name) —
+    # для APP_URL берём только первый, иначе в .env попадёт значение с пробелом.
+    PRIMARY_DOMAIN="${APP_DOMAIN%% *}"
+    if [ "$PRIMARY_DOMAIN" = "_" ]; then
         APP_URL_VALUE="http://$(hostname -I | awk '{print $1}')"
     else
-        APP_URL_VALUE="http://${APP_DOMAIN}"
+        APP_URL_VALUE="http://${PRIMARY_DOMAIN}"
     fi
     export APP_URL_VALUE DB_NAME DB_USER DB_PASSWORD
     php -r '

@@ -9,8 +9,17 @@ const props = defineProps({
     canLogin: { type: Boolean, default: false },
     canRegister: { type: Boolean, default: false },
     memberCount: { type: Number, default: 0 },
-    telegramBotUrl: { type: String, default: '#' },
+    telegramBotUrl: { type: String, default: null },
 });
+
+/* ---------- куди веде «Подати заявку» ----------
+   Поки бот не заведений у налаштуваннях, кнопка веде на звичайну реєстрацію
+   на сайті: заявку все одно можна залишити, просто іншим шляхом. Раніше в
+   цьому випадку підставлявся href="#", і головний заклик лендінгу мовчки
+   нічого не робив. target="_blank" ставимо тільки для зовнішнього посилання —
+   внутрішню сторінку відкривати в новій вкладці немає сенсу. */
+const applyUrl = computed(() => props.telegramBotUrl || route('register'));
+const applyExternal = computed(() => Boolean(props.telegramBotUrl));
 
 /* ---------- шапка: прозора -> скляна під час скролу ---------- */
 const scrolled = ref(false);
@@ -382,9 +391,9 @@ const leadership = [
                     </a>
 
                     <a
-                        :href="telegramBotUrl"
-                        target="_blank"
-                        rel="noopener"
+                        :href="applyUrl"
+                        :target="applyExternal ? '_blank' : null"
+                        :rel="applyExternal ? 'noopener' : null"
                         class="btn-gold animate-fade-in-up mt-10 py-4 text-center text-[13px] font-semibold uppercase tracking-[0.18em]"
                         :style="{ animationDelay: `${navLinks.length * 70}ms` }"
                         @click="closeMobileNav"
@@ -440,9 +449,9 @@ const leadership = [
 
                     <div v-reveal:450 class="mt-10 flex flex-wrap items-center gap-4 sm:gap-6">
                         <a
-                            :href="telegramBotUrl"
-                            target="_blank"
-                            rel="noopener"
+                            :href="applyUrl"
+                            :target="applyExternal ? '_blank' : null"
+                            :rel="applyExternal ? 'noopener' : null"
                             v-magnetic
                             class="btn-gold px-8 py-4 text-[13px] font-semibold uppercase tracking-[0.18em]"
                         >
@@ -955,22 +964,32 @@ const leadership = [
                         Кожна дія
                         <span class="text-gradient-gold italic">залишає слід.</span>
                     </h2>
+                    <!-- Поки бот не заведений, і текст, і підпис кнопки
+                         змінюються: обіцяти заявку в Telegram і вести на
+                         реєстрацію — це обманути з першого ж кроку. Друга
+                         кнопка тоді ховається, бо вела б рівно туди ж. -->
                     <p v-reveal:150 class="mx-auto mt-6 max-w-xl leading-relaxed text-white/60">
-                        Заповніть заявку в Telegram-боті — ми розглядаємо кожну
-                        особисто, а не масово.
+                        <template v-if="applyExternal">
+                            Заповніть заявку в Telegram-боті — ми розглядаємо
+                            кожну особисто, а не масово.
+                        </template>
+                        <template v-else>
+                            Створіть акаунт і залиште заявку — ми розглядаємо
+                            кожну особисто, а не масово.
+                        </template>
                     </p>
                     <div v-reveal:300 class="mt-10 flex flex-wrap items-center justify-center gap-4 sm:gap-5">
                         <a
-                            :href="telegramBotUrl"
-                            target="_blank"
-                            rel="noopener"
+                            :href="applyUrl"
+                            :target="applyExternal ? '_blank' : null"
+                            :rel="applyExternal ? 'noopener' : null"
                             v-magnetic
                             class="btn-gold px-9 py-4 text-[13px] font-semibold uppercase tracking-[0.18em]"
                         >
-                            Подати заявку в Telegram
+                            {{ applyExternal ? 'Подати заявку в Telegram' : 'Створити акаунт' }}
                         </a>
                         <Link
-                            v-if="canRegister && !$page.props.auth?.user"
+                            v-if="applyExternal && canRegister && !$page.props.auth?.user"
                             :href="route('register')"
                             class="glass-pill btn-ghost px-9 py-4 text-[13px] font-medium uppercase tracking-[0.18em] text-white/70"
                         >
@@ -1012,7 +1031,13 @@ const leadership = [
 
                     <div class="flex flex-col items-center gap-3 text-sm text-white/40 sm:items-start">
                         <span class="text-[10px] uppercase tracking-[0.35em] text-gold-300/60">Звʼязок</span>
-                        <a :href="telegramBotUrl" target="_blank" rel="noopener" class="transition-colors duration-300 hover:text-gold-300">
+                        <a
+                            v-if="telegramBotUrl"
+                            :href="telegramBotUrl"
+                            target="_blank"
+                            rel="noopener"
+                            class="transition-colors duration-300 hover:text-gold-300"
+                        >
                             Telegram-бот
                         </a>
                         <Link v-if="canLogin" :href="route('login')" class="transition-colors duration-300 hover:text-gold-300">

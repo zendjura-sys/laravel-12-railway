@@ -8,8 +8,8 @@ use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ThemeAssetController;
-use App\Models\Setting;
 use App\Models\User;
+use App\Support\TelegramLink;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -22,14 +22,14 @@ Route::get('/', function () {
         'canLogin' => Route::has('login'),
         'canRegister' => Route::has('register'),
         'memberCount' => User::query()->count(),
-        'telegramBotUrl' => Setting::get('telegram_bot_url') ?: config('services.telegram.bot_url', '#'),
+        'telegramBotUrl' => TelegramLink::url(),
     ]);
 })->name('home');
 
 Route::get('/dashboard', function () {
     return Inertia::render('Dashboard', [
         'memberCount' => User::query()->count(),
-        'telegramBotUrl' => Setting::get('telegram_bot_url') ?: config('services.telegram.bot_url', '#'),
+        'telegramBotUrl' => TelegramLink::url(),
     ]);
 })->middleware(['auth', 'verified'])->name('dashboard');
 

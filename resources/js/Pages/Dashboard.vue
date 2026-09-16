@@ -4,7 +4,7 @@ import { Head, Link } from '@inertiajs/vue3';
 
 defineProps({
     memberCount: { type: Number, default: 0 },
-    telegramBotUrl: { type: String, default: '#' },
+    telegramBotUrl: { type: String, default: null },
 });
 
 const cards = [
@@ -102,7 +102,11 @@ function fmtDate(iso) {
                     <span class="relative mt-4 inline-block text-xs uppercase tracking-widest text-gold-300">Відкрити →</span>
                 </Link>
 
+                <!-- Поки бот не заведений у налаштуваннях, картки просто
+                     немає: учаснику кабінету пропонувати замість неї
+                     реєстрацію безглуздо, а мертве посилання — тим більше. -->
                 <a
+                    v-if="telegramBotUrl"
                     :href="telegramBotUrl"
                     target="_blank"
                     rel="noopener"

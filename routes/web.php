@@ -3,17 +3,20 @@
 use App\Http\Controllers\Admin\AddonController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ThemeAssetController;
-use Illuminate\Foundation\Application;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
 Route::get('/', function () {
-    return Inertia::render('Welcome', [
+    // Только реальные цифры — модулей Reports/Progression ещё нет,
+    // поэтому XP/рейтинги/звіти на главной пока не показываем вообще,
+    // а не подставляем нули или выдуманные значения.
+    return Inertia::render('Home', [
         'canLogin' => Route::has('login'),
         'canRegister' => Route::has('register'),
-        'laravelVersion' => Application::VERSION,
-        'phpVersion' => PHP_VERSION,
+        'memberCount' => User::query()->count(),
+        'telegramBotUrl' => config('services.telegram.bot_url', '#'),
     ]);
 });
 

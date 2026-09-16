@@ -21,8 +21,13 @@ class TelegramLink
 {
     public static function url(): ?string
     {
+        // Проверяем схему и здесь, а не только при сохранении: значение
+        // уходит прямо в href кнопок лендинга, а Vue в :href ничего не
+        // санитайзит. Настройка могла быть записана и до того, как
+        // появилось правило валидации, — тогда javascript:… выполнился бы
+        // в origin сайта у каждого, кто нажмёт «Подати заявку».
         $url = trim((string) Setting::get('telegram_bot_url'));
-        if ($url !== '') {
+        if (self::isWebUrl($url)) {
             return $url;
         }
 
@@ -35,6 +40,11 @@ class TelegramLink
 
         $fromEnv = trim((string) config('services.telegram.bot_url'));
 
-        return $fromEnv !== '' && $fromEnv !== '#' ? $fromEnv : null;
+        return self::isWebUrl($fromEnv) ? $fromEnv : null;
+    }
+
+    private static function isWebUrl(string $url): bool
+    {
+        return $url !== '' && preg_match('#^https?://#i', $url) === 1;
     }
 }

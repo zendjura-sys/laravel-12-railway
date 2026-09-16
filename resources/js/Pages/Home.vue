@@ -49,9 +49,9 @@ let sectionObserver;
 
 const navLinks = [
     { id: 'family', label: 'Родина' },
-    { id: 'roles', label: 'Ролі' },
-    { id: 'showcase', label: 'Атмосфера' },
-    { id: 'goals', label: 'Цілі' },
+    { id: 'roles', label: 'Напрямки' },
+    { id: 'ranks', label: 'Ранги' },
+    { id: 'structure', label: 'Структура' },
     { id: 'legacy', label: 'Спадщина' },
 ];
 
@@ -143,21 +143,89 @@ const benefits = [
     },
 ];
 
-const paths = [
+// Два реальних напрямки родини. Це посади, а не сходинки рангу: на напрямок
+// переводять окремо, і потрапити туди можна навіть із нижчого рангу.
+const directions = [
     {
-        title: 'Виконавець',
-        text: 'Операції, контракти, робота "в полі". Результат вимірюється закритими задачами, а не словами в чаті.',
-        image: '/images/roles/role-executor.webp',
+        title: 'Охоронець',
+        tag: 'Бойовий напрямок',
+        text: 'Участь у бізнес-війнах — боротьбі за контроль над бізнесами. Від охоронців залежить, чи втримає родина те, що вже здобула.',
+        image: '/images/roles/dir-guard.webp',
     },
     {
-        title: 'Організатор',
-        text: 'Координація складу, розподіл ролей і контроль строків. Тримає структуру родини в робочому стані.',
-        image: '/images/roles/role-organizer.webp',
+        title: 'Юрист',
+        tag: 'Контрактний напрямок',
+        text: 'Виконання контрактів — робота, яка тримає бюджет родини. Стабільний результат тут цінується вище за разові подвиги.',
+        image: '/images/roles/dir-lawyer.webp',
+    },
+];
+
+// Вертикаль основного складу. Порядок важливий — це шлях, а не перелік.
+const ranks = [
+    {
+        title: 'Стажер',
+        text: 'Точка входу для всіх без винятку. Придивляємось одне до одного: ти до родини, родина до тебе.',
+        image: '/images/roles/rank-trainee.webp',
     },
     {
-        title: 'Стратег',
-        text: 'Довгі цілі, репутація родини та відносини з іншими організаціями на сервері.',
-        image: '/images/roles/role-strategist.webp',
+        title: 'Асистент',
+        text: 'Перший крок після стажування. З’являються власні задачі й перша довіра.',
+        image: '/images/roles/rank-assistant.webp',
+    },
+    {
+        title: 'Спеціаліст',
+        text: 'Ти вже розібрався, як усе влаштовано, і працюєш самостійно, без нагляду.',
+        image: '/images/roles/rank-specialist.webp',
+    },
+    {
+        title: 'Менеджер',
+        text: 'Тягнеш власну ділянку роботи й допомагаєш тим, хто прийшов пізніше.',
+        image: '/images/roles/rank-manager.webp',
+    },
+    {
+        title: 'Старший менеджер',
+        text: 'Верхівка основного складу. Тобі довіряють задачі, від яких залежить родина.',
+        image: '/images/roles/rank-senior.webp',
+    },
+];
+
+// Те, на що дивляться при підвищенні. Свідомо без «відпрацюй N днів» —
+// у родині немає строку, після якого ранг видається автоматично.
+const promotionCriteria = [
+    'стабільна активна гра',
+    'участь у житті родини',
+    'виконання контрактів',
+    'поповнення бюджету родини',
+    'допомога іншим учасникам',
+    'адекватність і дотримання правил',
+];
+
+// Структура подана за функціями, без ігрових ніків: сайт публічний, а
+// персональний склад керівництва — це вже внутрішня інформація родини.
+const leadership = [
+    {
+        title: 'Директор',
+        text: 'Глава родини. Приймає ключові та кінцеві рішення.',
+    },
+    {
+        title: 'Заступники',
+        text: 'Ініціюють підвищення й пониження в основному складі, узгоджують кадрові рішення з директором.',
+    },
+    {
+        title: 'Івенти',
+        text: 'Організація та проведення внутрішніх заходів родини.',
+    },
+    {
+        title: 'Фінанси',
+        text: 'Облік премій за виконаними контрактами.',
+    },
+    {
+        title: 'HR по контрактах',
+        text: 'Робота з юристами й усе, що повʼязано з контрактами.',
+    },
+    {
+        title: 'Старший охоронців',
+        text: 'Керує бойовим напрямком і організовує бізнес-війни.',
     },
 ];
 </script>
@@ -431,61 +499,54 @@ const paths = [
             </div>
         </section>
 
-        <!-- ================= РОДИНА: ТРИ РОЛІ ================= -->
-        <!-- Вирізані фігури, а не фонові кадри: кожна роль отримує власного
+        <!-- ================= НАПРЯМКИ ================= -->
+        <!-- Вирізані фігури, а не фонові кадри: напрямок отримує власного
              персонажа, який стоїть "у кімнаті" сторінки — зі своїм світлом
              позаду і відображенням під ногами, а не наклеєний на темряву. -->
         <section id="roles" class="relative overflow-hidden py-24 sm:py-32">
             <div class="mx-auto max-w-7xl px-4 sm:px-6">
                 <div v-reveal class="mx-auto mb-16 max-w-2xl text-center">
-                    <p class="mb-4 text-[11px] font-medium uppercase tracking-[0.45em] text-gold-300/90">Склад родини</p>
+                    <p class="mb-4 text-[11px] font-medium uppercase tracking-[0.45em] text-gold-300/90">Напрямки роботи</p>
                     <h2 class="text-balance font-display text-4xl font-semibold text-white sm:text-5xl">
-                        Три ролі. <span class="text-gradient-gold italic">Одна родина.</span>
+                        Два напрямки. <span class="text-gradient-gold italic">Один результат.</span>
                     </h2>
                     <p class="mx-auto mt-6 max-w-xl leading-relaxed text-white/55">
-                        Всередині Monsory немає "просто учасників". Кожен заходить
-                        у родину зі своєю сильною стороною — і саме під неї
-                        отримує зону відповідальності.
+                        Окрім основного складу, у родині є два напрямки. Це не
+                        сходинки рангу, а посади: на них переводять окремо, і
+                        потрапити туди можна навіть із нижчого рангу — якщо
+                        людина себе показала.
                     </p>
                 </div>
 
-                <!-- На телефоні — одна колонка, з планшета — три: ужимати три
-                     фігури в 390px означало б зробити їх нечитабельними. -->
-                <div class="grid gap-6 sm:grid-cols-3 sm:gap-5 lg:gap-6">
+                <div class="mx-auto grid max-w-4xl gap-6 sm:grid-cols-2">
                     <div
-                        v-for="(path, i) in paths"
-                        :key="path.title"
+                        v-for="(dir, i) in directions"
+                        :key="dir.title"
                         v-reveal="'scale'"
                         :style="{ transitionDelay: `${i * 130}ms` }"
                         v-glow
-                        class="group glass-panel relative flex flex-col overflow-hidden px-6 pb-7 pt-8 transition-all duration-700 hover:-translate-y-2"
+                        class="group glass-panel relative flex flex-col overflow-hidden px-6 pb-8 pt-8 transition-all duration-700 hover:-translate-y-2 sm:px-8"
                     >
                         <div class="glass-sheen"></div>
 
-                        <!-- Сцена персонажа: контрове світло + сама фігура +
+                        <!-- Сцена персонажа: контрове світло + фігура +
                              відображення. Фіксована висота тримає нижні краї
                              карток на одній лінії, навіть коли вирізи мають
                              різні пропорції. -->
-                        <div class="relative mb-6 h-56 sm:h-52 lg:h-64">
-                            <div
-                                class="pointer-events-none absolute left-1/2 top-1/4 h-40 w-40 -translate-x-1/2 rounded-full bg-gold-500/20 blur-[60px] transition-all duration-700 group-hover:bg-gold-400/30 lg:h-48 lg:w-48"
-                            ></div>
-                            <div
-                                class="pointer-events-none absolute left-1/2 top-1/2 h-28 w-28 -translate-x-1/2 rounded-full bg-aurora-500/20 blur-[55px]"
-                            ></div>
+                        <div class="relative mb-7 h-64 sm:h-72">
+                            <div class="pointer-events-none absolute left-1/2 top-1/4 h-48 w-48 -translate-x-1/2 rounded-full bg-gold-500/20 blur-[60px] transition-all duration-700 group-hover:bg-gold-400/30"></div>
+                            <div class="pointer-events-none absolute left-1/2 top-1/2 h-32 w-32 -translate-x-1/2 rounded-full bg-aurora-500/20 blur-[55px]"></div>
 
                             <img
-                                :src="path.image"
-                                :alt="`Роль у родині: ${path.title}`"
+                                :src="dir.image"
+                                :alt="`Напрямок у родині: ${dir.title}`"
                                 loading="lazy"
                                 decoding="async"
                                 class="img-cine relative mx-auto h-full w-auto object-contain drop-shadow-[0_28px_45px_rgba(0,0,0,0.8)] transition-transform duration-700 group-hover:-translate-y-1.5"
                             />
 
-                            <!-- Відображення "підлоги": фігура отримує опору,
-                                 а не висить у порожнечі. -->
                             <img
-                                :src="path.image"
+                                :src="dir.image"
                                 alt=""
                                 aria-hidden="true"
                                 loading="lazy"
@@ -496,24 +557,157 @@ const paths = [
                             <div class="pointer-events-none absolute inset-x-6 top-full h-px bg-gradient-to-r from-transparent via-gold-400/40 to-transparent"></div>
                         </div>
 
-                        <!-- Без mt-auto: інакше у картки з коротшим описом
-                             заголовок з'їжджає вниз і три назви ролей стоять
-                             на різних лініях. Висота блока з фігурою фіксована,
-                             тому заголовки й так вирівняні. -->
                         <div class="relative">
-                            <div class="mb-3 flex items-center gap-3">
+                            <p class="mb-2 text-[10px] uppercase tracking-[0.3em] text-gold-300/70">{{ dir.tag }}</p>
+                            <h3 class="font-display text-2xl text-white">{{ dir.title }}</h3>
+                            <p class="mt-3 text-sm leading-relaxed text-white/50">{{ dir.text }}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <p v-reveal:200 class="mx-auto mt-10 max-w-2xl text-center text-sm leading-relaxed text-white/40">
+                    Посада — не спосіб отримувати зарплату. Посада означає
+                    відповідальність перед родиною: немає активності й виконання
+                    обовʼязків — посада переглядається.
+                </p>
+            </div>
+        </section>
+
+        <!-- ================= РАНГИ ================= -->
+        <section id="ranks" class="relative overflow-hidden py-24 sm:py-28">
+            <div class="mx-auto max-w-7xl px-4 sm:px-6">
+                <div v-reveal class="mx-auto mb-16 max-w-2xl text-center">
+                    <p class="mb-4 text-[11px] font-medium uppercase tracking-[0.45em] text-gold-300/90">Система розвитку</p>
+                    <h2 class="text-balance font-display text-4xl font-semibold text-white sm:text-5xl">
+                        Шлях від <span class="text-gradient-gold italic">стажера</span>
+                    </h2>
+                    <p class="mx-auto mt-6 max-w-xl leading-relaxed text-white/55">
+                        Кожен починає з найнижчого рангу — без винятків. Ранг тут
+                        не напис біля ніку, а показник активності, внеску в
+                        родину й довіри керівництва.
+                    </p>
+                </div>
+
+                <!-- П'ять сходинок: на телефоні одна колонка, з планшета дві,
+                     з 1280px — усі п'ять в один ряд, як драбина зліва направо. -->
+                <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+                    <div
+                        v-for="(rank, i) in ranks"
+                        :key="rank.title"
+                        v-reveal="'scale'"
+                        :style="{ transitionDelay: `${i * 90}ms` }"
+                        v-glow
+                        class="group glass-panel relative flex flex-col overflow-hidden px-5 pb-6 pt-6 transition-all duration-700 hover:-translate-y-2"
+                    >
+                        <div class="glass-sheen"></div>
+
+                        <div class="relative mb-5 h-44">
+                            <div class="pointer-events-none absolute left-1/2 top-1/4 h-32 w-32 -translate-x-1/2 rounded-full bg-gold-500/20 blur-[50px] transition-all duration-700 group-hover:bg-gold-400/30"></div>
+                            <img
+                                :src="rank.image"
+                                :alt="`Ранг: ${rank.title}`"
+                                loading="lazy"
+                                decoding="async"
+                                class="img-cine relative mx-auto h-full w-auto object-contain drop-shadow-[0_22px_35px_rgba(0,0,0,0.8)] transition-transform duration-700 group-hover:-translate-y-1"
+                            />
+                            <div class="pointer-events-none absolute inset-x-4 top-full h-px bg-gradient-to-r from-transparent via-gold-400/35 to-transparent"></div>
+                        </div>
+
+                        <div class="relative">
+                            <div class="mb-2 flex items-center gap-2.5">
                                 <span class="font-display text-sm text-gold-400/70">0{{ i + 1 }}</span>
                                 <span class="h-px flex-1 bg-gradient-to-r from-gold-400/30 to-transparent"></span>
                             </div>
-                            <h3 class="text-lg font-semibold text-white">{{ path.title }}</h3>
-                            <p class="mt-2 text-sm leading-relaxed text-white/50">{{ path.text }}</p>
+                            <h3 class="font-semibold text-white">{{ rank.title }}</h3>
+                            <p class="mt-2 text-[13px] leading-relaxed text-white/50">{{ rank.text }}</p>
                         </div>
+                    </div>
+                </div>
+
+                <div class="mt-12 grid gap-5 lg:grid-cols-2">
+                    <div v-reveal="'left'" v-glow class="glass-panel px-7 py-8">
+                        <h3 class="font-display text-xl text-white">За що підвищують</h3>
+                        <ul class="mt-5 space-y-2.5">
+                            <li
+                                v-for="criterion in promotionCriteria"
+                                :key="criterion"
+                                class="flex items-start gap-3 text-sm text-white/55"
+                            >
+                                <span class="mt-2 h-1 w-1 shrink-0 rounded-full bg-gold-400/80"></span>
+                                {{ criterion }}
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div v-reveal="'right'" v-glow class="glass-panel-gold glass-panel px-7 py-8">
+                        <h3 class="font-display text-xl text-white">Як отримати підвищення</h3>
+                        <p class="mt-5 text-sm leading-relaxed text-white/60">
+                            Фіксованої кількості днів, після якої ранг видається
+                            автоматично, не існує. Заступники бачать, хто грає на
+                            результат, а хто просто числиться у складі.
+                        </p>
+                        <p class="mt-4 text-sm leading-relaxed text-white/60">
+                            Показуєш результат — рухаєшся далі. А от випрошування
+                            рангу, навпаки, помітно зменшує шанси його отримати.
+                        </p>
                     </div>
                 </div>
             </div>
         </section>
 
-        <!-- ================= SHOWCASE: VERBA ONLINE ================= -->
+        <!-- ================= СТРУКТУРА ================= -->
+        <section id="structure" class="relative overflow-hidden py-28 sm:py-32">
+            <!-- Груповий кадр іде фоном, а не вирізом: у файлі лишився чорний
+                 фон із джерела, і як фігура він давав би помітний прямокутник
+                 поверх сторінки. Під градієнтом він читається як сцена. -->
+            <div class="absolute inset-0 -z-20 overflow-hidden">
+                <div
+                    v-parallax="0.08"
+                    class="absolute inset-0 scale-110 bg-cover bg-top opacity-40"
+                    style="background-image: url('/images/roles/leadership.webp')"
+                ></div>
+            </div>
+            <div class="absolute inset-0 -z-10 bg-gradient-to-b from-obsidian-950 via-obsidian-950/85 to-obsidian-950"></div>
+
+            <div class="relative mx-auto max-w-7xl px-4 sm:px-6">
+                <div v-reveal class="mx-auto mb-14 max-w-2xl text-center">
+                    <p class="mb-4 text-[11px] font-medium uppercase tracking-[0.45em] text-gold-300/90">Керівництво</p>
+                    <h2 class="text-balance font-display text-4xl font-semibold text-white sm:text-5xl">
+                        Хто за що <span class="text-gradient-gold italic">відповідає</span>
+                    </h2>
+                    <p class="mx-auto mt-6 max-w-xl leading-relaxed text-white/55">
+                        У родині кожен напрямок має відповідального. Новачок із
+                        першого дня знає, до кого йти з конкретним питанням.
+                    </p>
+                </div>
+
+                <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                    <div
+                        v-for="(unit, i) in leadership"
+                        :key="unit.title"
+                        v-reveal="'scale'"
+                        :style="{ transitionDelay: `${i * 80}ms` }"
+                        v-glow
+                        class="group glass-panel relative overflow-hidden px-6 py-6 transition-all duration-700 hover:-translate-y-1.5"
+                    >
+                        <div class="glass-sheen"></div>
+                        <h3 class="relative font-semibold text-white">{{ unit.title }}</h3>
+                        <p class="relative mt-2 text-sm leading-relaxed text-white/50">{{ unit.text }}</p>
+                    </div>
+                </div>
+
+                <div v-reveal:200 v-glow class="glass-panel-gold glass-panel mx-auto mt-10 max-w-3xl px-7 py-7 text-center sm:px-10">
+                    <p class="text-[10px] uppercase tracking-[0.35em] text-gold-300/80">Головне правило</p>
+                    <p class="mt-4 leading-relaxed text-white/70">
+                        Питання — спершу до того, хто відповідає за напрямок. Так
+                        воно вирішується швидше, а керівництво не завантажене тим,
+                        що можна закрити на місці.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= АТМОСФЕРА ================= -->
         <section id="showcase" class="relative mx-auto max-w-7xl px-4 py-20 sm:px-6">
             <div v-reveal class="mx-auto mb-14 max-w-2xl text-center">
                 <p class="mb-4 text-[11px] font-medium uppercase tracking-[0.45em] text-gold-300/90">Атмосфера</p>
@@ -553,6 +747,41 @@ const paths = [
                         <p class="text-[10px] font-medium uppercase tracking-[0.4em] text-gold-300/90">Темп</p>
                         <p class="mt-1.5 font-display text-xl text-white">Ніч, у якій вирішує швидкість</p>
                     </div>
+                </div>
+            </div>
+
+            <!-- ================= РОЛЬОВА ГРА ================= -->
+            <div class="mt-16 grid items-center gap-10 sm:mt-20 lg:grid-cols-2 lg:gap-12">
+                <div v-reveal="'left'" class="relative order-2 flex justify-center lg:order-1">
+                    <div class="pointer-events-none absolute left-1/2 top-1/3 h-72 w-72 -translate-x-1/2 rounded-full bg-gold-500/20 blur-[80px]"></div>
+                    <div class="pointer-events-none absolute left-1/2 top-1/2 h-52 w-52 -translate-x-1/2 rounded-full bg-aurora-500/20 blur-[70px]"></div>
+
+                    <div class="relative w-full max-w-xs sm:max-w-sm">
+                        <img
+                            src="/images/roles/lifestyle.webp"
+                            alt="Життя родини поза роботою"
+                            loading="lazy"
+                            decoding="async"
+                            class="animate-float-slow img-cine relative w-full drop-shadow-[0_30px_50px_rgba(0,0,0,0.8)]"
+                        />
+                        <div class="pointer-events-none absolute inset-x-0 top-full h-px bg-gradient-to-r from-transparent via-gold-400/40 to-transparent"></div>
+                    </div>
+                </div>
+
+                <div v-reveal="'right'" class="order-1 lg:order-2">
+                    <p class="mb-4 text-[11px] font-medium uppercase tracking-[0.45em] text-gold-300/90">Не тільки робота</p>
+                    <h3 class="text-balance font-display text-3xl font-semibold text-white sm:text-4xl">
+                        Ми граємо <span class="text-gradient-gold italic">роль</span>, а не статистику
+                    </h3>
+                    <p class="mt-6 max-w-lg leading-relaxed text-white/55">
+                        У родини є власні традиції, дрес-код і кодекс. Між
+                        контрактами та бізнес-війнами є звичайне життя міста —
+                        зустрічі, вечірки, івенти й просто вечори у своєму колі.
+                    </p>
+                    <p class="mt-4 max-w-lg leading-relaxed text-white/55">
+                        Саме з цього складається історія, заради якої люди
+                        лишаються в родині роками, а не тільки з цифр у звітах.
+                    </p>
                 </div>
             </div>
         </section>

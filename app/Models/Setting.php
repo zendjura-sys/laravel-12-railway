@@ -15,7 +15,12 @@ class Setting extends Model
 {
     protected $fillable = ['group', 'key', 'value'];
 
-    /** @var array<string, array<string, string|null>>|null */
+    /**
+     * Мемоизация на время одного процесса, чтобы десяток Setting::get()
+     * за запрос не превращался в десяток обращений к кэш-хранилищу.
+     *
+     * @var array<string, string|null>|null
+     */
     private static ?array $cache = null;
 
     public static function get(string $key, ?string $default = null): ?string
@@ -26,8 +31,23 @@ class Setting extends Model
     public static function set(string $key, ?string $value, string $group = 'general'): void
     {
         self::query()->updateOrCreate(['key' => $key], ['value' => $value, 'group' => $group]);
-        self::$cache = null;
+        self::flushMemo();
         Cache::forget('settings.all');
+    }
+
+    /**
+     * Сбросить память процесса.
+     *
+     * Нужно там, где процесс живёт дольше одного запроса. Главный случай —
+     * `queue:work` с --max-time=3600: настройки, изменённые в админке,
+     * этот воркер иначе не увидит до часа, потому что Cache::forget() из
+     * веб-процесса чужую статику не трогает, а она отвечает раньше, чем
+     * дело дойдёт до общего хранилища. На таком «кэше» очередь ещё час
+     * слала бы сообщения старым токеном бота.
+     */
+    public static function flushMemo(): void
+    {
+        self::$cache = null;
     }
 
     /** @return array<string, string|null> */

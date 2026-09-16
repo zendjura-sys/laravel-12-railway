@@ -2,8 +2,10 @@
 
 namespace App\Providers;
 
+use App\Models\Setting;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Auth\Listeners\SendEmailVerificationNotification;
+use Illuminate\Queue\Events\JobProcessing;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\Vite;
@@ -31,6 +33,12 @@ class AppServiceProvider extends ServiceProvider
         // без этой строки письмо с подтверждением email при регистрации
         // никогда не отправлялось, даже с рабочим SMTP.
         Event::listen(Registered::class, SendEmailVerificationNotification::class);
+
+        // queue:work живёт до часа (--max-time=3600) и держит настройки в
+        // статике процесса. Без этого сброса воркер ещё час работал бы со
+        // старым токеном бота после того, как его сменили в админке:
+        // Cache::forget() из веб-процесса чужую статику не трогает.
+        Event::listen(JobProcessing::class, static fn () => Setting::flushMemo());
 
         // Force HTTPS when APP_URL uses https
         if (str_starts_with(env('APP_URL', ''), 'https://')) {

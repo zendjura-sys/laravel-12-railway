@@ -63,7 +63,11 @@ final class AddonInstaller
             }
             $probe->close();
 
-            $root = $this->extractor->extract($zipPath, $extractDir, forbidPhp: $expectedType === 'theme');
+            // forbidPhp: false — PHP внутри пакета теперь законен всегда.
+            // Единственным типом, которому код был запрещён, был theme
+            // (Design-пакет), а его больше нет: оформление настраивается в
+            // админке, а не ставится архивом.
+            $root = $this->extractor->extract($zipPath, $extractDir, forbidPhp: false);
 
             $manifestPath = $root . '/manifest.json';
             if (! is_file($manifestPath)) {
@@ -147,8 +151,8 @@ final class AddonInstaller
     public function activate(Addon $addon, ?User $actor): void
     {
         DB::transaction(function () use ($addon, $actor) {
-            // Core и Theme — эксклюзивны: активна только одна версия/тема сразу.
-            if (in_array($addon->type, ['core', 'theme'], true)) {
+            // Core эксклюзивен: активна только одна версия сразу.
+            if ($addon->type === 'core') {
                 Addon::query()
                     ->where('type', $addon->type)
                     ->where('id', '!=', $addon->id)

@@ -16,6 +16,7 @@ const props = defineProps({
     baseCount: { type: Number, default: 5 },
     directions: { type: Array, default: () => [] },
     promotionCriteria: { type: Array, default: () => [] },
+    leadership: { type: Array, default: () => [] },
 });
 
 /* ---------- куди веде «Подати заявку» ----------
@@ -30,6 +31,7 @@ const props = defineProps({
 const basePositions = computed(() => props.positions.slice(0, props.baseCount));
 const topPositions = computed(() => props.positions.slice(props.baseCount));
 const directions = computed(() => props.directions);
+const leadership = computed(() => props.leadership);
 const promotionCriteria = computed(() => props.promotionCriteria);
 
 const applyUrl = computed(() => props.telegramBotUrl || route('register'));
@@ -181,32 +183,6 @@ const benefits = [
 
 // Структура подана за функціями, без ігрових ніків: сайт публічний, а
 // персональний склад керівництва — це вже внутрішня інформація родини.
-const leadership = [
-    {
-        title: 'Директор',
-        text: 'Глава родини. Приймає ключові та кінцеві рішення.',
-    },
-    {
-        title: 'Заступники',
-        text: 'Ініціюють підвищення й пониження в основному складі, узгоджують кадрові рішення з директором.',
-    },
-    {
-        title: 'Івенти',
-        text: 'Організація та проведення внутрішніх заходів родини.',
-    },
-    {
-        title: 'Фінанси',
-        text: 'Облік премій за виконаними контрактами.',
-    },
-    {
-        title: 'HR по контрактах',
-        text: 'Робота з юристами й усе, що повʼязано з контрактами.',
-    },
-    {
-        title: 'Старший охоронців',
-        text: 'Керує бойовим напрямком і організовує бізнес-війни.',
-    },
-];
 </script>
 
 <template>
@@ -716,6 +692,12 @@ const leadership = [
                     >
                         <div class="glass-sheen"></div>
                         <h3 class="relative font-semibold text-white">{{ unit.title }}</h3>
+                        <!-- Нік показуємо, лише коли він заповнений в адмінці:
+                             порожній рядок під заголовком виглядав би як
+                             недозавантажена картка. -->
+                        <p v-if="unit.nickname" class="relative mt-1 font-mono text-xs tracking-wide text-gold-300/80">
+                            {{ unit.nickname }}
+                        </p>
                         <p class="relative mt-2 text-sm leading-relaxed text-white/50">{{ unit.text }}</p>
                     </div>
                 </div>

@@ -133,6 +133,7 @@ class BotHandler
             'about' => $this->screens->about(),
             'directions' => $this->screens->directions(),
             'positions' => $this->screens->positions(),
+            'structure' => $this->screens->structure(),
             'pos' => $this->screens->position((int) $arg),
             'growth' => $this->screens->growth(),
             'account' => $this->accountScreen($chat),

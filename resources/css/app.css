@@ -3,6 +3,51 @@
 @tailwind utilities;
 
 @layer base {
+    /* Густина атмосферы задаётся в админке (Дизайн → Оформлення) и
+       приезжает атрибутом на <html>. Правила ниже гасят именно
+       декоративные слои — фон, свечения, зерно, — не трогая содержимое,
+       поэтому «вимкнена» не ломает вёрстку, а только убирает эффекты.
+
+       Оставляем отдельным уровнем от prefers-reduced-motion: там речь про
+       движение, здесь про количество света на странице. */
+    /* Значения абсолютные и подобраны каждому слою отдельно, а не одной
+       долей на всех: своя прозорість у них разная (аврора 0.55, зерно
+       0.045), и общий множитель сделал бы зерно на порядок заметнее, а не
+       тише. */
+    html[data-effects='soft'] .aurora-orb {
+        opacity: 0.3;
+    }
+    html[data-effects='soft'] .film-grain {
+        opacity: 0.02;
+    }
+    html[data-effects='soft'] .glass-sheen {
+        opacity: 0.6;
+    }
+
+    html[data-effects='off'] .aurora-orb,
+    html[data-effects='off'] .film-grain,
+    html[data-effects='off'] .glass-sheen {
+        display: none;
+    }
+}
+
+@layer base {
+    :root {
+        /* Палитра акцента. Значения совпадают с прежними хексами
+           (#f1e2b8 … #a9822f) — пока цвет в админке не меняли, оформление
+           пиксель в пиксель прежнее. Оттенки пересчитываются из одного
+           акцентного цвета и переопределяются инлайном в <head>. */
+        --gold-100: 248 239 216;
+        --gold-200: 241 226 184;
+        --gold-300: 228 205 143;
+        /* Промежуточная ступень: её использует только градиент .btn-gold,
+           но без неё кнопка «съезжает» с согласованной палитры. */
+        --gold-350: 224 193 105;
+        --gold-400: 212 175 55;
+        --gold-500: 201 162 75;
+        --gold-600: 169 130 47;
+    }
+
     html {
         scroll-behavior: smooth;
         /* Верхний отступ для якорных переходов — иначе фиксированная шапка
@@ -40,14 +85,14 @@
     }
 
     ::selection {
-        background: rgba(212, 175, 55, 0.3);
+        background: rgb(var(--gold-400) / 0.3);
         color: #fff;
     }
 
     /* Полоса прокрутки в тон теме — дефолтная светлая разрывает тёмный кадр. */
     * {
         scrollbar-width: thin;
-        scrollbar-color: rgba(212, 175, 55, 0.25) transparent;
+        scrollbar-color: rgb(var(--gold-400) / 0.25) transparent;
     }
     *::-webkit-scrollbar {
         width: 10px;
@@ -57,13 +102,13 @@
         background: transparent;
     }
     *::-webkit-scrollbar-thumb {
-        background: rgba(212, 175, 55, 0.22);
+        background: rgb(var(--gold-400) / 0.22);
         border-radius: 9999px;
         border: 3px solid transparent;
         background-clip: content-box;
     }
     *::-webkit-scrollbar-thumb:hover {
-        background: rgba(212, 175, 55, 0.4);
+        background: rgb(var(--gold-400) / 0.4);
         background-clip: content-box;
     }
 
@@ -84,7 +129,7 @@
 
 @layer utilities {
     .text-gradient-gold {
-        background-image: linear-gradient(120deg, #f1e2b8 0%, #d4af37 45%, #a9822f 100%);
+        background-image: linear-gradient(120deg, rgb(var(--gold-200)) 0%, rgb(var(--gold-400)) 45%, rgb(var(--gold-600)) 100%);
         -webkit-background-clip: text;
         background-clip: text;
         color: transparent;
@@ -132,7 +177,7 @@
         rgba(255, 255, 255, 0.55) 0%,
         rgba(255, 255, 255, 0.08) 26%,
         rgba(255, 255, 255, 0) 52%,
-        rgba(212, 175, 55, 0.28) 100%
+        rgb(var(--gold-400) / 0.28) 100%
     );
     -webkit-mask:
         linear-gradient(#000 0 0) content-box,
@@ -166,22 +211,22 @@
 
 .glass-panel-gold {
     background:
-        linear-gradient(155deg, rgba(212, 175, 55, 0.13) 0%, rgba(255, 255, 255, 0.02) 50%, rgba(212, 175, 55, 0.055) 100%);
+        linear-gradient(155deg, rgb(var(--gold-400) / 0.13) 0%, rgba(255, 255, 255, 0.02) 50%, rgb(var(--gold-400) / 0.055) 100%);
     box-shadow:
         inset 0 1px 0 rgba(241, 226, 184, 0.28),
-        inset 0 -20px 50px -30px rgba(212, 175, 55, 0.3),
+        inset 0 -20px 50px -30px rgb(var(--gold-400) / 0.3),
         0 1px 2px rgba(0, 0, 0, 0.35),
         0 16px 34px -14px rgba(0, 0, 0, 0.6),
         0 36px 70px -26px rgba(0, 0, 0, 0.72),
-        0 0 50px -18px rgba(212, 175, 55, 0.3);
+        0 0 50px -18px rgb(var(--gold-400) / 0.3);
 }
 .glass-panel-gold::before {
     background: linear-gradient(
         140deg,
         rgba(241, 226, 184, 0.7) 0%,
-        rgba(212, 175, 55, 0.25) 30%,
+        rgb(var(--gold-400) / 0.25) 30%,
         rgba(255, 255, 255, 0) 58%,
-        rgba(212, 175, 55, 0.4) 100%
+        rgb(var(--gold-400) / 0.4) 100%
     );
 }
 
@@ -346,7 +391,7 @@
     inset: 0;
     pointer-events: none;
     background:
-        linear-gradient(180deg, rgba(212, 175, 55, 0.07) 0%, transparent 35%),
+        linear-gradient(180deg, rgb(var(--gold-400) / 0.07) 0%, transparent 35%),
         radial-gradient(130% 90% at 50% 15%, transparent 35%, rgba(6, 6, 5, 0.5) 100%);
 }
 
@@ -380,13 +425,17 @@
     position: relative;
     overflow: hidden;
     border-radius: 9999px;
-    background: linear-gradient(180deg, #f8efd8 0%, #e0c169 34%, #c9a24b 64%, #a9822f 100%);
+    background: linear-gradient(180deg,
+        rgb(var(--gold-100)) 0%,
+        rgb(var(--gold-350)) 34%,
+        rgb(var(--gold-500)) 64%,
+        rgb(var(--gold-600)) 100%);
     color: #0b0a09;
     box-shadow:
         inset 0 1px 0 rgba(255, 255, 255, 0.8),
         inset 0 -1px 1px rgba(90, 62, 12, 0.35),
         0 2px 6px rgba(0, 0, 0, 0.3),
-        0 10px 26px -10px rgba(212, 175, 55, 0.6);
+        0 10px 26px -10px rgb(var(--gold-400) / 0.6);
     transition:
         transform 0.55s cubic-bezier(0.16, 1, 0.3, 1),
         box-shadow 0.55s cubic-bezier(0.16, 1, 0.3, 1);
@@ -397,7 +446,7 @@
         inset 0 1px 0 rgba(255, 255, 255, 0.9),
         inset 0 -1px 1px rgba(90, 62, 12, 0.35),
         0 4px 10px rgba(0, 0, 0, 0.35),
-        0 18px 44px -12px rgba(212, 175, 55, 0.75);
+        0 18px 44px -12px rgb(var(--gold-400) / 0.75);
 }
 .btn-gold:active {
     transform: translateY(0);
@@ -432,7 +481,7 @@
     color: #fff;
     box-shadow:
         inset 0 1px 0 rgba(255, 255, 255, 0.25),
-        0 14px 34px -14px rgba(212, 175, 55, 0.5);
+        0 14px 34px -14px rgb(var(--gold-400) / 0.5);
 }
 
 /* ============ ПОДЧЁРКИВАНИЕ В НАВИГАЦИИ ============
@@ -448,7 +497,7 @@
     bottom: -6px;
     height: 1px;
     width: 100%;
-    background: linear-gradient(90deg, rgba(212, 175, 55, 0.9), rgba(241, 226, 184, 0.35));
+    background: linear-gradient(90deg, rgb(var(--gold-400) / 0.9), rgba(241, 226, 184, 0.35));
     transform: scaleX(0);
     transform-origin: left;
     transition: transform 0.55s cubic-bezier(0.16, 1, 0.3, 1);
@@ -462,7 +511,7 @@
 .hairline {
     height: 1px;
     border: 0;
-    background: linear-gradient(90deg, transparent, rgba(212, 175, 55, 0.35), transparent);
+    background: linear-gradient(90deg, transparent, rgb(var(--gold-400) / 0.35), transparent);
 }
 
 /* Полоса прогресса чтения — тонкая золотая нить под шапкой. */
@@ -472,8 +521,8 @@
     left: 0;
     height: 2px;
     z-index: 70;
-    background: linear-gradient(90deg, rgba(169, 130, 47, 0.9), #e4cd8f, rgba(241, 226, 184, 0.95));
-    box-shadow: 0 0 14px rgba(212, 175, 55, 0.65);
+    background: linear-gradient(90deg, rgb(var(--gold-600) / 0.9), rgb(var(--gold-300)), rgb(var(--gold-200) / 0.95));
+    box-shadow: 0 0 14px rgb(var(--gold-400) / 0.65);
     transform-origin: left;
     will-change: transform;
 }
@@ -482,7 +531,7 @@
    заливка съедает внимание с заголовка, контур держит иерархию. */
 .text-outline-gold {
     color: transparent;
-    -webkit-text-stroke: 1px rgba(212, 175, 55, 0.55);
+    -webkit-text-stroke: 1px rgb(var(--gold-400) / 0.55);
 }
 
 /* Разбалансированные переносы в заголовках выглядят неряшливо: одна

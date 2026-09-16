@@ -18,7 +18,7 @@ use Throwable;
 
 class AddonController extends Controller
 {
-    private const TYPES = ['core', 'module', 'plugin', 'theme'];
+    private const TYPES = ['core', 'module', 'plugin'];
 
     public function __construct(private readonly AddonInstaller $installer)
     {

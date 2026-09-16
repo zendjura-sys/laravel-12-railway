@@ -3,12 +3,13 @@
 use App\Http\Controllers\Admin\AddonController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\DeployController;
+use App\Http\Controllers\Admin\DesignController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\ThemeAssetController;
 use App\Models\User;
+use App\Support\FamilyContent;
 use App\Support\TelegramLink;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -23,13 +24,15 @@ Route::get('/', function () {
         'canRegister' => Route::has('register'),
         'memberCount' => User::query()->count(),
         'telegramBotUrl' => TelegramLink::url(),
-        // Содержание берётся из config/family.php — тот же источник, из
-        // которого читает бот в Telegram. Пока список жил во Vue, правка
-        // должностей означала расхождение: на сайте одно, в боте другое.
-        'positions' => config('family.positions'),
-        'baseCount' => config('family.base_count'),
-        'directions' => config('family.directions'),
-        'promotionCriteria' => config('family.promotion_criteria'),
+        // Содержание идёт через FamilyContent: правки из админки, а при их
+        // отсутствии — значения из config/family.php. Тот же источник читает
+        // бот в Telegram. Пока список жил во Vue, правка должностей означала
+        // расхождение: на сайте одно, в боте другое.
+        'positions' => FamilyContent::positions(),
+        'baseCount' => FamilyContent::baseCount(),
+        'directions' => FamilyContent::directions(),
+        'promotionCriteria' => FamilyContent::promotionCriteria(),
+        'leadership' => FamilyContent::leadership(),
     ]);
 })->name('home');
 
@@ -48,11 +51,6 @@ Route::middleware('auth')->group(function () {
 
 require __DIR__.'/auth.php';
 
-// Статика активной темы (Design-пакета) — публично, без auth.
-Route::get('/theme-assets/{path}', [ThemeAssetController::class, 'show'])
-    ->where('path', '.*')
-    ->name('theme.asset');
-
 Route::middleware(['auth', 'verified', 'permission:addons.manage|reports.manage|progression.manage|settings.manage|roles.manage|users.manage|members.manage|goals.manage|broadcasts.manage|telegram.manage'])
     ->get('/admin', [DashboardController::class, 'index'])
     ->name('admin.dashboard');
@@ -63,7 +61,7 @@ Route::middleware(['auth', 'verified', 'permission:addons.manage'])
     ->group(function () {
         Route::get('/', [AddonController::class, 'index'])->name('index');
         Route::post('/{type}/upload', [AddonController::class, 'upload'])
-            ->where('type', 'core|module|plugin|theme')
+            ->where('type', 'core|module|plugin')
             ->name('upload');
         Route::post('/{addon}/activate', [AddonController::class, 'activate'])->name('activate');
         Route::post('/{addon}/deactivate', [AddonController::class, 'deactivate'])->name('deactivate');
@@ -77,6 +75,18 @@ Route::middleware(['auth', 'verified', 'permission:addons.manage'])
     ->group(function () {
         Route::post('/trigger', [DeployController::class, 'trigger'])->name('trigger');
         Route::get('/status', [DeployController::class, 'status'])->name('status');
+    });
+
+// Дизайн — обычный раздел настроек, а не аддон: см. DesignController.
+Route::middleware(['auth', 'verified', 'permission:settings.manage'])
+    ->prefix('admin/design')
+    ->name('admin.design.')
+    ->group(function () {
+        Route::get('/', [DesignController::class, 'index'])->name('index');
+        Route::post('/brand', [DesignController::class, 'updateBrand'])->name('brand');
+        Route::put('/theme', [DesignController::class, 'updateTheme'])->name('theme');
+        Route::put('/content', [DesignController::class, 'updateContent'])->name('content');
+        Route::post('/content/reset', [DesignController::class, 'resetContent'])->name('content.reset');
     });
 
 Route::middleware(['auth', 'verified', 'permission:settings.manage'])

@@ -4,7 +4,7 @@ namespace Addons\TelegramBot\Bot;
 
 use Addons\TelegramBot\Models\TelegramApplication;
 use Addons\TelegramBot\Models\TelegramChat;
-use App\Models\Setting;
+use App\Support\FamilyContent;
 
 /**
  * Все экраны бота в одном месте: текст + клавиатура для каждого.
@@ -14,8 +14,9 @@ use App\Models\Setting;
  * «назад» в таком интерфейсе означает, что человек застрял и вынужден
  * перезапускать диалог.
  *
- * Содержание (должности, направления, критерии) берётся из
- * config/family.php — того же источника, что и сайт.
+ * Содержание (должности, направления, критерии, структура) берётся через
+ * FamilyContent — из того же источника, что и сайт: правки в админке или
+ * значения по умолчанию из config/family.php.
  */
 class Screens
 {
@@ -42,6 +43,7 @@ class Screens
                 [$this->btn('👤  Мій акаунт', 'account')],
                 [$this->btn('🏛  Про родину', 'about'), $this->btn('💼  Посади', 'positions')],
                 [$this->btn('⚔️  Напрямки', 'directions'), $this->btn('📈  Як рости', 'growth')],
+                [$this->btn('👥  Структура', 'structure')],
             ];
         } else {
             $text = $this->head('MONSORY FAMILY')
@@ -54,7 +56,7 @@ class Screens
                 [$this->btn('📝  Подати заявку', 'apply')],
                 [$this->btn('🏛  Про родину', 'about'), $this->btn('💼  Посади', 'positions')],
                 [$this->btn('⚔️  Напрямки', 'directions'), $this->btn('📈  Як рости', 'growth')],
-                [$this->btn('🔗  Мій акаунт', 'account')],
+                [$this->btn('👥  Структура', 'structure'), $this->btn('🔗  Мій акаунт', 'account')],
             ];
         }
 
@@ -68,7 +70,7 @@ class Screens
     public function about(): array
     {
         $body = '';
-        foreach ((array) config('family.about', []) as $paragraph) {
+        foreach (FamilyContent::about() as $paragraph) {
             $body .= e($paragraph)."\n\n";
         }
 
@@ -85,7 +87,7 @@ class Screens
     public function directions(): array
     {
         $body = '';
-        foreach ((array) config('family.directions', []) as $d) {
+        foreach (FamilyContent::directions() as $d) {
             $body .= '◆ <b>'.e($d['title'])."</b>\n"
                 .'<i>'.e($d['tag'])."</i>\n"
                 .e($d['text'])."\n\n";
@@ -103,8 +105,8 @@ class Screens
     /** Список всех должностей: номер + название, по две в ряд. */
     public function positions(): array
     {
-        $positions = (array) config('family.positions', []);
-        $baseCount = (int) config('family.base_count', 5);
+        $positions = FamilyContent::positions();
+        $baseCount = FamilyContent::baseCount();
 
         $text = $this->head('💼  ПОСАДИ')
             ."Десять посад, суворо за порядком росту.\n"
@@ -132,7 +134,7 @@ class Screens
     /** Карточка одной должности с переходами к соседним. */
     public function position(int $index): array
     {
-        $positions = array_values((array) config('family.positions', []));
+        $positions = FamilyContent::positions();
         $total = count($positions);
         $index = max(0, min($index, $total - 1));
         $p = $positions[$index];
@@ -155,12 +157,44 @@ class Screens
         ]);
     }
 
+    /** Хто за що відповідає — з ніками, якщо їх заповнили в адмінці. */
+    public function structure(): array
+    {
+        $units = FamilyContent::leadership();
+
+        if ($units === []) {
+            return $this->screen(
+                $this->head('👥  СТРУКТУРА')."Структуру ще не заповнено.\n\n".self::RULE,
+                [[$this->backHome()]]
+            );
+        }
+
+        $text = $this->head('👥  ХТО ЗА ЩО ВІДПОВІДАЄ')
+            ."Кожен напрямок має відповідального.\nПитання — спершу до нього.\n\n";
+
+        foreach ($units as $u) {
+            $text .= '◆ <b>'.e($u['title'])."</b>\n";
+            if (trim((string) ($u['nickname'] ?? '')) !== '') {
+                $text .= '<code>'.e($u['nickname'])."</code>\n";
+            }
+            if (trim((string) ($u['text'] ?? '')) !== '') {
+                $text .= e($u['text'])."\n";
+            }
+            $text .= "\n";
+        }
+
+        return $this->screen($text.self::RULE, [
+            [$this->btn('💼  Посади', 'positions'), $this->btn('📈  Як рости', 'growth')],
+            [$this->backHome()],
+        ]);
+    }
+
     public function growth(): array
     {
         $text = $this->head('📈  ЯК РОСТИ')
             ."Підвищення — не за вислугу років, а за внесок.\nДивимось на це:\n\n";
 
-        foreach ((array) config('family.promotion_criteria', []) as $c) {
+        foreach (FamilyContent::promotionCriteria() as $c) {
             $text .= '  ◆  '.e($c)."\n";
         }
 

@@ -13,7 +13,14 @@ use InvalidArgumentException;
  */
 final class AddonManifest
 {
-    public const TYPES = ['core', 'module', 'plugin', 'theme'];
+    /*
+     * Тип theme (Design-пакет) убран: оформление настраивается в админке
+     * (раздел «Дизайн»), а не ставится архивом. Для сайта на Vue 3 со
+     * сборкой через Vite тема в ZIP всё равно не могла влезть в
+     * скомпилированные компоненты — она умела лишь подложить свои css/js
+     * рядом, то есть держать второе, несогласованное оформление.
+     */
+    public const TYPES = ['core', 'module', 'plugin'];
 
     public function __construct(
         public readonly string $type,
@@ -75,15 +82,8 @@ final class AddonManifest
             }
         }
 
-        // Темы — данные и статика, никогда не код: entrypoints/psr4 им не положены.
-        if ($type === 'theme' && ($entrypoints !== [] || ! empty($data['autoload']['psr4'] ?? []))) {
-            throw new InvalidArgumentException(
-                'Design-пакет не может объявлять entrypoints или PHP-автозагрузку — только ассеты'
-            );
-        }
-
         $psr4 = [];
-        if ($type !== 'theme') {
+        {
             $psr4 = $data['autoload']['psr4'] ?? [];
             if (! is_array($psr4)) {
                 throw new InvalidArgumentException('manifest.autoload.psr4 должен быть объектом');
@@ -121,7 +121,6 @@ final class AddonManifest
             'core' => 'Core',
             'module' => 'Modules',
             'plugin' => 'Plugin',
-            'theme' => 'Design',
             default => $type,
         };
     }

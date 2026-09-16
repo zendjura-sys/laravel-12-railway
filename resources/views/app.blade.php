@@ -1,5 +1,12 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+@php
+    // Оформление читается из настроек (админка → Дизайн), а не собирается
+    // в бандл: смена акцента или фавикона не должна требовать пересборки
+    // фронтенда и деплоя.
+    $design = App\Support\DesignSettings::all();
+    $accentCss = App\Support\DesignSettings::accentCss();
+@endphp
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-effects="{{ $design['effects'] }}">
     <head>
         <meta charset="utf-8">
         {{-- viewport-fit=cover — иначе на телефонах с вырезом (iPhone X и
@@ -9,9 +16,14 @@
         {{-- Красит адресную строку браузера на телефоне в цвет фона сайта:
              без этого поверх тёмной страницы висит светлая полоса. --}}
         <meta name="theme-color" content="#060605">
+
+        @if ($design['faviconUrl'])
+            <link rel="icon" href="{{ $design['faviconUrl'] }}">
+        @endif
+
         <meta name="description" content="Monsory Family — закрита родина на RP-сервері: спільний особняк і автопарк, свій звʼязок, спільні операції та власний кодекс.">
 
-        <title inertia>{{ config('app.name', 'Laravel') }}</title>
+        <title inertia>{{ $design['siteName'] ?: config('app.name', 'Laravel') }}</title>
 
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.bunny.net" crossorigin>
@@ -23,6 +35,17 @@
         <!-- Scripts -->
         @routes
         @vite(['resources/js/app.js', "resources/js/Pages/{$page['component']}.vue"])
+
+        @if ($accentCss)
+            {{-- Пять переменных перекрашивают весь сайт: палитра золота в
+                 Tailwind объявлена как rgb(var(--gold-N)).
+
+                 Обязательно ПОСЛЕ @vite: дефолты живут в :root внутри
+                 app.css, селектор тот же, и при равной специфичности
+                 побеждает тот, что идёт в документе последним. Стоя выше,
+                 переопределение молча не работало. --}}
+            <style>:root{ {!! $accentCss !!} }</style>
+        @endif
         @inertiaHead
     </head>
     <body class="font-sans antialiased">

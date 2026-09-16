@@ -51,9 +51,8 @@ const TYPE_META = {
     core: { label: 'Core', hint: '(Core)(x.y.z)Name.zip', desc: 'Оновлення ядра платформи' },
     module: { label: 'Modules', hint: '(Modules)(x.y)Name.zip', desc: 'Бізнес-логіка: власний функціонал цілком' },
     plugin: { label: 'Plugin', hint: '(Plugin)(x.y)Name.zip', desc: 'Опціональні надбудови над модулями' },
-    theme: { label: 'Design', hint: '(Design)(x.y)Name.zip', desc: 'Лише ассети — CSS/JS/зображення, без PHP' },
 };
-const TYPES = ['core', 'module', 'plugin', 'theme'];
+const TYPES = ['core', 'module', 'plugin'];
 
 const activeTab = ref('module');
 

@@ -34,6 +34,12 @@ createInertiaApp({
             .mount(el);
     },
     progress: {
-        color: '#d4af37',
+        // Читаем из палитры, а не хексом: акцент задаётся в админке, и
+        // полоска загрузки не должна оставаться золотой, когда весь сайт
+        // уже другого цвета.
+        color: getComputedStyle(document.documentElement)
+            .getPropertyValue('--gold-400')
+            .trim()
+            .replace(/^(\d+)\s+(\d+)\s+(\d+)$/, 'rgb($1,$2,$3)') || '#d4af37',
     },
 });

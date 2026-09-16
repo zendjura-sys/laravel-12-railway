@@ -12,6 +12,13 @@ export default {
 
     theme: {
         extend: {
+            screens: {
+                // Узкие телефоны (iPhone SE, 360px-андроиды) — на них шапка и
+                // кнопки уже не помещаются в один ряд, а до sm (640px) ещё
+                // далеко: без этой ступени пришлось бы либо ломать вёрстку на
+                // 360px, либо резать всё подряд уже с 400px.
+                xs: '400px',
+            },
             fontFamily: {
                 sans: ['Manrope', ...defaultTheme.fontFamily.sans],
                 display: ['"Cormorant Garamond"', 'serif'],

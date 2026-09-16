@@ -1,5 +1,6 @@
 <script setup>
 import ApplicationLogo from '@/Components/ApplicationLogo.vue';
+import AmbientBackground from '@/Components/AmbientBackground.vue';
 import { Link } from '@inertiajs/vue3';
 import { ref } from 'vue';
 import { Blocks, IdCard, LayoutDashboard, Megaphone, Menu, MessageCircle, ScrollText, Settings, ShieldCheck, Target, TrendingUp, Users, X } from '@lucide/vue';
@@ -41,11 +42,10 @@ const mobileOpen = ref(false);
 </script>
 
 <template>
-    <div class="relative min-h-screen bg-obsidian-950 font-sans text-white/80 antialiased">
-        <div class="pointer-events-none fixed inset-0 -z-30 hidden overflow-hidden lg:block">
-            <div class="aurora-orb animate-aurora -left-40 top-10 h-[28rem] w-[28rem] bg-gold-500/15"></div>
-            <div class="aurora-orb animate-aurora right-[-10rem] bottom-0 h-[30rem] w-[30rem] bg-aurora-500/20" style="animation-delay: -8s"></div>
-        </div>
+    <div class="relative min-h-[100svh] font-sans text-white/80 antialiased">
+        <!-- mobile не передаём: на телефоне сайдбар занимает весь экран, и
+             подсветка за ним только съедает производительность. -->
+        <AmbientBackground intensity="soft" />
 
         <div class="flex">
             <!-- ================= SIDEBAR ================= -->

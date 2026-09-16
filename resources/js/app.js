@@ -7,6 +7,8 @@ import { createApp, h } from 'vue';
 import { ZiggyVue } from '../../vendor/tightenco/ziggy';
 import { reveal } from './directives/reveal';
 import { glow } from './directives/glow';
+import { parallax } from './directives/parallax';
+import { magnetic } from './directives/magnetic';
 import CommandPalette from './Components/CommandPalette.vue';
 import PageTransition from './Components/PageTransition.vue';
 
@@ -27,6 +29,8 @@ createInertiaApp({
             .use(ZiggyVue)
             .directive('reveal', reveal)
             .directive('glow', glow)
+            .directive('parallax', parallax)
+            .directive('magnetic', magnetic)
             .mount(el);
     },
     progress: {

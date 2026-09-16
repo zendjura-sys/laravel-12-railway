@@ -1,6 +1,7 @@
 <script setup>
 import { ref } from 'vue';
 import ApplicationLogo from '@/Components/ApplicationLogo.vue';
+import AmbientBackground from '@/Components/AmbientBackground.vue';
 import Dropdown from '@/Components/Dropdown.vue';
 import DropdownLink from '@/Components/DropdownLink.vue';
 import NavLink from '@/Components/NavLink.vue';
@@ -11,13 +12,10 @@ const showingNavigationDropdown = ref(false);
 </script>
 
 <template>
-    <div class="relative min-h-screen bg-obsidian-950 font-sans text-white/80 antialiased">
-        <div class="pointer-events-none fixed inset-0 -z-30 overflow-hidden">
-            <div class="aurora-orb animate-aurora -left-40 top-10 h-[28rem] w-[28rem] bg-gold-500/15"></div>
-            <div class="aurora-orb animate-aurora right-[-10rem] top-1/2 h-[30rem] w-[30rem] bg-aurora-500/20" style="animation-delay: -8s"></div>
-        </div>
+    <div class="relative min-h-[100svh] font-sans text-white/80 antialiased">
+        <AmbientBackground mobile intensity="normal" />
 
-        <nav class="border-b border-white/5 bg-obsidian-900/60 backdrop-blur-md">
+        <nav class="sticky top-0 z-40 border-b border-white/5 bg-obsidian-950/70 backdrop-blur-xl">
             <!-- Primary Navigation Menu -->
             <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
                 <div class="flex h-16 justify-between">

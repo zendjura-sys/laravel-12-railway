@@ -143,19 +143,20 @@ const benefits = [
     },
 ];
 
-// Два робочі напрямки родини — 6-та і 7-ма посади у вертикалі. На них
-// переводять окремо: потрапити можна навіть із нижчої посади.
+// Тут навмисно названа сама РОБОТА, а не посади: посади Юрист і Охорона
+// показані нижче, у вертикалі з десяти. Інакше вони зустрічалися б на
+// сторінці двічі й читались як дві різні системи.
 const directions = [
     {
-        title: 'Охоронець',
+        title: 'Бізнес-війни',
         tag: 'Бойовий напрямок',
-        text: 'Участь у бізнес-війнах — боротьбі за контроль над бізнесами. Від охоронців залежить, чи втримає родина те, що вже здобула.',
+        text: 'Боротьба за контроль над бізнесами. Від того, хто виходить на БВ, залежить, чи втримає родина те, що вже здобула.',
         image: '/images/roles/dir-guard.webp',
     },
     {
-        title: 'Юрист',
+        title: 'Контракти',
         tag: 'Контрактний напрямок',
-        text: 'Виконання контрактів — робота, яка тримає бюджет родини. Стабільний результат тут цінується вище за разові подвиги.',
+        text: 'Робота, яка тримає бюджет родини. Стабільний результат тут цінується вище за разові подвиги.',
         image: '/images/roles/dir-lawyer.webp',
     },
 ];
@@ -190,29 +191,33 @@ const basePositions = [
     },
 ];
 
-// Посади 6–10. Подані компактно свідомо: Юрист і Охорона вже мають власні
-// великі картки в секції «Напрямки» вище, а керівні посади — це не те, куди
-// заходять з вулиці, тому детальних описів тут не потрібно.
+// Посади 6–10. Оформлені так само, як і перші пʼять: вертикаль має
+// читатися як один суцільний шлях, а не як «ті, що з фото» і «решта».
 const topPositions = [
     {
         title: 'Юрист',
         text: 'Контрактний напрямок: виконання контрактів, які тримають бюджет родини.',
+        image: '/images/roles/pos-lawyer.webp',
     },
     {
         title: 'Охорона',
         text: 'Бойовий напрямок: участь у бізнес-війнах за контроль над бізнесами.',
+        image: '/images/roles/pos-guard.webp',
     },
     {
         title: 'Інвестор',
         text: 'Підсилює родину ресурсом і вкладається в її розвиток та активи.',
+        image: '/images/roles/pos-investor.webp',
     },
     {
         title: 'Заступник директора',
         text: 'Веде свій напрямок, ініціює кадрові рішення та узгоджує їх із директором.',
+        image: '/images/roles/pos-deputy.webp',
     },
     {
         title: 'Директор',
         text: 'Глава родини. Приймає ключові та кінцеві рішення.',
+        image: '/images/roles/pos-director.webp',
     },
 ];
 
@@ -533,15 +538,15 @@ const leadership = [
         <section id="roles" class="relative overflow-hidden py-24 sm:py-32">
             <div class="mx-auto max-w-7xl px-4 sm:px-6">
                 <div v-reveal class="mx-auto mb-16 max-w-2xl text-center">
-                    <p class="mb-4 text-[11px] font-medium uppercase tracking-[0.45em] text-gold-300/90">Напрямки роботи</p>
+                    <p class="mb-4 text-[11px] font-medium uppercase tracking-[0.45em] text-gold-300/90">Чим займається родина</p>
                     <h2 class="text-balance font-display text-4xl font-semibold text-white sm:text-5xl">
                         Два напрямки. <span class="text-gradient-gold italic">Один результат.</span>
                     </h2>
                     <p class="mx-auto mt-6 max-w-xl leading-relaxed text-white/55">
-                        Над основним складом стоять два робочі напрямки — 6-та і
-                        7-ма посади. Це вже робота з обовʼязками: на них
-                        переводять окремо, і потрапити туди можна навіть із
-                        нижчої посади, якщо людина себе показала.
+                        Уся робота родини зводиться до двох напрямків. Під кожен
+                        є своя посада — Охорона та Юрист, 7-ма і 6-та у
+                        вертикалі. Потрапити на них можна навіть із нижчої
+                        посади, якщо людина себе показала.
                     </p>
                 </div>
 
@@ -669,15 +674,30 @@ const leadership = [
                         v-reveal="'scale'"
                         :style="{ transitionDelay: `${i * 80}ms` }"
                         v-glow
-                        class="group glass-panel relative overflow-hidden px-5 py-5 transition-all duration-700 hover:-translate-y-1.5"
+                        class="group glass-panel relative flex flex-col overflow-hidden px-5 pb-6 pt-6 transition-all duration-700 hover:-translate-y-2"
                     >
                         <div class="glass-sheen"></div>
-                        <div class="relative mb-2.5 flex items-center gap-2.5">
-                            <span class="font-display text-sm text-gold-400/70">{{ i + 6 }}</span>
-                            <span class="h-px flex-1 bg-gradient-to-r from-gold-400/30 to-transparent"></span>
+
+                        <div class="relative mb-5 h-44">
+                            <div class="pointer-events-none absolute left-1/2 top-1/4 h-32 w-32 -translate-x-1/2 rounded-full bg-gold-500/20 blur-[50px] transition-all duration-700 group-hover:bg-gold-400/30"></div>
+                            <img
+                                :src="rank.image"
+                                :alt="`Посада в родині: ${rank.title}`"
+                                loading="lazy"
+                                decoding="async"
+                                class="img-cine relative mx-auto h-full w-auto object-contain drop-shadow-[0_22px_35px_rgba(0,0,0,0.8)] transition-transform duration-700 group-hover:-translate-y-1"
+                            />
+                            <div class="pointer-events-none absolute inset-x-4 top-full h-px bg-gradient-to-r from-transparent via-gold-400/35 to-transparent"></div>
                         </div>
-                        <h3 class="relative font-semibold text-white">{{ rank.title }}</h3>
-                        <p class="relative mt-2 text-[13px] leading-relaxed text-white/50">{{ rank.text }}</p>
+
+                        <div class="relative">
+                            <div class="mb-2 flex items-center gap-2.5">
+                                <span class="font-display text-sm text-gold-400/70">{{ i + 6 }}</span>
+                                <span class="h-px flex-1 bg-gradient-to-r from-gold-400/30 to-transparent"></span>
+                            </div>
+                            <h3 class="font-semibold text-white">{{ rank.title }}</h3>
+                            <p class="mt-2 text-[13px] leading-relaxed text-white/50">{{ rank.text }}</p>
+                        </div>
                     </div>
                 </div>
 

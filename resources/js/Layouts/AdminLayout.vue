@@ -2,7 +2,7 @@
 import ApplicationLogo from '@/Components/ApplicationLogo.vue';
 import { Link } from '@inertiajs/vue3';
 import { ref } from 'vue';
-import { Blocks, IdCard, LayoutDashboard, Megaphone, Menu, ScrollText, Settings, ShieldCheck, Target, TrendingUp, Users, X } from '@lucide/vue';
+import { Blocks, IdCard, LayoutDashboard, Megaphone, Menu, MessageCircle, ScrollText, Settings, ShieldCheck, Target, TrendingUp, Users, X } from '@lucide/vue';
 
 defineProps({
     title: { type: String, default: '' },
@@ -31,6 +31,7 @@ const navGroups = [
         items: [
             { name: 'admin.addons.index', label: 'Аддони', can: 'manageAddons', icon: Blocks },
             { name: 'admin.roles.index', label: 'Права доступу', can: 'manageRoles', icon: ShieldCheck },
+            { name: 'admin.telegram.index', label: 'Telegram-бот', can: 'manageTelegram', icon: MessageCircle },
             { name: 'admin.settings.index', label: 'Налаштування', can: 'manageSettings', icon: Settings },
         ],
     },

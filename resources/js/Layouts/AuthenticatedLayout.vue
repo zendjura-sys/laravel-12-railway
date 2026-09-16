@@ -78,7 +78,7 @@ const showingNavigationDropdown = ref(false);
                                 v-if="route().has('admin.dashboard') && (
                                     $page.props.can?.manageAddons || $page.props.can?.manageReports ||
                                     $page.props.can?.manageProgression || $page.props.can?.manageSettings ||
-                                    $page.props.can?.manageRoles || $page.props.can?.manageUsers || $page.props.can?.manageMembers || $page.props.can?.manageGoals || $page.props.can?.manageBroadcasts
+                                    $page.props.can?.manageRoles || $page.props.can?.manageUsers || $page.props.can?.manageMembers || $page.props.can?.manageGoals || $page.props.can?.manageBroadcasts || $page.props.can?.manageTelegram
                                 )"
                                 :href="route('admin.dashboard')"
                                 :active="route().current('admin.*')"
@@ -231,7 +231,7 @@ const showingNavigationDropdown = ref(false);
                         v-if="route().has('admin.dashboard') && (
                             $page.props.can?.manageAddons || $page.props.can?.manageReports ||
                             $page.props.can?.manageProgression || $page.props.can?.manageSettings ||
-                            $page.props.can?.manageRoles || $page.props.can?.manageUsers || $page.props.can?.manageMembers || $page.props.can?.manageGoals || $page.props.can?.manageBroadcasts
+                            $page.props.can?.manageRoles || $page.props.can?.manageUsers || $page.props.can?.manageMembers || $page.props.can?.manageGoals || $page.props.can?.manageBroadcasts || $page.props.can?.manageTelegram
                         )"
                         :href="route('admin.dashboard')"
                         :active="route().current('admin.*')"

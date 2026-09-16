@@ -90,7 +90,7 @@ function fmtDate(iso) {
                     v-if="route().has('admin.dashboard') && (
                         $page.props.can?.manageAddons || $page.props.can?.manageReports ||
                         $page.props.can?.manageProgression || $page.props.can?.manageSettings ||
-                        $page.props.can?.manageRoles || $page.props.can?.manageUsers || $page.props.can?.manageMembers || $page.props.can?.manageGoals || $page.props.can?.manageBroadcasts
+                        $page.props.can?.manageRoles || $page.props.can?.manageUsers || $page.props.can?.manageMembers || $page.props.can?.manageGoals || $page.props.can?.manageBroadcasts || $page.props.can?.manageTelegram
                     )"
                     :href="route('admin.dashboard')"
                     v-reveal:240="'scale'"

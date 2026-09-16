@@ -1,6 +1,7 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import DeleteUserForm from './Partials/DeleteUserForm.vue';
+import TelegramLinkForm from './Partials/TelegramLinkForm.vue';
 import UpdatePasswordForm from './Partials/UpdatePasswordForm.vue';
 import UpdateProfileInformationForm from './Partials/UpdateProfileInformationForm.vue';
 import { Head } from '@inertiajs/vue3';
@@ -34,7 +35,11 @@ defineProps({
                 />
             </div>
 
-            <div v-reveal:100 v-glow class="glass-panel p-6 sm:p-8">
+            <div v-if="route().has('telegram.status')" v-reveal:100 v-glow class="glass-panel p-6 sm:p-8">
+                <TelegramLinkForm class="max-w-xl" />
+            </div>
+
+            <div v-reveal:150 v-glow class="glass-panel p-6 sm:p-8">
                 <UpdatePasswordForm class="max-w-xl" />
             </div>
 

@@ -23,7 +23,7 @@ Route::get('/', function () {
         'memberCount' => User::query()->count(),
         'telegramBotUrl' => Setting::get('telegram_bot_url') ?: config('services.telegram.bot_url', '#'),
     ]);
-});
+})->name('home');
 
 Route::get('/dashboard', function () {
     return Inertia::render('Dashboard');

@@ -98,6 +98,29 @@
     left: 130%;
 }
 
+/* Курсорне світло: рухається за мишею всередині .glow-tracked, гасне коли
+   курсор іде — ефект "живого" скла, а не статичний блік. */
+.glow-tracked {
+    position: relative;
+}
+.glow-tracked::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    background: radial-gradient(
+        220px circle at var(--glow-x, 50%) var(--glow-y, 50%),
+        rgba(241, 226, 184, 0.14),
+        transparent 70%
+    );
+}
+.glow-tracked:hover::after {
+    opacity: 1;
+}
+
 @keyframes aurora-drift {
     0%, 100% { transform: translate(0, 0) scale(1); }
     33% { transform: translate(4%, -6%) scale(1.08); }

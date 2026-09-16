@@ -142,7 +142,7 @@ const pillars = [
             <div class="bg-noise absolute inset-0 -z-10"></div>
 
             <div class="relative mx-auto w-full max-w-7xl px-6 py-32">
-                <div class="glass-panel max-w-2xl px-8 py-10 sm:px-10 sm:py-12">
+                <div v-glow class="glass-panel max-w-2xl px-8 py-10 sm:px-10 sm:py-12">
                     <p v-reveal class="mb-5 text-sm font-medium uppercase tracking-[0.45em] text-gold-300/90">
                         Monsory Family · Est. Legacy · Verba Online
                     </p>
@@ -210,6 +210,7 @@ const pillars = [
                     :key="pillar.title"
                     v-reveal="'scale'"
                     :style="{ transitionDelay: `${i * 110}ms` }"
+                    v-glow
                     class="group glass-panel relative overflow-hidden p-7 transition-all duration-500 hover:-translate-y-1.5 hover:shadow-gold"
                 >
                     <div class="glass-sheen"></div>
@@ -271,7 +272,7 @@ const pillars = [
             <div class="absolute inset-0 -z-10 bg-gradient-to-t from-obsidian-950 via-transparent to-obsidian-950/60"></div>
 
             <div class="relative mx-auto max-w-4xl px-6 text-center">
-                <div class="glass-panel mx-auto inline-block px-8 py-10 sm:px-14 sm:py-14">
+                <div v-glow class="glass-panel mx-auto inline-block px-8 py-10 sm:px-14 sm:py-14">
                     <p v-reveal class="mb-6 text-sm font-medium uppercase tracking-[0.4em] text-gold-300/90">
                         Ціль родини
                     </p>
@@ -299,7 +300,7 @@ const pillars = [
             <div class="absolute inset-0 -z-10 bg-gradient-to-t from-obsidian-950 via-obsidian-950/80 to-obsidian-950/40"></div>
 
             <div class="relative mx-auto max-w-3xl px-6 text-center">
-                <div class="glass-panel-gold glass-panel mx-auto inline-block px-8 py-10 sm:px-14 sm:py-14">
+                <div v-glow class="glass-panel-gold glass-panel mx-auto inline-block px-8 py-10 sm:px-14 sm:py-14">
                     <h2 v-reveal class="font-display text-4xl font-semibold text-white sm:text-5xl">
                         Кожна дія
                         <span class="text-gradient-gold italic">залишає слід.</span>

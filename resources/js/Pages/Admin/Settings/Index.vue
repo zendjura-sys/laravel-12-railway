@@ -81,7 +81,7 @@ function submit(group) {
         </div>
 
         <Transition name="fade-tab" mode="out-in">
-            <form :key="activeTab" class="glass-panel max-w-xl space-y-5 p-8" @submit.prevent="submit(activeTab)">
+            <form v-glow :key="activeTab" class="glass-panel max-w-xl space-y-5 p-8" @submit.prevent="submit(activeTab)">
                 <div v-for="field in TABS[activeTab].fields" :key="field.key">
                     <InputLabel :value="field.label" />
                     <TextInput

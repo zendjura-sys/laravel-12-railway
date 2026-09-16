@@ -26,7 +26,7 @@ defineProps({
         </template>
 
         <div class="mx-auto max-w-3xl space-y-6 px-4 py-10 sm:px-6 lg:px-8">
-            <div class="glass-panel p-6 sm:p-8">
+            <div v-glow class="glass-panel p-6 sm:p-8">
                 <UpdateProfileInformationForm
                     :must-verify-email="mustVerifyEmail"
                     :status="status"
@@ -34,11 +34,11 @@ defineProps({
                 />
             </div>
 
-            <div class="glass-panel p-6 sm:p-8">
+            <div v-glow class="glass-panel p-6 sm:p-8">
                 <UpdatePasswordForm class="max-w-xl" />
             </div>
 
-            <div class="glass-panel p-6 sm:p-8">
+            <div v-glow class="glass-panel p-6 sm:p-8">
                 <DeleteUserForm class="max-w-xl" />
             </div>
         </div>

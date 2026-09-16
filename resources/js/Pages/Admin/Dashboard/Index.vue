@@ -29,15 +29,15 @@ const sections = [
         </div>
 
         <div class="mb-10 grid gap-6 sm:grid-cols-3">
-            <div class="glass-panel-gold glass-panel p-6">
+            <div v-glow class="glass-panel-gold glass-panel p-6">
                 <p class="text-xs uppercase tracking-widest text-white/40">Учасників</p>
                 <p class="font-display mt-2 text-4xl text-gold-300">{{ stats.members }}</p>
             </div>
-            <div class="glass-panel p-6">
+            <div v-glow class="glass-panel p-6">
                 <p class="text-xs uppercase tracking-widest text-white/40">Ролей у системі</p>
                 <p class="font-display mt-2 text-4xl text-white">{{ stats.roles }}</p>
             </div>
-            <div class="glass-panel p-6">
+            <div v-glow class="glass-panel p-6">
                 <p class="text-xs uppercase tracking-widest text-white/40">Активних аддонів</p>
                 <p class="font-display mt-2 text-4xl text-white">{{ stats.activeAddons }}</p>
             </div>
@@ -48,7 +48,7 @@ const sections = [
                 <Link
                     v-if="$page.props.can?.[section.can] && route().has(section.name)"
                     :href="route(section.name)"
-                    class="group glass-panel relative overflow-hidden p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-gold"
+                    v-glow class="group glass-panel relative overflow-hidden p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-gold"
                 >
                     <div class="glass-sheen"></div>
                     <h3 class="relative font-semibold text-white">{{ section.title }}</h3>

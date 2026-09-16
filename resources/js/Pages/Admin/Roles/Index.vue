@@ -53,7 +53,7 @@ function destroyRole(role) {
         </form>
 
         <div class="space-y-6">
-            <div v-for="role in roles" :key="role.id" class="glass-panel p-6">
+            <div v-for="role in roles" :key="role.id" v-glow class="glass-panel p-6">
                 <div class="mb-4 flex items-center justify-between">
                     <div>
                         <h3 class="font-display text-xl text-white">{{ role.name }}</h3>

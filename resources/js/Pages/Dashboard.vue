@@ -31,7 +31,7 @@ const cards = [
                     <Link
                         v-if="route().has(card.name)"
                         :href="route(card.name)"
-                        class="group glass-panel relative overflow-hidden p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-gold"
+                        v-glow class="group glass-panel relative overflow-hidden p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-gold"
                     >
                         <div class="glass-sheen"></div>
                         <h3 class="relative font-semibold text-white">{{ card.title }}</h3>
@@ -47,7 +47,7 @@ const cards = [
                         $page.props.can?.manageRoles || $page.props.can?.manageUsers
                     )"
                     :href="route('admin.dashboard')"
-                    class="group glass-panel-gold glass-panel relative overflow-hidden p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-gold"
+                    v-glow class="group glass-panel-gold glass-panel relative overflow-hidden p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-gold"
                 >
                     <div class="glass-sheen"></div>
                     <h3 class="relative font-semibold text-white">Адмін-панель CMS</h3>

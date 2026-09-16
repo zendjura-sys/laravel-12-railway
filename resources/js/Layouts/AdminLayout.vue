@@ -2,6 +2,7 @@
 import ApplicationLogo from '@/Components/ApplicationLogo.vue';
 import { Link } from '@inertiajs/vue3';
 import { ref } from 'vue';
+import { Blocks, LayoutDashboard, ScrollText, Settings, ShieldCheck, TrendingUp, Users } from '@lucide/vue';
 
 defineProps({
     title: { type: String, default: '' },
@@ -11,23 +12,23 @@ const navGroups = [
     {
         label: 'Огляд',
         items: [
-            { name: 'admin.dashboard', label: 'Панель CMS', can: null },
+            { name: 'admin.dashboard', label: 'Панель CMS', can: null, icon: LayoutDashboard },
         ],
     },
     {
         label: 'Спільнота',
         items: [
-            { name: 'admin.reports.index', label: 'Модерація звітів', can: 'manageReports' },
-            { name: 'admin.progression.index', label: 'Прогресія', can: 'manageProgression' },
-            { name: 'admin.users.index', label: 'Учасники', can: 'manageUsers' },
+            { name: 'admin.reports.index', label: 'Модерація звітів', can: 'manageReports', icon: ScrollText },
+            { name: 'admin.progression.index', label: 'Прогресія', can: 'manageProgression', icon: TrendingUp },
+            { name: 'admin.users.index', label: 'Учасники', can: 'manageUsers', icon: Users },
         ],
     },
     {
         label: 'Система',
         items: [
-            { name: 'admin.addons.index', label: 'Аддони', can: 'manageAddons' },
-            { name: 'admin.roles.index', label: 'Права доступу', can: 'manageRoles' },
-            { name: 'admin.settings.index', label: 'Налаштування', can: 'manageSettings' },
+            { name: 'admin.addons.index', label: 'Аддони', can: 'manageAddons', icon: Blocks },
+            { name: 'admin.roles.index', label: 'Права доступу', can: 'manageRoles', icon: ShieldCheck },
+            { name: 'admin.settings.index', label: 'Налаштування', can: 'manageSettings', icon: Settings },
         ],
     },
 ];
@@ -64,11 +65,12 @@ const mobileOpen = ref(false);
                                 <Link
                                     v-if="(item.can === null || $page.props.can?.[item.can]) && route().has(item.name)"
                                     :href="route(item.name)"
-                                    class="block rounded-lg px-3 py-2 text-sm transition-colors"
+                                    class="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors"
                                     :class="route().current(item.name.split('.').slice(0, -1).join('.') + '.*')
                                         ? 'bg-gold-400/10 text-gold-200'
                                         : 'text-white/50 hover:bg-white/5 hover:text-white'"
                                 >
+                                    <component :is="item.icon" class="h-4 w-4 shrink-0" />
                                     {{ item.label }}
                                 </Link>
                             </template>
@@ -76,7 +78,12 @@ const mobileOpen = ref(false);
                     </div>
                 </nav>
 
-                <Link :href="route('dashboard')" class="mt-10 block text-xs uppercase tracking-widest text-white/30 hover:text-gold-300">
+                <div class="mt-10 flex items-center gap-2 rounded-lg border border-white/10 px-3 py-2 text-[11px] text-white/30">
+                    <kbd class="rounded border border-white/15 px-1.5 py-0.5">⌘K</kbd>
+                    швидка навігація
+                </div>
+
+                <Link :href="route('dashboard')" class="mt-3 block text-xs uppercase tracking-widest text-white/30 hover:text-gold-300">
                     ← На сайт
                 </Link>
             </aside>

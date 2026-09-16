@@ -319,8 +319,24 @@ git config --global --add safe.directory "${APP_DIR}"
 # безвредна и стандартна для Laravel — заранее готовим, чтобы не забыть,
 # когда появится первая запланированная задача.
 log "Настраиваю cron для планировщика"
+
+# В минимальных образах Ubuntu пакета cron нет вовсе, а значит нет и команды
+# crontab. При set -e это роняло весь деплой ровно здесь — уже после миграций,
+# но ДО настройки nginx и сервиса очереди, то есть сайт оставался недоступным.
+if ! command -v crontab >/dev/null 2>&1; then
+    apt-get install -y -qq cron
+fi
+systemctl enable --now cron >/dev/null 2>&1 || true
+
 CRON_LINE="* * * * * cd ${APP_DIR} && php artisan schedule:run >> /dev/null 2>&1"
-( crontab -u www-data -l 2>/dev/null | grep -vF "schedule:run"; echo "$CRON_LINE" ) | crontab -u www-data -
+
+# Вторая ловушка на том же месте: у пустого crontab `crontab -l` возвращает 1,
+# и grep без совпадений — тоже 1. Внутри подоболочки с set -e это обрывало её
+# ДО echo, и в crontab уходил пустой ввод: строка планировщика молча не
+# добавлялась, а сам скрипт шёл дальше как ни в чём не бывало.
+EXISTING_CRON="$( { crontab -u www-data -l 2>/dev/null || true; } | grep -vF 'schedule:run' || true )"
+printf '%s\n%s\n' "$EXISTING_CRON" "$CRON_LINE" | sed '/^[[:space:]]*$/d' | crontab -u www-data - \
+    || warn "Не удалось прописать cron планировщика — проверь: crontab -u www-data -l"
 
 # --------------------------------------------------------------- queue worker
 log "Настраиваю systemd-сервис очереди"

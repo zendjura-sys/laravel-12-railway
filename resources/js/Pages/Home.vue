@@ -785,7 +785,14 @@ const leadership = [
         </section>
 
         <!-- ================= АТМОСФЕРА ================= -->
-        <section id="showcase" class="relative mx-auto max-w-7xl px-4 py-20 sm:px-6">
+        <!-- overflow-x-clip обовʼязковий: усередині є картки з появою "збоку"
+             (v-reveal left/right), які до показу зсунуті на 40px за межі
+             контейнера. Це єдина секція без власного обрізання, і саме через
+             неї сторінка ставала на 24px ширшою за екран — при максимальному
+             віддаленні збоку зʼявлялась порожня смуга.
+             Саме clip, а не hidden: hidden зробив би секцію скрол-контейнером
+             і зламав би position: sticky всередині. -->
+        <section id="showcase" class="relative mx-auto max-w-7xl overflow-x-clip px-4 py-20 sm:px-6">
             <div v-reveal class="mx-auto mb-14 max-w-2xl text-center">
                 <p class="mb-4 text-[11px] font-medium uppercase tracking-[0.45em] text-gold-300/90">Атмосфера</p>
                 <h2 class="text-balance font-display text-4xl font-semibold text-white sm:text-5xl">
@@ -833,15 +840,33 @@ const leadership = [
                     <div class="pointer-events-none absolute left-1/2 top-1/3 h-72 w-72 -translate-x-1/2 rounded-full bg-gold-500/20 blur-[80px]"></div>
                     <div class="pointer-events-none absolute left-1/2 top-1/2 h-52 w-52 -translate-x-1/2 rounded-full bg-aurora-500/20 blur-[70px]"></div>
 
-                    <div class="relative w-full max-w-xs sm:max-w-sm">
+                    <!-- Кадр в рамке, а не «парящая» вырезка: исходник обрезан
+                         по макушке и по бедру, и без рамки эти два плоских
+                         среза висели посреди страницы как брак. У края рамки
+                         тот же срез читается как обычное портретное
+                         кадрирование. -->
+                    <div
+                        v-glow
+                        class="group glass-panel relative aspect-[3/4] w-full max-w-[17rem] overflow-hidden sm:max-w-xs"
+                    >
                         <img
                             src="/images/roles/lifestyle.webp"
                             alt="Життя родини поза роботою"
                             loading="lazy"
                             decoding="async"
-                            class="animate-float-slow img-cine relative w-full drop-shadow-[0_30px_50px_rgba(0,0,0,0.8)]"
+                            class="img-cine h-full w-full object-cover object-top transition-transform duration-[1.2s] group-hover:scale-[1.04]"
                         />
-                        <div class="pointer-events-none absolute inset-x-0 top-full h-px bg-gradient-to-r from-transparent via-gold-400/40 to-transparent"></div>
+                        <div class="cine-veil"></div>
+                        <div class="glass-sheen z-10"></div>
+                        <!-- В отличие от пейзажных кадров тут у нижней кромки
+                             не фон, а сама фигура, поэтому подписи нужна своя
+                             затемняющая подложка — иначе она читается поверх
+                             светлой кожи. -->
+                        <div class="pointer-events-none absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-obsidian-950 via-obsidian-950/70 to-transparent"></div>
+                        <div class="absolute inset-x-0 bottom-0 p-5">
+                            <p class="text-[10px] font-medium uppercase tracking-[0.4em] text-gold-300/90">Поза справами</p>
+                            <p class="mt-1.5 font-display text-lg leading-snug text-white">Вечір поза звітами</p>
+                        </div>
                     </div>
                 </div>
 

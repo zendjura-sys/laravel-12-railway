@@ -95,5 +95,18 @@ const submit = () => {
                 </PrimaryButton>
             </div>
         </form>
+
+        <!-- Реєстрація існує (маршрут register), але зі сторінки входу на неї
+             не вело жодне посилання — новий учасник упирався в глухий кут і
+             міг потрапити на форму лише вручну набравши адресу. -->
+        <p class="mt-7 border-t border-white/10 pt-6 text-center text-sm text-white/40">
+            Ще не в родині?
+            <Link
+                :href="route('register')"
+                class="link-underline ms-1 font-medium text-gold-300 transition-colors hover:text-gold-200"
+            >
+                Створити акаунт
+            </Link>
+        </p>
     </GuestLayout>
 </template>

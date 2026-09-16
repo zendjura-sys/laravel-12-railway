@@ -50,4 +50,13 @@ return [
         'api_url' => env('TELEGRAM_API_URL', 'https://api.telegram.org'),
     ],
 
+    /*
+     * Маршрут /api/nfe/emitir из другого проекта в этом же репозитории.
+     * По умолчанию выключен: он публичный, без CSRF и принимает чужой
+     * сертификат с паролем. Включать только вместе с авторизацией.
+     */
+    'nfe' => [
+        'enabled' => (bool) env('NFE_ENDPOINT_ENABLED', false),
+    ],
+
 ];

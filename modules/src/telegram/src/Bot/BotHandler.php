@@ -5,6 +5,7 @@ namespace Addons\TelegramBot\Bot;
 use Addons\TelegramBot\Models\TelegramApplication;
 use Addons\TelegramBot\Models\TelegramChat;
 use Addons\TelegramBot\Models\TelegramLink;
+use Addons\TelegramBot\Services\ApplicationReview;
 use Addons\TelegramBot\Services\FamilyGroup;
 use Addons\TelegramBot\Services\TelegramClient;
 use App\Models\User;
@@ -28,6 +29,7 @@ class BotHandler
         private readonly TelegramClient $telegram,
         private readonly Screens $screens,
         private readonly FamilyGroup $group,
+        private readonly ApplicationReview $review,
     ) {}
 
     /** @param array<string,mixed> $update */
@@ -172,12 +174,13 @@ class BotHandler
             'account' => $this->accountScreen($chat),
             'unlink' => $this->unlink($chat),
             'apply' => $this->apply($chat, $arg),
+            'rev' => $this->reviewFromChat($chat, $arg),
             default => $this->homeScreen($chat),
         };
 
         // Экраны вне анкеты сбрасывают незаконченный черновик: иначе
         // следующее случайное сообщение в чат попадёт в брошенную заявку.
-        if ($action !== 'apply' && $chat->step !== null) {
+        if (! in_array($action, ['apply', 'rev'], true) && $chat->step !== null) {
             $chat->clearDraft();
         }
 
@@ -322,7 +325,7 @@ class BotHandler
             return $this->screens->applyIntro($pending);
         }
 
-        TelegramApplication::create([
+        $application = TelegramApplication::create([
             'chat_id' => $chat->chat_id,
             'telegram_username' => $chat->telegram_username,
             'user_id' => $this->linkedUser($chat)?->id,
@@ -336,6 +339,10 @@ class BotHandler
         ]);
 
         $chat->clearDraft();
+
+        // Керівництво дізнається про заявку одразу, а не коли хтось
+        // наступного разу зайде в панель — людина в цей час чекає.
+        $this->review->notifyReviewers($application);
 
         return $this->screens->submitted();
     }
@@ -367,6 +374,34 @@ class BotHandler
             'about' => $this->screens->askAbout(),
             default => $this->screens->oops(),
         };
+    }
+
+    /**
+     * Решение по заявке прямо из чата.
+     *
+     * Права проверяем по привязанному аккаунту, а не по факту получения
+     * сообщения: callback_data видна в клиенте, и её можно отправить
+     * вебхуку самому. ApplicationReview проверяет разрешение ещё раз —
+     * здесь это нужно, только чтобы показать понятный ответ.
+     */
+    private function reviewFromChat(TelegramChat $chat, ?string $arg): array
+    {
+        [$decision, $id] = array_pad(explode(':', (string) $arg, 2), 2, null);
+
+        $user = $this->linkedUser($chat);
+        $application = TelegramApplication::find((int) $id);
+
+        if (! $user || ! $user->can(ApplicationReview::PERMISSION)) {
+            return $this->screens->reviewResult('Немає прав розглядати заявки.', null);
+        }
+
+        if (! $application) {
+            return $this->screens->reviewResult('Заявку не знайдено.', null);
+        }
+
+        $result = $this->review->decide($application, $user, $decision === 'a');
+
+        return $this->screens->reviewResult($result['message'], $application->fresh());
     }
 
     /* ==================== АККАУНТ ==================== */

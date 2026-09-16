@@ -54,7 +54,12 @@ class DesignController extends Controller
             // svg сознательно НЕ принимаем: это исполняемый в браузере
             // документ, а логотип вставляется в каждую страницу сайта.
             'logo' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
-            'favicon' => ['nullable', 'image', 'mimes:png,ico,webp', 'max:512'],
+            // У фавикона правило file, а не image: правило image знает
+            // только jpg/jpeg/png/gif/bmp/webp, поэтому вместе с ним ни
+            // один .ico не проходил — а форма его предлагает. Проверку
+            // типа делает mimes: он смотрит на настоящий MIME, так что
+            // переименованный скрипт всё равно не пройдёт.
+            'favicon' => ['nullable', 'file', 'mimes:png,webp,ico', 'max:512'],
             'removeLogo' => ['nullable', 'boolean'],
             'removeFavicon' => ['nullable', 'boolean'],
         ]);

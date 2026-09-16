@@ -117,7 +117,21 @@ Route::middleware(['auth', 'verified', 'permission:users.manage'])
         Route::put('/{user}/roles', [UserController::class, 'updateRoles'])->name('roles');
     });
 
-// Rota que o Base44 vai acessar
+/*
+ * Rota que o Base44 vai acessar.
+ *
+ * ВЫКЛЮЧЕНА ПО УМОЛЧАНИЮ. Маршрут остался от другого проекта в этом же
+ * репозитории: он без авторизации и без CSRF принимает base64 PFX-
+ * сертификат, пароль к нему и произвольный XML, подписывает и отправляет
+ * в SEFAZ. На домене Monsory он открыт всему интернету и ничем здесь не
+ * используется, поэтому висит за флагом.
+ *
+ * Код не удалён, чтобы не сломать тот проект: чтобы вернуть маршрут,
+ * достаточно NFE_ENDPOINT_ENABLED=true в .env. Но прежде чем включать,
+ * его стоит закрыть авторизацией — в нынешнем виде подписывать документы
+ * через него может кто угодно.
+ */
+if (config('services.nfe.enabled')) {
 Route::any('/api/nfe/emitir', function (Request $request) {
     try {
         $autoload = base_path('vendor/autoload.php');
@@ -162,9 +176,14 @@ Route::any('/api/nfe/emitir', function (Request $request) {
         return response()->json(['status' => 'sucesso', 'retorno' => $respostaSefaz], 200);
 
     } catch (\Throwable $e) {
+        // Текст исключения и номер строки наружу не отдаём: маршрут
+        // публичный, а это готовая карта внутренностей приложения.
+        report($e);
+
         return response()->json([
             'status' => 'erro',
-            'mensagem' => 'ERRO NO PHP: ' . $e->getMessage() . ' na linha ' . $e->getLine()
+            'mensagem' => 'Erro interno ao processar a requisicao.'
         ], 200);
     }
 })->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class]);
+}

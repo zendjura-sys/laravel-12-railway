@@ -416,6 +416,36 @@ class Screens
         );
     }
 
+    /**
+     * Итог решения, принятого кнопкой прямо в чате.
+     *
+     * Карточку заявки заменяем итогом, а не оставляем кнопки: иначе
+     * второй администратор видит «Схвалити» у уже разобранной заявки и
+     * жмёт впустую.
+     */
+    public function reviewResult(string $message, ?TelegramApplication $application): array
+    {
+        $text = $this->head('РІШЕННЯ ЗА ЗАЯВКОЮ');
+
+        if ($application) {
+            $status = match ($application->status) {
+                TelegramApplication::STATUS_APPROVED => '✅  схвалено',
+                TelegramApplication::STATUS_REJECTED => '✖️  відхилено',
+                default => 'на розгляді',
+            };
+
+            $text .= '<b>'.e($application->nickname)."</b>\n".$status."\n";
+
+            if ($application->reviewer) {
+                $text .= '<i>'.e($application->reviewer->name)."</i>\n";
+            }
+
+            $text .= "\n";
+        }
+
+        return $this->screen($text.e($message)."\n\n".self::RULE, [[$this->backHome()]]);
+    }
+
     /* ==================== СЛУЖЕБНОЕ ==================== */
 
     /** Экран, когда бот не настроен или что-то пошло не так. */

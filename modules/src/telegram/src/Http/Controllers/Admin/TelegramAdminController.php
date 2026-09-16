@@ -4,6 +4,7 @@ namespace Addons\TelegramBot\Http\Controllers\Admin;
 
 use Addons\TelegramBot\Models\TelegramApplication;
 use Addons\TelegramBot\Models\TelegramLink;
+use Addons\TelegramBot\Services\ApplicationReview;
 use Addons\TelegramBot\Services\FamilyGroup;
 use Addons\TelegramBot\Services\TelegramClient;
 use App\Models\Setting;
@@ -74,66 +75,25 @@ class TelegramAdminController
     }
 
     /**
-     * Решение по заявке. Ответ уходит человеку в тот же чат, из которого
-     * заявка пришла: заставлять его самого заходить и проверять статус —
-     * ровно то, чего мы избегали, делая бота кнопочным.
+     * Решение по заявке. Сама логика — в ApplicationReview: то же решение
+     * принимают кнопками прямо в чате бота, и расходиться этим двум путям
+     * нельзя.
      */
-    public function review(Request $request, TelegramClient $telegram, FamilyGroup $group, TelegramApplication $application): JsonResponse
+    public function review(Request $request, ApplicationReview $review, TelegramApplication $application): JsonResponse
     {
         $data = $request->validate([
             'decision' => ['required', 'in:approve,reject'],
             'note' => ['nullable', 'string', 'max:500'],
         ]);
 
-        if (! $application->isPending()) {
-            return $this->json(false, 'Цю заявку вже розглянули.');
-        }
-
-        $approved = $data['decision'] === 'approve';
-
-        $application->update([
-            'status' => $approved ? TelegramApplication::STATUS_APPROVED : TelegramApplication::STATUS_REJECTED,
-            'review_note' => $data['note'] ?? null,
-            'reviewed_by' => $request->user()->id,
-            'reviewed_at' => now(),
-        ]);
-
-        $note = trim((string) ($data['note'] ?? ''));
-
-        $text = $approved
-            ? "◆  <b>ЗАЯВКУ СХВАЛЕНО</b>\n━━━━━━━━━━━━━━━\n\nВітаємо в Monsory Family, <b>".e($application->nickname)."</b>.\n\nЗ вами звʼяжеться керівництво щодо наступних кроків."
-            : "◆  <b>ЗАЯВКУ ВІДХИЛЕНО</b>\n━━━━━━━━━━━━━━━\n\nДякуємо за інтерес до Monsory Family.\nЦього разу не склалося — подати нову заявку можна будь-коли.";
-
-        if ($note !== '') {
-            $text .= "\n\n<b>Коментар:</b> ".e($note);
-        }
-
-        // Одобрили — сразу выдаём персональную ссылку в группу. Добавить
-        // человека самим нельзя: в Bot API нет такого метода, это умеет
-        // только клиентский API от имени самого пользователя. Вход в одно
-        // нажатие — максимум возможного.
-        $keyboard = null;
-        $inviteNote = '';
-
-        if ($approved) {
-            if (! $group->isConfigured()) {
-                $inviteNote = ' Група не вказана в налаштуваннях — посилання не надіслано.';
-            } elseif ($link = $group->inviteFor($application->fresh())) {
-                $text .= "\n\nЛишився один крок — увійдіть до групи родини.";
-                $keyboard = ['inline_keyboard' => [[['text' => '🚪  Увійти до групи', 'url' => $link]]]];
-            } else {
-                $inviteNote = ' Посилання створити не вдалося — перевірте, що бот є адміністратором групи з правом запрошувати.';
-            }
-        }
-
-        $delivered = $telegram->sendMessage($application->chat_id, $text, $keyboard) !== null;
-
-        return $this->json(
-            true,
-            ($approved ? 'Заявку схвалено.' : 'Заявку відхилено.')
-                .($delivered ? ' Повідомлення надіслано.' : ' Повідомлення в Telegram надіслати не вдалося.')
-                .$inviteNote,
+        $result = $review->decide(
+            $application,
+            $request->user(),
+            $data['decision'] === 'approve',
+            $data['note'] ?? null,
         );
+
+        return $this->json($result['ok'], $result['message']);
     }
 
     /**

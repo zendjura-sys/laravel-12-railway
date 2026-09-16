@@ -43,7 +43,7 @@ function destroyRole(role) {
     <Head title="Права доступу — Monsory Connect" />
 
     <AdminLayout title="Права доступу">
-        <form class="glass-panel mb-8 flex flex-wrap items-end gap-4 p-6" @submit.prevent="createRole">
+        <form v-reveal class="glass-panel mb-8 flex flex-wrap items-end gap-4 p-6" @submit.prevent="createRole">
             <div class="min-w-[220px]">
                 <label class="mb-2 block text-xs font-medium uppercase tracking-widest text-white/40">Нова роль</label>
                 <TextInput v-model="createForm.name" placeholder="напр. moderator" />
@@ -53,7 +53,7 @@ function destroyRole(role) {
         </form>
 
         <div class="space-y-6">
-            <div v-for="role in roles" :key="role.id" v-glow class="glass-panel p-6">
+            <div v-for="role in roles" :key="role.id" v-reveal v-glow class="glass-panel p-6">
                 <div class="mb-4 flex items-center justify-between">
                     <div>
                         <h3 class="font-display text-xl text-white">{{ role.name }}</h3>

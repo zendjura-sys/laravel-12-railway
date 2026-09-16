@@ -2,7 +2,7 @@
 import ApplicationLogo from '@/Components/ApplicationLogo.vue';
 import { Link } from '@inertiajs/vue3';
 import { ref } from 'vue';
-import { Blocks, LayoutDashboard, ScrollText, Settings, ShieldCheck, TrendingUp, Users, X } from '@lucide/vue';
+import { Blocks, LayoutDashboard, Menu, ScrollText, Settings, ShieldCheck, TrendingUp, Users, X } from '@lucide/vue';
 
 defineProps({
     title: { type: String, default: '' },
@@ -102,22 +102,27 @@ const mobileOpen = ref(false);
                 </div>
             </aside>
 
-            <!-- mobile toggle -->
-            <button
-                v-if="!mobileOpen"
-                class="glass-pill fixed left-4 top-4 z-50 px-4 py-2 text-xs uppercase tracking-widest text-white/70 lg:hidden"
-                @click="mobileOpen = true"
-            >
-                Меню
-            </button>
-
             <!-- ================= CONTENT ================= -->
-            <main class="min-h-screen flex-1 px-6 py-8 lg:ml-[17rem] lg:px-10">
-                <header v-if="title" class="mb-8">
-                    <h1 class="font-display text-3xl font-semibold text-white">{{ title }}</h1>
-                </header>
-                <slot />
-            </main>
+            <!-- Мобільна панель-тригер живе у звичайному потоці (sticky, не
+                 fixed) — саме тому вона більше не може перекрити заголовок
+                 сторінки: контент під нею відштовхується самою розміткою,
+                 а не підбором відступу навмання. -->
+            <div class="min-h-screen flex-1 lg:ml-[17rem]">
+                <div class="sticky top-0 z-30 flex items-center gap-3 border-b border-white/5 bg-obsidian-950/90 px-6 py-4 backdrop-blur-md lg:hidden">
+                    <button class="text-white/70 hover:text-white" aria-label="Відкрити меню" @click="mobileOpen = true">
+                        <Menu class="h-5 w-5" />
+                    </button>
+                    <ApplicationLogo mark class="h-7 w-7 text-sm" />
+                    <span class="font-display text-sm tracking-[0.2em] text-white">MONSORY CONNECT</span>
+                </div>
+
+                <main class="px-6 py-8 lg:px-10">
+                    <header v-if="title" class="mb-8">
+                        <h1 class="font-display text-3xl font-semibold text-white">{{ title }}</h1>
+                    </header>
+                    <slot />
+                </main>
+            </div>
         </div>
     </div>
 </template>

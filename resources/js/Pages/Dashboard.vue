@@ -30,14 +30,14 @@ function fmtDate(iso) {
         </template>
 
         <div class="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-            <div class="mb-8">
+            <div v-reveal class="mb-8">
                 <p class="text-white/50">
                     Вітаємо, <span class="text-gold-300">{{ $page.props.auth.user.name }}</span> — це ваш особистий кабінет Monsory Connect.
                 </p>
             </div>
 
             <!-- ================= ОБЛІКОВИЙ ЗАПИС ================= -->
-            <div v-glow class="glass-panel mb-8 grid gap-6 p-6 sm:grid-cols-3 sm:p-8">
+            <div v-reveal v-glow class="glass-panel mb-8 grid gap-6 p-6 sm:grid-cols-3 sm:p-8">
                 <div>
                     <p class="text-xs uppercase tracking-widest text-white/40">Ім'я</p>
                     <p class="mt-1 font-medium text-white">{{ $page.props.auth.user.name }}</p>
@@ -68,10 +68,12 @@ function fmtDate(iso) {
             </div>
 
             <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                <template v-for="card in cards" :key="card.name">
+                <template v-for="(card, i) in cards" :key="card.name">
                     <Link
                         v-if="route().has(card.name)"
                         :href="route(card.name)"
+                        v-reveal="'scale'"
+                        :style="{ transitionDelay: `${i * 80}ms` }"
                         v-glow class="group glass-panel relative overflow-hidden p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-gold"
                     >
                         <div class="glass-sheen"></div>
@@ -88,6 +90,7 @@ function fmtDate(iso) {
                         $page.props.can?.manageRoles || $page.props.can?.manageUsers
                     )"
                     :href="route('admin.dashboard')"
+                    v-reveal:240="'scale'"
                     v-glow class="group glass-panel-gold glass-panel relative overflow-hidden p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-gold"
                 >
                     <div class="glass-sheen"></div>
@@ -100,6 +103,7 @@ function fmtDate(iso) {
                     :href="telegramBotUrl"
                     target="_blank"
                     rel="noopener"
+                    v-reveal:320="'scale'"
                     v-glow class="group glass-panel relative overflow-hidden p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-gold"
                 >
                     <div class="glass-sheen"></div>
@@ -110,7 +114,7 @@ function fmtDate(iso) {
             </div>
 
             <!-- ================= МАСШТАБ РОДИНИ ================= -->
-            <div v-glow class="glass-panel mt-8 inline-flex items-baseline gap-3 p-6">
+            <div v-reveal v-glow class="glass-panel mt-8 inline-flex items-baseline gap-3 p-6">
                 <span class="font-display text-3xl text-gold-300">{{ memberCount }}</span>
                 <span class="text-xs uppercase tracking-widest text-white/40">учасників на сайті</span>
             </div>

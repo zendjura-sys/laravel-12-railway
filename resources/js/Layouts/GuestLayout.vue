@@ -19,7 +19,7 @@ import { Link } from '@inertiajs/vue3';
             </div>
         </Link>
 
-        <div v-glow class="glass-panel w-full max-w-md px-8 py-9">
+        <div v-reveal v-glow class="glass-panel w-full max-w-md px-8 py-9">
             <slot />
         </div>
     </div>

@@ -46,7 +46,7 @@ async function toggleRole(user, role) {
             />
         </div>
 
-        <div class="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02]">
+        <div v-reveal class="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02]">
             <div
                 v-for="user in users.data"
                 :key="user.id"

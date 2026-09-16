@@ -20,7 +20,7 @@ const sections = [
     <Head title="Панель CMS — Monsory Connect" />
 
     <AdminLayout>
-        <div class="mb-10">
+        <div v-reveal class="mb-10">
             <p class="mb-2 text-sm font-medium uppercase tracking-[0.4em] text-gold-300/90">Monsory Connect</p>
             <h1 class="font-display text-4xl font-semibold text-white">
                 Панель <span class="text-gradient-gold italic">керування</span>
@@ -29,25 +29,27 @@ const sections = [
         </div>
 
         <div class="mb-10 grid gap-6 sm:grid-cols-3">
-            <div v-glow class="glass-panel-gold glass-panel p-6">
+            <div v-reveal="'scale'" v-glow class="glass-panel-gold glass-panel p-6">
                 <p class="text-xs uppercase tracking-widest text-white/40">Учасників</p>
                 <p class="font-display mt-2 text-4xl text-gold-300">{{ stats.members }}</p>
             </div>
-            <div v-glow class="glass-panel p-6">
+            <div v-reveal:80="'scale'" v-glow class="glass-panel p-6">
                 <p class="text-xs uppercase tracking-widest text-white/40">Ролей у системі</p>
                 <p class="font-display mt-2 text-4xl text-white">{{ stats.roles }}</p>
             </div>
-            <div v-glow class="glass-panel p-6">
+            <div v-reveal:160="'scale'" v-glow class="glass-panel p-6">
                 <p class="text-xs uppercase tracking-widest text-white/40">Активних аддонів</p>
                 <p class="font-display mt-2 text-4xl text-white">{{ stats.activeAddons }}</p>
             </div>
         </div>
 
         <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            <template v-for="section in sections" :key="section.name">
+            <template v-for="(section, i) in sections" :key="section.name">
                 <Link
                     v-if="$page.props.can?.[section.can] && route().has(section.name)"
                     :href="route(section.name)"
+                    v-reveal="'scale'"
+                    :style="{ transitionDelay: `${i * 80}ms` }"
                     v-glow class="group glass-panel relative overflow-hidden p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-gold"
                 >
                     <div class="glass-sheen"></div>

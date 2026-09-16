@@ -195,8 +195,14 @@ ALTER USER '${DB_USER}'@'127.0.0.1' IDENTIFIED BY '${DB_PASSWORD}';
 GRANT ALL PRIVILEGES ON \`${DB_NAME}\`.* TO '${DB_USER}'@'127.0.0.1';
 FLUSH PRIVILEGES;
 SQL
-    umask 077
-    printf 'DB_DATABASE=%s\nDB_USERNAME=%s\nDB_PASSWORD=%s\n' "$DB_NAME" "$DB_USER" "$DB_PASSWORD" > "$CRED_FILE"
+    # umask строго в подоболочке, только на запись этого файла. Раньше он
+    # ставился на весь остаток скрипта и там же и оставался — в результате
+    # ВСЁ, что artisan создавал дальше (bootstrap/cache/*.php, packages.php,
+    # скомпилированные views), получало режим 600. Пока финальный chown
+    # передавал файлы www-data, это ещё сходило с рук, но стоило один раз
+    # выполнить `php artisan config:cache` от root — и www-data терял доступ
+    # к собственному кешу: сайт отдавал 500, а cron падал с Permission denied.
+    ( umask 077; printf 'DB_DATABASE=%s\nDB_USERNAME=%s\nDB_PASSWORD=%s\n' "$DB_NAME" "$DB_USER" "$DB_PASSWORD" > "$CRED_FILE" )
     echo "База ${DB_NAME} и пользователь ${DB_USER} готовы. Пароль сохранён в ${CRED_FILE}"
 else
     die "Клиент mysql не найден — база в стек не вошла."
@@ -310,6 +316,10 @@ log "Права на приложение"
 chown -R www-data:www-data "${APP_DIR}"
 chmod 600 "${APP_DIR}/.env"
 find "${APP_DIR}/storage" "${APP_DIR}/bootstrap/cache" -type d -exec chmod 775 {} \;
+# Режимы файлов выправляем явно, а не полагаемся на umask того, кто запустил
+# скрипт: кеш и логи должны читаться группой, иначе www-data спотыкается о
+# файл, созданный от root вручную между деплоями.
+find "${APP_DIR}/storage" "${APP_DIR}/bootstrap/cache" -type f -exec chmod 664 {} \;
 # .git теперь тоже принадлежит www-data — без этого следующий `git pull` от root
 # откажется работать с "detected dubious ownership in repository".
 git config --global --add safe.directory "${APP_DIR}"

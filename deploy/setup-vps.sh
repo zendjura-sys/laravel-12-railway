@@ -25,6 +25,39 @@ die()  { printf '\033[1;31m[x] %s\033[0m\n' "$*" >&2; exit 1; }
 [ "$(id -u)" -eq 0 ] || die "Запускать от root."
 [ -f "${APP_DIR}/artisan" ] || [ -f ./artisan ] || die "Не вижу artisan. Сначала помести код проекта в ${APP_DIR}."
 
+# ------------------------------------------------------- deploy status/log
+# Пишем сюда же, откуда сайт читает статус кнопки "Задеплоїти" в адмінці —
+# systemd-таймер запускает этот скрипт от root по изменению TRIGGER_FILE,
+# сам сайт root не получает никогда, только пишет метку в этот файл
+# (см. deploy/systemd/README.md).
+DEPLOY_DIR="${APP_DIR}/storage/app/deploy"
+TRIGGER_FILE="${DEPLOY_DIR}/trigger"
+STATUS_FILE="${DEPLOY_DIR}/status.json"
+LOG_FILE="${DEPLOY_DIR}/log.txt"
+mkdir -p "$DEPLOY_DIR"
+: > "$LOG_FILE"
+exec > >(tee -a "$LOG_FILE") 2>&1
+
+DEPLOY_STARTED_AT="$(date -Iseconds)"
+printf '{"status":"running","started_at":"%s","finished_at":null,"exit_code":null}\n' "$DEPLOY_STARTED_AT" > "$STATUS_FILE"
+
+deploy_finish() {
+    local code=$?
+    local finished_at
+    finished_at="$(date -Iseconds)"
+    if [ "$code" -eq 0 ]; then
+        printf '{"status":"success","started_at":"%s","finished_at":"%s","exit_code":0}\n' "$DEPLOY_STARTED_AT" "$finished_at" > "$STATUS_FILE"
+    else
+        printf '{"status":"failed","started_at":"%s","finished_at":"%s","exit_code":%s}\n' "$DEPLOY_STARTED_AT" "$finished_at" "$code" > "$STATUS_FILE"
+    fi
+    rm -f "$TRIGGER_FILE"
+    # Скрипт в итоге всегда запускается от root — эта строка гарантирует,
+    # что www-data (читающий статус для кнопки в адмінці) сможет прочитать
+    # файл вне зависимости от текущего umask, а не полагается на него.
+    chmod 644 "$STATUS_FILE" "$LOG_FILE" 2>/dev/null || true
+}
+trap deploy_finish EXIT
+
 # ------------------------------------------------------------- base packages
 export DEBIAN_FRONTEND=noninteractive
 log "Обновляю списки пакетов"

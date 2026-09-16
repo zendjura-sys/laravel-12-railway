@@ -1,12 +1,51 @@
 <script setup>
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { Head } from '@inertiajs/vue3';
-import { computed, ref } from 'vue';
+import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue';
 
 const props = defineProps({
     addons: { type: Object, required: true },
     recentAudit: { type: Array, default: () => [] },
 });
+
+/* ---------- деплой одним кліком: кнопка лише лишає мітку на сервері,
+   сам деплой виконує systemd-таймер від root, не сайт ---------- */
+const deployStatus = ref({ status: 'idle' });
+const deployLog = ref('');
+const deployTriggering = ref(false);
+const deployLogEl = ref(null);
+let deployPoll = null;
+
+async function fetchDeployStatus() {
+    const { data } = await window.axios.get('/admin/deploy/status');
+    deployStatus.value = data.data.status;
+    deployLog.value = data.data.log;
+    nextTick(() => {
+        if (deployLogEl.value) deployLogEl.value.scrollTop = deployLogEl.value.scrollHeight;
+    });
+    if (['pending', 'running'].includes(deployStatus.value.status)) {
+        if (!deployPoll) deployPoll = setInterval(fetchDeployStatus, 2000);
+    } else if (deployPoll) {
+        clearInterval(deployPoll);
+        deployPoll = null;
+    }
+}
+
+async function triggerDeploy() {
+    deployTriggering.value = true;
+    try {
+        const { data } = await window.axios.post('/admin/deploy/trigger');
+        pushToast(data.ok, data.message);
+        if (data.ok) fetchDeployStatus();
+    } catch (e) {
+        pushToast(false, e.response?.data?.message || 'Помилка запуску деплою');
+    } finally {
+        deployTriggering.value = false;
+    }
+}
+
+onMounted(fetchDeployStatus);
+onUnmounted(() => { if (deployPoll) clearInterval(deployPoll); });
 
 const TYPE_META = {
     core: { label: 'Core', hint: '(Core)(x.y.z)Name.zip', desc: 'Оновлення ядра платформи' },
@@ -284,6 +323,53 @@ const totalInstalled = computed(() =>
                 </div>
             </div>
         </Transition>
+
+        <!-- ================= ДЕПЛОЙ ================= -->
+        <div class="mt-16">
+            <h2 class="font-display mb-1 text-xl text-white">Деплой на сервер</h2>
+            <p class="mb-4 text-sm text-white/40">
+                Підтягує новий код з гілки й перезбирає застосунок. Потрібен лише для нових сторінок/дизайну — оновлення самих аддонів через ZIP тут не завантажуються.
+            </p>
+
+            <div class="rounded-2xl border border-white/10 bg-white/[0.02] p-6">
+                <div class="flex flex-wrap items-center gap-4">
+                    <button
+                        :disabled="deployTriggering || ['pending', 'running'].includes(deployStatus.status)"
+                        class="rounded-full bg-gradient-to-r from-gold-500 via-gold-300 to-gold-500 px-6 py-3 text-sm font-semibold uppercase tracking-widest text-obsidian-950 shadow-gold transition-transform hover:scale-[1.03] disabled:pointer-events-none disabled:opacity-40"
+                        @click="triggerDeploy"
+                    >
+                        <span v-if="deployStatus.status === 'running'">Виконується…</span>
+                        <span v-else-if="deployStatus.status === 'pending'">Заплановано…</span>
+                        <span v-else>🚀 Задеплоїти</span>
+                    </button>
+
+                    <span
+                        v-if="deployStatus.status === 'success'"
+                        class="rounded-full border border-emerald-400/30 bg-emerald-400/10 px-3 py-1 text-xs font-medium text-emerald-300"
+                    >
+                        Успішно · {{ new Date(deployStatus.finished_at).toLocaleString('uk-UA') }}
+                    </span>
+                    <span
+                        v-else-if="deployStatus.status === 'failed'"
+                        class="rounded-full border border-ember-500/30 bg-ember-600/10 px-3 py-1 text-xs font-medium text-ember-500"
+                    >
+                        Помилка (код {{ deployStatus.exit_code }}) · {{ new Date(deployStatus.finished_at).toLocaleString('uk-UA') }}
+                    </span>
+                    <span
+                        v-else-if="deployStatus.status === 'pending' || deployStatus.status === 'running'"
+                        class="rounded-full border border-gold-400/30 bg-gold-400/10 px-3 py-1 text-xs font-medium text-gold-300"
+                    >
+                        {{ deployStatus.status === 'pending' ? 'Очікує на таймер сервера…' : 'Триває…' }}
+                    </span>
+                </div>
+
+                <pre
+                    v-if="deployLog"
+                    ref="deployLogEl"
+                    class="mt-5 max-h-64 overflow-y-auto whitespace-pre-wrap rounded-xl border border-white/10 bg-obsidian-950 p-4 font-mono text-[11px] leading-relaxed text-white/50"
+                >{{ deployLog }}</pre>
+            </div>
+        </div>
 
         <!-- ================= AUDIT LOG ================= -->
         <div class="mt-16">

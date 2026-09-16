@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\AddonController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\DeployController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\UserController;
@@ -61,6 +62,14 @@ Route::middleware(['auth', 'verified', 'permission:addons.manage'])
         Route::post('/{addon}/deactivate', [AddonController::class, 'deactivate'])->name('deactivate');
         Route::post('/{addon}/migrate', [AddonController::class, 'migrate'])->name('migrate');
         Route::delete('/{addon}', [AddonController::class, 'destroy'])->name('destroy');
+    });
+
+Route::middleware(['auth', 'verified', 'permission:addons.manage'])
+    ->prefix('admin/deploy')
+    ->name('admin.deploy.')
+    ->group(function () {
+        Route::post('/trigger', [DeployController::class, 'trigger'])->name('trigger');
+        Route::get('/status', [DeployController::class, 'status'])->name('status');
     });
 
 Route::middleware(['auth', 'verified', 'permission:settings.manage'])

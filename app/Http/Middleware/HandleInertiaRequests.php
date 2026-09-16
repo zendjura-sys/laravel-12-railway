@@ -37,6 +37,7 @@ class HandleInertiaRequests extends Middleware
             'can' => [
                 'manageAddons' => $request->user()?->can('addons.manage') ?? false,
                 'manageReports' => $request->user()?->can('reports.manage') ?? false,
+                'manageProgression' => $request->user()?->can('progression.manage') ?? false,
             ],
         ];
     }

@@ -25,6 +25,88 @@
     }
 }
 
+/* ============ LIQUID GLASS ============
+   Настоящий glassmorphism требует трёх вещей одновременно: размытый цветной
+   свет ЗА панелью (иначе backdrop-blur размывает пустоту и выглядит как
+   обычная полупрозрачная заливка), многослойный полупрозрачный градиент
+   САМОЙ панели (не плоский bg-white/5), и тонкий внутренний блик по
+   верхнему краю (имитация преломления света в стекле). Без всех трёх
+   получается плоский "тёмный минимализм", а не стекло. */
+
+.aurora-orb {
+    position: absolute;
+    border-radius: 9999px;
+    filter: blur(90px);
+    pointer-events: none;
+    opacity: 0.55;
+}
+
+.glass-panel {
+    position: relative;
+    border-radius: 28px;
+    background: linear-gradient(155deg, rgba(255, 255, 255, 0.09) 0%, rgba(255, 255, 255, 0.02) 45%, rgba(255, 255, 255, 0.045) 100%);
+    -webkit-backdrop-filter: blur(28px) saturate(150%);
+    backdrop-filter: blur(28px) saturate(150%);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.16),
+        inset 0 0 40px rgba(255, 255, 255, 0.02),
+        0 20px 50px -15px rgba(0, 0, 0, 0.65),
+        0 0 0 1px rgba(0, 0, 0, 0.2);
+}
+
+.glass-panel-gold {
+    background: linear-gradient(155deg, rgba(212, 175, 55, 0.14) 0%, rgba(255, 255, 255, 0.02) 50%, rgba(212, 175, 55, 0.06) 100%);
+    border-color: rgba(212, 175, 55, 0.22);
+    box-shadow:
+        inset 0 1px 0 rgba(241, 226, 184, 0.35),
+        inset 0 0 50px rgba(212, 175, 55, 0.05),
+        0 20px 60px -15px rgba(0, 0, 0, 0.7),
+        0 0 40px -10px rgba(212, 175, 55, 0.25);
+}
+
+.glass-pill {
+    position: relative;
+    border-radius: 9999px;
+    background: linear-gradient(155deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.03) 100%);
+    -webkit-backdrop-filter: blur(20px) saturate(160%);
+    backdrop-filter: blur(20px) saturate(160%);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 8px 24px -8px rgba(0, 0, 0, 0.5);
+}
+
+/* Блик, который "проезжает" по стеклу при наведении — тот самый liquid-эффект. */
+.glass-sheen {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    overflow: hidden;
+    pointer-events: none;
+}
+.glass-sheen::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -60%;
+    width: 40%;
+    height: 200%;
+    background: linear-gradient(120deg, transparent, rgba(255, 255, 255, 0.16), transparent);
+    transform: rotate(20deg);
+    transition: left 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.group:hover .glass-sheen::before {
+    left: 130%;
+}
+
+@keyframes aurora-drift {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    33% { transform: translate(4%, -6%) scale(1.08); }
+    66% { transform: translate(-3%, 4%) scale(0.96); }
+}
+.animate-aurora {
+    animation: aurora-drift 22s ease-in-out infinite;
+}
+
 /* Scroll-reveal: elements start hidden/offset, JS flips .is-visible on intersect */
 [data-reveal] {
     opacity: 0;

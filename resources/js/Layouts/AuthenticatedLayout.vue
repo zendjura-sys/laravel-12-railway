@@ -62,6 +62,20 @@ const showingNavigationDropdown = ref(false);
                                 >
                                     Модерація звітів
                                 </NavLink>
+                                <NavLink
+                                    v-if="route().has('progression.index')"
+                                    :href="route('progression.index')"
+                                    :active="route().current('progression.*')"
+                                >
+                                    Мій прогрес
+                                </NavLink>
+                                <NavLink
+                                    v-if="route().has('admin.progression.index') && $page.props.can?.manageProgression"
+                                    :href="route('admin.progression.index')"
+                                    :active="route().current('admin.progression.*')"
+                                >
+                                    Progression адмін
+                                </NavLink>
                             </div>
                         </div>
 
@@ -189,6 +203,20 @@ const showingNavigationDropdown = ref(false);
                             :active="route().current('admin.reports.*')"
                         >
                             Модерація звітів
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink
+                            v-if="route().has('progression.index')"
+                            :href="route('progression.index')"
+                            :active="route().current('progression.*')"
+                        >
+                            Мій прогрес
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink
+                            v-if="route().has('admin.progression.index') && $page.props.can?.manageProgression"
+                            :href="route('admin.progression.index')"
+                            :active="route().current('admin.progression.*')"
+                        >
+                            Progression адмін
                         </ResponsiveNavLink>
                     </div>
 

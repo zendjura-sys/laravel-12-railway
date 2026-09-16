@@ -9,7 +9,7 @@
         {{-- Красит адресную строку браузера на телефоне в цвет фона сайта:
              без этого поверх тёмной страницы висит светлая полоса. --}}
         <meta name="theme-color" content="#060605">
-        <meta name="description" content="Monsory Family — закрита родина у Verba Online. Структура, звітність і прогрес учасників в одній системі.">
+        <meta name="description" content="Monsory Family — закрита родина на RP-сервері: спільний особняк і автопарк, свій звʼязок, спільні операції та власний кодекс.">
 
         <title inertia>{{ config('app.name', 'Laravel') }}</title>
 

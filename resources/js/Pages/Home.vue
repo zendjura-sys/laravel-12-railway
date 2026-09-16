@@ -48,9 +48,9 @@ const activeSection = ref('');
 let sectionObserver;
 
 const navLinks = [
-    { id: 'structure', label: 'Структура' },
     { id: 'family', label: 'Родина' },
-    { id: 'showcase', label: 'Verba Online' },
+    { id: 'roles', label: 'Ролі' },
+    { id: 'showcase', label: 'Атмосфера' },
     { id: 'goals', label: 'Цілі' },
     { id: 'legacy', label: 'Спадщина' },
 ];
@@ -113,22 +113,33 @@ onUnmounted(() => {
 
 const year = computed(() => new Date().getFullYear());
 
-const pillars = [
+// Те, що учасник реально отримує, вступивши в родину. Формулювання —
+// конкретні речі (склад, рація, завдання), а не абстракції на кшталт
+// «дружня атмосфера»: саме за конкретикою людина й обирає, куди вступати.
+const benefits = [
     {
-        title: 'Структура',
-        text: 'Чітка ієрархія родини: ролі, зони відповідальності та внутрішній порядок — не хаотичний чат, а організована спільнота.',
+        title: 'Спільне майно',
+        text: 'Особняк, автопарк і склад родини — у спільному користуванні. Не треба місяцями збирати на першу машину: усе потрібне для роботи видає склад.',
     },
     {
-        title: 'Рейтинги',
-        text: 'Особистий прогрес і ранги учасників з’являться на порталі одразу, як тільки буде активовано модуль Progression — архітектура вже готова прийняти його.',
+        title: 'Свій звʼязок',
+        text: 'Сімейний чат і рація для координації. Питання вирішується за секунди, а не пошуком потрібної людини по всьому серверу.',
     },
     {
-        title: 'Звітність',
-        text: 'Прозора система звітів за операціями та контрактами — кожна дія фіксується і може бути перевірена, без "на слово".',
+        title: 'Спільні заходи',
+        text: 'Захоплення територій, бізнес, поставки та операції. Поруч є й спокійніші легальні напрямки — кожен сам обирає, у чому бере участь.',
     },
     {
-        title: 'Прогрес',
-        text: 'Особисті цілі та цілі родини в одному місці, з реальним трекінгом виконання — не косметика, а робочий інструмент.',
+        title: 'Бонуси і прокачка',
+        text: 'Сімейні завдання та покращення, які дають пасивний дохід і підсилюють характеристики персонажа.',
+    },
+    {
+        title: 'Своя історія',
+        text: 'Традиції, дрес-код і кодекс родини. Ми граємо роль і будуємо власну історію, а не просто набиваємо статистику.',
+    },
+    {
+        title: 'Підтримка новачків',
+        text: 'Старші діляться грошима й транспортом, пояснюють правила сервера і прикривають від тих, хто вирішив, що новачок — легка ціль.',
     },
 ];
 
@@ -145,14 +156,14 @@ const paths = [
     },
     {
         title: 'Стратег',
-        text: 'Довгі цілі, репутація родини та відносини із зовнішнім світом Verba Online.',
+        text: 'Довгі цілі, репутація родини та відносини з іншими організаціями на сервері.',
         image: '/images/roles/michael-pistol.webp',
     },
 ];
 </script>
 
 <template>
-    <Head title="Monsory Family — Verba Online" />
+    <Head title="Monsory Family — закрита родина RP" />
 
     <!-- Умышленно БЕЗ bg-obsidian-950: непрозрачный фон на этой обёртке
          закрашивал собой все слои с отрицательным z-index — фото героя,
@@ -313,7 +324,7 @@ const paths = [
             <div class="relative mx-auto w-full max-w-7xl px-4 py-32 sm:px-6">
                 <div v-glow class="glass-panel max-w-2xl px-7 py-9 sm:px-11 sm:py-14">
                     <p v-reveal class="mb-6 text-[10px] font-medium uppercase tracking-[0.3em] text-gold-300/90 sm:text-xs sm:tracking-[0.5em]">
-                        Monsory Family · Verba Online
+                        Monsory Family · Закритий набір
                     </p>
 
                     <h1 v-reveal:150 class="text-balance font-display text-[2.75rem] font-semibold leading-[1.02] text-white sm:text-6xl lg:text-7xl">
@@ -322,9 +333,9 @@ const paths = [
                     </h1>
 
                     <p v-reveal:300 class="mt-7 max-w-xl text-base leading-relaxed text-white/60 sm:text-lg">
-                        Закрита сім'я, де статус підтверджують діями, розвиток
-                        вимірюється результатом, а сайт і Telegram працюють як
-                        одна система.
+                        Закрита родина на RP-сервері: спільний особняк і автопарк,
+                        свій звʼязок, спільні операції та власний кодекс. Тут
+                        новачка не кидають самого, а статус підтверджують діями.
                     </p>
 
                     <div v-reveal:450 class="mt-10 flex flex-wrap items-center gap-4 sm:gap-6">
@@ -366,11 +377,11 @@ const paths = [
         <div class="relative overflow-hidden border-y border-white/5 py-4">
             <div class="animate-marquee flex w-max gap-10 whitespace-nowrap text-xs uppercase tracking-[0.45em] text-white/25">
                 <span v-for="n in 2" :key="n" class="flex gap-10">
-                    <span>Verba Online</span>
-                    <span class="text-gold-400/70">◆</span>
                     <span>Monsory Family</span>
                     <span class="text-gold-400/70">◆</span>
-                    <span>Est. Legacy</span>
+                    <span>Спільне майно</span>
+                    <span class="text-gold-400/70">◆</span>
+                    <span>Свій кодекс</span>
                     <span class="text-gold-400/70">◆</span>
                     <span>Закритий набір</span>
                     <span class="text-gold-400/70">◆</span>
@@ -382,24 +393,29 @@ const paths = [
             <div class="pointer-events-none absolute inset-y-0 right-0 w-24 bg-gradient-to-l from-obsidian-950 to-transparent"></div>
         </div>
 
-        <!-- ================= СТРУКТУРА ================= -->
-        <section id="structure" class="relative mx-auto max-w-7xl px-4 py-24 sm:px-6 sm:py-28">
+        <!-- ================= ЩО ДАЄ РОДИНА ================= -->
+        <section id="family" class="relative mx-auto max-w-7xl px-4 py-24 sm:px-6 sm:py-28">
             <div v-reveal class="mx-auto mb-16 max-w-2xl text-center">
-                <p class="mb-4 text-[11px] font-medium uppercase tracking-[0.45em] text-gold-300/90">Як влаштована родина</p>
+                <p class="mb-4 text-[11px] font-medium uppercase tracking-[0.45em] text-gold-300/90">Навіщо вступати</p>
                 <h2 class="text-balance font-display text-4xl font-semibold text-white sm:text-5xl">
-                    Чотири опори <span class="text-gradient-gold italic">Monsory</span>
+                    Що дає <span class="text-gradient-gold italic">родина</span>
                 </h2>
+                <p class="mx-auto mt-6 max-w-xl leading-relaxed text-white/55">
+                    Родина — це не просто спільний тег у ніку. Це майно, звʼязок,
+                    спільні заходи й люди, які підтримають замість того, щоб
+                    дивитись, як ти розбираєшся сам.
+                </p>
             </div>
 
-            <!-- 4 колонки тільки з 1280px: на ноуті 1024–1280 чотири картки
-                 стискаються до ~220px і текст розсипається на 8 рядків,
-                 тому там 2×2. -->
-            <div class="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
+            <!-- 3 колонки з 1024px: шість карток лягають у рівні 2×3, а на
+                 планшеті 2×3 вертикально — без «осиротілої» картки в кінці
+                 останнього ряду, як було б при чотирьох колонках. -->
+            <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
                 <div
-                    v-for="(pillar, i) in pillars"
-                    :key="pillar.title"
+                    v-for="(benefit, i) in benefits"
+                    :key="benefit.title"
                     v-reveal="'scale'"
-                    :style="{ transitionDelay: `${i * 110}ms` }"
+                    :style="{ transitionDelay: `${i * 90}ms` }"
                     v-glow
                     class="group glass-panel relative overflow-hidden p-7 transition-all duration-700 hover:-translate-y-2"
                 >
@@ -409,8 +425,8 @@ const paths = [
                     <div class="text-outline-gold font-display relative mb-5 text-4xl leading-none transition-colors duration-500 group-hover:text-gold-400/25">
                         {{ String(i + 1).padStart(2, '0') }}
                     </div>
-                    <h3 class="relative mb-3 text-lg font-semibold text-white">{{ pillar.title }}</h3>
-                    <p class="relative text-sm leading-relaxed text-white/55">{{ pillar.text }}</p>
+                    <h3 class="relative mb-3 text-lg font-semibold text-white">{{ benefit.title }}</h3>
+                    <p class="relative text-sm leading-relaxed text-white/55">{{ benefit.text }}</p>
                 </div>
             </div>
         </section>
@@ -419,7 +435,7 @@ const paths = [
         <!-- Вирізані фігури, а не фонові кадри: кожна роль отримує власного
              персонажа, який стоїть "у кімнаті" сторінки — зі своїм світлом
              позаду і відображенням під ногами, а не наклеєний на темряву. -->
-        <section id="family" class="relative overflow-hidden py-24 sm:py-32">
+        <section id="roles" class="relative overflow-hidden py-24 sm:py-32">
             <div class="mx-auto max-w-7xl px-4 sm:px-6">
                 <div v-reveal class="mx-auto mb-16 max-w-2xl text-center">
                     <p class="mb-4 text-[11px] font-medium uppercase tracking-[0.45em] text-gold-300/90">Склад родини</p>
@@ -502,7 +518,7 @@ const paths = [
             <div v-reveal class="mx-auto mb-14 max-w-2xl text-center">
                 <p class="mb-4 text-[11px] font-medium uppercase tracking-[0.45em] text-gold-300/90">Атмосфера</p>
                 <h2 class="text-balance font-display text-4xl font-semibold text-white sm:text-5xl">
-                    Життя всередині <span class="text-gradient-gold italic">Verba Online</span>
+                    Життя <span class="text-gradient-gold italic">родини</span>
                 </h2>
             </div>
 
@@ -510,7 +526,7 @@ const paths = [
                 <div v-reveal="'left'" v-glow class="group glass-panel relative aspect-[4/3] overflow-hidden sm:aspect-[16/10]">
                     <img
                         src="/images/hero/ferrari-daylight.jpg"
-                        alt="Verba Online — вулиці міста на світанку"
+                        alt="Вулиці міста на світанку"
                         loading="lazy"
                         decoding="async"
                         class="img-cine h-full w-full object-cover group-hover:scale-[1.05]"
@@ -526,7 +542,7 @@ const paths = [
                 <div v-reveal="'right'" v-glow class="group glass-panel relative aspect-[4/3] overflow-hidden sm:aspect-[16/10]">
                     <img
                         src="/images/hero/chase.jpg"
-                        alt="Verba Online — нічна погоня вулицями міста"
+                        alt="Нічна погоня вулицями міста"
                         loading="lazy"
                         decoding="async"
                         class="img-cine h-full w-full object-cover group-hover:scale-[1.05]"
@@ -567,9 +583,10 @@ const paths = [
                         <span class="text-gradient-gold">Спільний результат.</span>
                     </blockquote>
                     <p v-reveal:300 class="mx-auto mt-8 max-w-xl leading-relaxed text-white/50">
-                        У кожного учасника свій шлях і свої задачі всередині Verba
-                        Online — але результат родини складається із суми дій
-                        кожного, а не з обіцянок.
+                        У кожного учасника свій шлях і свої задачі — хтось тримає
+                        бізнес, хтось працює в полі, хтось веде переговори. Але
+                        результат родини складається із суми дій кожного, а не
+                        з обіцянок.
                     </p>
                 </div>
             </div>
@@ -645,7 +662,7 @@ const paths = [
                             <span class="font-display text-lg tracking-[0.3em] text-white">MONSORY</span>
                         </div>
                         <p class="mt-4 max-w-xs text-sm leading-relaxed text-white/35">
-                            Закрита родина Verba Online. Статус підтверджують
+                            Закрита родина на RP-сервері. Статус підтверджують
                             діями, а не словами.
                         </p>
                     </div>
@@ -676,7 +693,7 @@ const paths = [
                 <hr class="hairline my-10" />
 
                 <p class="text-center text-xs tracking-wide text-white/25">
-                    © {{ year }} Monsory Family · Verba Online RP
+                    © {{ year }} Monsory Family
                 </p>
             </div>
         </footer>

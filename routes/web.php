@@ -45,7 +45,7 @@ Route::get('/theme-assets/{path}', [ThemeAssetController::class, 'show'])
     ->where('path', '.*')
     ->name('theme.asset');
 
-Route::middleware(['auth', 'verified', 'permission:addons.manage|reports.manage|progression.manage|settings.manage|roles.manage|users.manage|members.manage|goals.manage'])
+Route::middleware(['auth', 'verified', 'permission:addons.manage|reports.manage|progression.manage|settings.manage|roles.manage|users.manage|members.manage|goals.manage|broadcasts.manage'])
     ->get('/admin', [DashboardController::class, 'index'])
     ->name('admin.dashboard');
 

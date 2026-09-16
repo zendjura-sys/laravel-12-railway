@@ -68,10 +68,17 @@ const showingNavigationDropdown = ref(false);
                                 Цілі родини
                             </NavLink>
                             <NavLink
+                                v-if="route().has('notifications.index')"
+                                :href="route('notifications.index')"
+                                :active="route().current('notifications.*')"
+                            >
+                                Сповіщення
+                            </NavLink>
+                            <NavLink
                                 v-if="route().has('admin.dashboard') && (
                                     $page.props.can?.manageAddons || $page.props.can?.manageReports ||
                                     $page.props.can?.manageProgression || $page.props.can?.manageSettings ||
-                                    $page.props.can?.manageRoles || $page.props.can?.manageUsers || $page.props.can?.manageMembers || $page.props.can?.manageGoals
+                                    $page.props.can?.manageRoles || $page.props.can?.manageUsers || $page.props.can?.manageMembers || $page.props.can?.manageGoals || $page.props.can?.manageBroadcasts
                                 )"
                                 :href="route('admin.dashboard')"
                                 :active="route().current('admin.*')"
@@ -214,10 +221,17 @@ const showingNavigationDropdown = ref(false);
                         Цілі родини
                     </ResponsiveNavLink>
                     <ResponsiveNavLink
+                        v-if="route().has('notifications.index')"
+                        :href="route('notifications.index')"
+                        :active="route().current('notifications.*')"
+                    >
+                        Сповіщення
+                    </ResponsiveNavLink>
+                    <ResponsiveNavLink
                         v-if="route().has('admin.dashboard') && (
                             $page.props.can?.manageAddons || $page.props.can?.manageReports ||
                             $page.props.can?.manageProgression || $page.props.can?.manageSettings ||
-                            $page.props.can?.manageRoles || $page.props.can?.manageUsers || $page.props.can?.manageMembers || $page.props.can?.manageGoals
+                            $page.props.can?.manageRoles || $page.props.can?.manageUsers || $page.props.can?.manageMembers || $page.props.can?.manageGoals || $page.props.can?.manageBroadcasts
                         )"
                         :href="route('admin.dashboard')"
                         :active="route().current('admin.*')"

@@ -11,8 +11,31 @@ import { parallax } from './directives/parallax';
 import { magnetic } from './directives/magnetic';
 import CommandPalette from './Components/CommandPalette.vue';
 import PageTransition from './Components/PageTransition.vue';
+import { startSmoothScroll, handleAnchorClick, resetScroll } from './lib/smoothScroll';
+import { startCursor } from './lib/cursor';
+import { startAuroraShader } from './lib/auroraShader';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
+
+/**
+ * «Тяжёлые» украшения — инерционный скролл, кастомный курсор и шейдерный
+ * фон — включаются ПОСЛЕ монтирования и каждое решает само, уместно ли
+ * оно здесь: см. lib/motion.js. На телефоне остаётся то же, что и было,
+ * ПК получает полный набор.
+ */
+function startDecorations() {
+    startSmoothScroll();
+    startCursor();
+    startAuroraShader();
+
+    // Якорные ссылки ведёт Lenis, иначе «Посади» в шапке прыгает мимо
+    // всей плавности, ради которой он и ставился.
+    document.addEventListener('click', handleAnchorClick);
+
+    // Inertia меняет страницу без перезагрузки: браузер сам скролл
+    // наверх не вернёт, и новая страница открывается с середины.
+    document.addEventListener('inertia:navigate', resetScroll);
+}
 
 createInertiaApp({
     title: (title) => `${title} - ${appName}`,
@@ -22,7 +45,7 @@ createInertiaApp({
             import.meta.glob('./Pages/**/*.vue'),
         ),
     setup({ el, App, props, plugin }) {
-        return createApp({
+        const app = createApp({
             render: () => h('div', [h(PageTransition, () => h(App, props)), h(CommandPalette)]),
         })
             .use(plugin)
@@ -32,6 +55,10 @@ createInertiaApp({
             .directive('parallax', parallax)
             .directive('magnetic', magnetic)
             .mount(el);
+
+        startDecorations();
+
+        return app;
     },
     progress: {
         // Читаем из палитры, а не хексом: акцент задаётся в админке, и

@@ -2,6 +2,101 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer components {
+    /* ---------- шейдерный фон ----------
+       На той же глубине, что и CSS-аврора (-z-30): ниже — и его
+       перекрывали бы собственные фоны секций, а видно было бы только в
+       редких просветах, ради которых его не стоило писать. Холст в DOM
+       идёт первым, поэтому световые пятна авроры ложатся поверх него, а
+       не спорят с ним.
+
+       Если WebGL недоступен, уровень оформления ниже «повної», стоит
+       prefers-reduced-motion или машина слабая — холста просто нет, и
+       остаётся та же аврора, что была раньше. */
+    .aurora-shader {
+        position: fixed;
+        inset: 0;
+        z-index: -30;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        /* Плавное появление: включённый резко шейдер выглядит как
+           мигание страницы при загрузке. */
+        animation: aurora-shader-in 1.8s ease-out both;
+    }
+
+    @keyframes aurora-shader-in {
+        from { opacity: 0; }
+        to   { opacity: 1; }
+    }
+
+    /* ---------- кастомный курсор ---------- */
+    .cursor-dot,
+    .cursor-ring {
+        position: fixed;
+        top: 0;
+        left: 0;
+        z-index: 9999;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        will-change: transform;
+    }
+
+    .has-custom-cursor .cursor-dot,
+    .has-custom-cursor .cursor-ring {
+        opacity: 1;
+    }
+
+    .cursor-dot {
+        width: 6px;
+        height: 6px;
+        margin: -3px 0 0 -3px;
+        border-radius: 9999px;
+        background: rgb(var(--gold-300));
+        transition: opacity 0.3s ease, width 0.3s ease, height 0.3s ease, margin 0.3s ease;
+    }
+
+    .cursor-dot.is-active {
+        width: 0;
+        height: 0;
+        margin: 0;
+    }
+
+    .cursor-ring {
+        width: 30px;
+        height: 30px;
+        margin: -15px 0 0 -15px;
+        border: 1px solid rgb(var(--gold-400) / 0.5);
+        border-radius: 9999px;
+        transition: opacity 0.3s ease, width 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+            height 0.35s cubic-bezier(0.16, 1, 0.3, 1), margin 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+            background-color 0.35s ease, border-color 0.35s ease;
+    }
+
+    .cursor-ring.is-active {
+        width: 46px;
+        height: 46px;
+        margin: -23px 0 0 -23px;
+        background: rgb(var(--gold-400) / 0.1);
+        border-color: rgb(var(--gold-300) / 0.75);
+    }
+
+    .cursor-ring.is-pressed {
+        width: 22px;
+        height: 22px;
+        margin: -11px 0 0 -11px;
+    }
+
+    /* Родной курсор прячем только там, где его форма ничего не значит:
+       на полях ввода каретка — это подсказка, отнимать её нельзя. */
+    .has-custom-cursor body,
+    .has-custom-cursor a,
+    .has-custom-cursor button {
+        cursor: none;
+    }
+}
+
 @layer base {
     /* Густина атмосферы задаётся в админке (Дизайн → Оформлення) и
        приезжает атрибутом на <html>. Правила ниже гасят именно
@@ -14,6 +109,15 @@
        долей на всех: своя прозорість у них разная (аврора 0.55, зерно
        0.045), и общий множитель сделал бы зерно на порядок заметнее, а не
        тише. */
+    html.lenis-active {
+        scroll-behavior: auto;
+    }
+
+    /* Lenis сам ставит эти классы на время программной прокрутки. */
+    html.lenis-smooth iframe {
+        pointer-events: none;
+    }
+
     html[data-effects='soft'] .aurora-orb {
         opacity: 0.3;
     }
@@ -49,6 +153,9 @@
     }
 
     html {
+        /* Пока Lenis не запустился (тач, «вимкнена», reduced-motion), за
+           плавность отвечает браузер. Когда запустился — класс снимает
+           это правило: два аниматора скролла одновременно дают рывки. */
         scroll-behavior: smooth;
         /* Верхний отступ для якорных переходов — иначе фиксированная шапка
            накрывает заголовок секции, в которую только что проскроллили. */

@@ -8,6 +8,12 @@ export default {
         './storage/framework/views/*.php',
         './resources/views/**/*.blade.php',
         './resources/js/**/*.vue',
+        // .js обязателен: классы, которые навешиваются из скриптов
+        // (.aurora-shader, .cursor-dot, .cursor-ring), Tailwind иначе не
+        // находит и вырезает их правила из @layer components. Канвас
+        // шейдера тогда остаётся без position: fixed и, будучи блоком в
+        // натуральный размер, расталкивает всю страницу вниз.
+        './resources/js/**/*.js',
     ],
 
     theme: {

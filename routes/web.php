@@ -23,6 +23,13 @@ Route::get('/', function () {
         'canRegister' => Route::has('register'),
         'memberCount' => User::query()->count(),
         'telegramBotUrl' => TelegramLink::url(),
+        // Содержание берётся из config/family.php — тот же источник, из
+        // которого читает бот в Telegram. Пока список жил во Vue, правка
+        // должностей означала расхождение: на сайте одно, в боте другое.
+        'positions' => config('family.positions'),
+        'baseCount' => config('family.base_count'),
+        'directions' => config('family.directions'),
+        'promotionCriteria' => config('family.promotion_criteria'),
     ]);
 })->name('home');
 

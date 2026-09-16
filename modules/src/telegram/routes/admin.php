@@ -10,4 +10,6 @@ Route::middleware(['web', 'auth', 'verified', 'permission:telegram.manage'])
         Route::get('/', [TelegramAdminController::class, 'index'])->name('index');
         Route::post('/webhook', [TelegramAdminController::class, 'setupWebhook'])->name('webhook.setup');
         Route::delete('/webhook', [TelegramAdminController::class, 'removeWebhook'])->name('webhook.remove');
+        Route::post('/applications/{application}/review', [TelegramAdminController::class, 'review'])
+            ->name('applications.review');
     });

@@ -10,6 +10,12 @@ const props = defineProps({
     canRegister: { type: Boolean, default: false },
     memberCount: { type: Number, default: 0 },
     telegramBotUrl: { type: String, default: null },
+    // Содержание приходит из config/family.php — единый источник для сайта
+    // и бота в Telegram. Здесь остаётся только отображение.
+    positions: { type: Array, default: () => [] },
+    baseCount: { type: Number, default: 5 },
+    directions: { type: Array, default: () => [] },
+    promotionCriteria: { type: Array, default: () => [] },
 });
 
 /* ---------- куди веде «Подати заявку» ----------
@@ -18,6 +24,14 @@ const props = defineProps({
    цьому випадку підставлявся href="#", і головний заклик лендінгу мовчки
    нічого не робив. target="_blank" ставимо тільки для зовнішнього посилання —
    внутрішню сторінку відкривати в новій вкладці немає сенсу. */
+/* ---------- контент родини ----------
+   Перші baseCount посад — основний склад, решта — напрямки й керівництво.
+   На сайті вони рознесені у два блоки саме по цій межі. */
+const basePositions = computed(() => props.positions.slice(0, props.baseCount));
+const topPositions = computed(() => props.positions.slice(props.baseCount));
+const directions = computed(() => props.directions);
+const promotionCriteria = computed(() => props.promotionCriteria);
+
 const applyUrl = computed(() => props.telegramBotUrl || route('register'));
 const applyExternal = computed(() => Boolean(props.telegramBotUrl));
 
@@ -155,91 +169,15 @@ const benefits = [
 // Тут навмисно названа сама РОБОТА, а не посади: посади Юрист і Охорона
 // показані нижче, у вертикалі з десяти. Інакше вони зустрічалися б на
 // сторінці двічі й читались як дві різні системи.
-const directions = [
-    {
-        title: 'Бізнес-війни',
-        tag: 'Бойовий напрямок',
-        text: 'Боротьба за контроль над бізнесами. Від того, хто виходить на БВ, залежить, чи втримає родина те, що вже здобула.',
-        image: '/images/roles/dir-guard.webp',
-    },
-    {
-        title: 'Контракти',
-        tag: 'Контрактний напрямок',
-        text: 'Робота, яка тримає бюджет родини. Стабільний результат тут цінується вище за разові подвиги.',
-        image: '/images/roles/dir-lawyer.webp',
-    },
-];
 
 // Перші пʼять посад — шлях новачка. Саме вони цікавлять того, хто тільки
 // думає вступати, тому показані великими картками з персонажами.
-const basePositions = [
-    {
-        title: 'Стажер',
-        text: 'Точка входу для всіх без винятку. Придивляємось одне до одного: ти до родини, родина до тебе.',
-        image: '/images/roles/rank-trainee.webp',
-    },
-    {
-        title: 'Асистент',
-        text: 'Перший крок після стажування. З’являються власні задачі й перша довіра.',
-        image: '/images/roles/rank-assistant.webp',
-    },
-    {
-        title: 'Спеціаліст',
-        text: 'Ти вже розібрався, як усе влаштовано, і працюєш самостійно, без нагляду.',
-        image: '/images/roles/rank-specialist.webp',
-    },
-    {
-        title: 'Менеджер',
-        text: 'Тягнеш власну ділянку роботи й допомагаєш тим, хто прийшов пізніше.',
-        image: '/images/roles/rank-manager.webp',
-    },
-    {
-        title: 'Старший менеджер',
-        text: 'Верхівка основного складу. Тобі довіряють задачі, від яких залежить родина.',
-        image: '/images/roles/rank-senior.webp',
-    },
-];
 
 // Посади 6–10. Оформлені так само, як і перші пʼять: вертикаль має
 // читатися як один суцільний шлях, а не як «ті, що з фото» і «решта».
-const topPositions = [
-    {
-        title: 'Юрист',
-        text: 'Контрактний напрямок: виконання контрактів, які тримають бюджет родини.',
-        image: '/images/roles/pos-lawyer.webp',
-    },
-    {
-        title: 'Охорона',
-        text: 'Бойовий напрямок: участь у бізнес-війнах за контроль над бізнесами.',
-        image: '/images/roles/pos-guard.webp',
-    },
-    {
-        title: 'Інвестор',
-        text: 'Підсилює родину ресурсом і вкладається в її розвиток та активи.',
-        image: '/images/roles/pos-investor.webp',
-    },
-    {
-        title: 'Заступник директора',
-        text: 'Веде свій напрямок, ініціює кадрові рішення та узгоджує їх із директором.',
-        image: '/images/roles/pos-deputy.webp',
-    },
-    {
-        title: 'Директор',
-        text: 'Глава родини. Приймає ключові та кінцеві рішення.',
-        image: '/images/roles/pos-director.webp',
-    },
-];
 
 // Те, на що дивляться при підвищенні. Свідомо без «відпрацюй N днів» —
 // у родині немає строку, після якого посада видається автоматично.
-const promotionCriteria = [
-    'стабільна активна гра',
-    'участь у житті родини',
-    'виконання контрактів',
-    'поповнення бюджету родини',
-    'допомога іншим учасникам',
-    'адекватність і дотримання правил',
-];
 
 // Структура подана за функціями, без ігрових ніків: сайт публічний, а
 // персональний склад керівництва — це вже внутрішня інформація родини.

@@ -11,6 +11,7 @@ const cards = [
     { name: 'reports.index', title: 'Мої звіти', text: 'Подайте звіт за KAPT чи контрактом та слідкуйте за статусом розгляду.' },
     { name: 'progression.index', title: 'Мій прогрес', text: 'XP, ранг, досягнення та історія нарахувань.' },
     { name: 'progression.leaderboard', title: 'Рейтинг родини', text: 'Хто зараз попереду за очками прогресу.' },
+    { name: 'member-center.index', title: 'Кадровий центр', text: 'Ваш статус у родині та заявки на відпустку.' },
 ];
 
 function fmtDate(iso) {
@@ -87,7 +88,7 @@ function fmtDate(iso) {
                     v-if="route().has('admin.dashboard') && (
                         $page.props.can?.manageAddons || $page.props.can?.manageReports ||
                         $page.props.can?.manageProgression || $page.props.can?.manageSettings ||
-                        $page.props.can?.manageRoles || $page.props.can?.manageUsers
+                        $page.props.can?.manageRoles || $page.props.can?.manageUsers || $page.props.can?.manageMembers
                     )"
                     :href="route('admin.dashboard')"
                     v-reveal:240="'scale'"

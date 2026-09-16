@@ -50,7 +50,7 @@ let sectionObserver;
 const navLinks = [
     { id: 'family', label: 'Родина' },
     { id: 'roles', label: 'Напрямки' },
-    { id: 'ranks', label: 'Ранги' },
+    { id: 'positions', label: 'Посади' },
     { id: 'structure', label: 'Структура' },
     { id: 'legacy', label: 'Спадщина' },
 ];
@@ -143,8 +143,8 @@ const benefits = [
     },
 ];
 
-// Два реальних напрямки родини. Це посади, а не сходинки рангу: на напрямок
-// переводять окремо, і потрапити туди можна навіть із нижчого рангу.
+// Два робочі напрямки родини — 6-та і 7-ма посади у вертикалі. На них
+// переводять окремо: потрапити можна навіть із нижчої посади.
 const directions = [
     {
         title: 'Охоронець',
@@ -160,8 +160,9 @@ const directions = [
     },
 ];
 
-// Вертикаль основного складу. Порядок важливий — це шлях, а не перелік.
-const ranks = [
+// Перші пʼять посад — шлях новачка. Саме вони цікавлять того, хто тільки
+// думає вступати, тому показані великими картками з персонажами.
+const basePositions = [
     {
         title: 'Стажер',
         text: 'Точка входу для всіх без винятку. Придивляємось одне до одного: ти до родини, родина до тебе.',
@@ -189,8 +190,34 @@ const ranks = [
     },
 ];
 
+// Посади 6–10. Подані компактно свідомо: Юрист і Охорона вже мають власні
+// великі картки в секції «Напрямки» вище, а керівні посади — це не те, куди
+// заходять з вулиці, тому детальних описів тут не потрібно.
+const topPositions = [
+    {
+        title: 'Юрист',
+        text: 'Контрактний напрямок: виконання контрактів, які тримають бюджет родини.',
+    },
+    {
+        title: 'Охорона',
+        text: 'Бойовий напрямок: участь у бізнес-війнах за контроль над бізнесами.',
+    },
+    {
+        title: 'Інвестор',
+        text: 'Підсилює родину ресурсом і вкладається в її розвиток та активи.',
+    },
+    {
+        title: 'Заступник директора',
+        text: 'Веде свій напрямок, ініціює кадрові рішення та узгоджує їх із директором.',
+    },
+    {
+        title: 'Директор',
+        text: 'Глава родини. Приймає ключові та кінцеві рішення.',
+    },
+];
+
 // Те, на що дивляться при підвищенні. Свідомо без «відпрацюй N днів» —
-// у родині немає строку, після якого ранг видається автоматично.
+// у родині немає строку, після якого посада видається автоматично.
 const promotionCriteria = [
     'стабільна активна гра',
     'участь у житті родини',
@@ -511,10 +538,10 @@ const leadership = [
                         Два напрямки. <span class="text-gradient-gold italic">Один результат.</span>
                     </h2>
                     <p class="mx-auto mt-6 max-w-xl leading-relaxed text-white/55">
-                        Окрім основного складу, у родині є два напрямки. Це не
-                        сходинки рангу, а посади: на них переводять окремо, і
-                        потрапити туди можна навіть із нижчого рангу — якщо
-                        людина себе показала.
+                        Над основним складом стоять два робочі напрямки — 6-та і
+                        7-ма посади. Це вже робота з обовʼязками: на них
+                        переводять окремо, і потрапити туди можна навіть із
+                        нижчої посади, якщо людина себе показала.
                     </p>
                 </div>
 
@@ -574,7 +601,7 @@ const leadership = [
         </section>
 
         <!-- ================= РАНГИ ================= -->
-        <section id="ranks" class="relative overflow-hidden py-24 sm:py-28">
+        <section id="positions" class="relative overflow-hidden py-24 sm:py-28">
             <div class="mx-auto max-w-7xl px-4 sm:px-6">
                 <div v-reveal class="mx-auto mb-16 max-w-2xl text-center">
                     <p class="mb-4 text-[11px] font-medium uppercase tracking-[0.45em] text-gold-300/90">Система розвитку</p>
@@ -582,17 +609,21 @@ const leadership = [
                         Шлях від <span class="text-gradient-gold italic">стажера</span>
                     </h2>
                     <p class="mx-auto mt-6 max-w-xl leading-relaxed text-white/55">
-                        Кожен починає з найнижчого рангу — без винятків. Ранг тут
-                        не напис біля ніку, а показник активності, внеску в
-                        родину й довіри керівництва.
+                        У родині десять посад. Кожен починає з найнижчої — без
+                        винятків. Посада тут не напис біля ніку, а показник
+                        активності, внеску в родину й довіри керівництва.
                     </p>
                 </div>
+
+                <p v-reveal class="mb-6 text-center text-[10px] uppercase tracking-[0.35em] text-gold-300/70">
+                    Основний склад · 01–05
+                </p>
 
                 <!-- П'ять сходинок: на телефоні одна колонка, з планшета дві,
                      з 1280px — усі п'ять в один ряд, як драбина зліва направо. -->
                 <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
                     <div
-                        v-for="(rank, i) in ranks"
+                        v-for="(rank, i) in basePositions"
                         :key="rank.title"
                         v-reveal="'scale'"
                         :style="{ transitionDelay: `${i * 90}ms` }"
@@ -605,7 +636,7 @@ const leadership = [
                             <div class="pointer-events-none absolute left-1/2 top-1/4 h-32 w-32 -translate-x-1/2 rounded-full bg-gold-500/20 blur-[50px] transition-all duration-700 group-hover:bg-gold-400/30"></div>
                             <img
                                 :src="rank.image"
-                                :alt="`Ранг: ${rank.title}`"
+                                :alt="`Посада в родині: ${rank.title}`"
                                 loading="lazy"
                                 decoding="async"
                                 class="img-cine relative mx-auto h-full w-auto object-contain drop-shadow-[0_22px_35px_rgba(0,0,0,0.8)] transition-transform duration-700 group-hover:-translate-y-1"
@@ -621,6 +652,32 @@ const leadership = [
                             <h3 class="font-semibold text-white">{{ rank.title }}</h3>
                             <p class="mt-2 text-[13px] leading-relaxed text-white/50">{{ rank.text }}</p>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Верхні пʼять посад — без фотографій і компактніше: сюди
+                     не приходять із вулиці, а Юрист і Охорона вже показані
+                     великими картками в секції «Напрямки». -->
+                <p v-reveal class="mb-6 mt-14 text-center text-[10px] uppercase tracking-[0.35em] text-gold-300/70">
+                    Напрямки та керівництво · 06–10
+                </p>
+
+                <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+                    <div
+                        v-for="(rank, i) in topPositions"
+                        :key="rank.title"
+                        v-reveal="'scale'"
+                        :style="{ transitionDelay: `${i * 80}ms` }"
+                        v-glow
+                        class="group glass-panel relative overflow-hidden px-5 py-5 transition-all duration-700 hover:-translate-y-1.5"
+                    >
+                        <div class="glass-sheen"></div>
+                        <div class="relative mb-2.5 flex items-center gap-2.5">
+                            <span class="font-display text-sm text-gold-400/70">{{ i + 6 }}</span>
+                            <span class="h-px flex-1 bg-gradient-to-r from-gold-400/30 to-transparent"></span>
+                        </div>
+                        <h3 class="relative font-semibold text-white">{{ rank.title }}</h3>
+                        <p class="relative mt-2 text-[13px] leading-relaxed text-white/50">{{ rank.text }}</p>
                     </div>
                 </div>
 
@@ -642,13 +699,13 @@ const leadership = [
                     <div v-reveal="'right'" v-glow class="glass-panel-gold glass-panel px-7 py-8">
                         <h3 class="font-display text-xl text-white">Як отримати підвищення</h3>
                         <p class="mt-5 text-sm leading-relaxed text-white/60">
-                            Фіксованої кількості днів, після якої ранг видається
+                            Фіксованої кількості днів, після якої посада видається
                             автоматично, не існує. Заступники бачать, хто грає на
                             результат, а хто просто числиться у складі.
                         </p>
                         <p class="mt-4 text-sm leading-relaxed text-white/60">
                             Показуєш результат — рухаєшся далі. А от випрошування
-                            рангу, навпаки, помітно зменшує шанси його отримати.
+                            посади, навпаки, помітно зменшує шанси її отримати.
                         </p>
                     </div>
                 </div>

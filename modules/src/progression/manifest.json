@@ -1,0 +1,19 @@
+{
+    "type": "module",
+    "slug": "progression-statistics",
+    "name": "Progression & Statistics",
+    "version": "1.0.0",
+    "description": "XP, рівні, ранги, досягнення, тижневі бонуси та leaderboard. Слухає report.reviewed від модуля Reports (Reports має бути активний і встановлений раніше — інакше XP просто не нараховується, помилки не буде).",
+    "min_core_version": "1.0.0",
+    "entrypoints": {
+        "web": "routes/web.php",
+        "admin": "routes/admin.php",
+        "events": "routes/events.php"
+    },
+    "migrations": "migrations",
+    "autoload": {
+        "psr4": {
+            "Addons\\Progression\\": "src/"
+        }
+    }
+}

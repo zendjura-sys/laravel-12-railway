@@ -1,0 +1,18 @@
+{
+    "type": "module",
+    "slug": "telegram-bot",
+    "name": "Telegram Bot",
+    "version": "1.0.0",
+    "description": "Прив'язка Telegram-акаунту до профілю на сайті через бота, вебхук на вхідні команди (/start, /link, /status) та відправка повідомлень назовні. Токен бота й юзернейм читаються з уже наявних налаштувань Telegram в адмінці.",
+    "min_core_version": "1.0.0",
+    "entrypoints": {
+        "web": "routes/web.php",
+        "admin": "routes/admin.php"
+    },
+    "migrations": "migrations",
+    "autoload": {
+        "psr4": {
+            "Addons\\TelegramBot\\": "src/"
+        }
+    }
+}

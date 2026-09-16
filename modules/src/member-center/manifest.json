@@ -1,0 +1,18 @@
+{
+    "type": "module",
+    "slug": "member-center",
+    "name": "Member Center & HR",
+    "version": "1.0.0",
+    "description": "Кадровий облік родини: статус учасника, приватні нотатки HR та заявки на відпустку/паузу. Незалежний від Reports/Progression — не слухає і не диспатчить жодних подій.",
+    "min_core_version": "1.0.0",
+    "entrypoints": {
+        "web": "routes/web.php",
+        "admin": "routes/admin.php"
+    },
+    "migrations": "migrations",
+    "autoload": {
+        "psr4": {
+            "Addons\\MemberCenter\\": "src/"
+        }
+    }
+}

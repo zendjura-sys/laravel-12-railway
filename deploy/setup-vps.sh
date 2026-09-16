@@ -12,6 +12,17 @@
 set -euo pipefail
 
 APP_DIR="${APP_DIR:-/var/www/laravel}"
+
+# Домен запоминается между прогонами. Без этого APP_DOMAIN молча падал в "_"
+# на любом повторном деплое, где его забыли передать, — а server_name "_" в
+# конфиге nginx означает, что certbot больше не находит блок для домена и
+# HTTPS не поднимается. Отдельно это ломало кнопку "Задеплоїти" в админке:
+# systemd-юнит запускает скрипт вообще без переменных окружения, так что
+# каждое её нажатие сбрасывало домен, хотя человек ничего не менял.
+DOMAIN_STATE_FILE="/etc/laravel-deploy-domain"
+if [ -z "${APP_DOMAIN:-}" ] && [ -r "$DOMAIN_STATE_FILE" ]; then
+    APP_DOMAIN="$(cat "$DOMAIN_STATE_FILE")"
+fi
 APP_DOMAIN="${APP_DOMAIN:-_}"
 DB_NAME="${DB_NAME:-laravel}"
 DB_USER="${DB_USER:-laravel}"
@@ -23,6 +34,12 @@ warn() { printf '\033[1;33m[!] %s\033[0m\n' "$*"; }
 die()  { printf '\033[1;31m[x] %s\033[0m\n' "$*" >&2; exit 1; }
 
 [ "$(id -u)" -eq 0 ] || die "Запускать от root."
+
+# Пишем сюда только реальный домен: "_" запоминать нечего, иначе следующий
+# прогон с уже переданным APP_DOMAIN не смог бы его перебить.
+if [ "$APP_DOMAIN" != "_" ]; then
+    printf '%s\n' "$APP_DOMAIN" > "$DOMAIN_STATE_FILE"
+fi
 [ -f "${APP_DIR}/artisan" ] || [ -f ./artisan ] || die "Не вижу artisan. Сначала помести код проекта в ${APP_DIR}."
 
 # ------------------------------------------------------- deploy status/log

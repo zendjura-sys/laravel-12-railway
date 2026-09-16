@@ -392,6 +392,32 @@ if systemctl is-active --quiet nginx; then
 else
     systemctl enable --now nginx
 fi
+
+# ----------------------------------------------------------------------- https
+# Конфиг nginx выше переписывается из шаблона на КАЖДОМ прогоне, а в шаблоне
+# только 80-й порт. Всё, что certbot дописал туда при выпуске сертификата,
+# каждый деплой стирал: сертификат оставался на диске, но nginx переставал
+# слушать 443 — сайт открывался только по http, а в браузере пользователя
+# https просто переставал отвечать. Поэтому после перезаписи конфига
+# возвращаем HTTPS на место.
+#
+# certbot --nginx идемпотентен: с --keep-until-expiring он не перевыпускает
+# живой сертификат, а только заново прописывает его в конфиг.
+if [ "$APP_DOMAIN" != "_" ] && command -v certbot >/dev/null 2>&1; then
+    PRIMARY_DOMAIN="${APP_DOMAIN%% *}"
+    if [ -d "/etc/letsencrypt/live/${PRIMARY_DOMAIN}" ]; then
+        log "Возвращаю HTTPS в конфиг nginx"
+        CERT_DOMAINS=""
+        for d in $APP_DOMAIN; do CERT_DOMAINS="${CERT_DOMAINS} -d ${d}"; done
+        # shellcheck disable=SC2086
+        certbot --nginx ${CERT_DOMAINS} --non-interactive --agree-tos --keep-until-expiring \
+            --redirect -m "${CERTBOT_EMAIL:-admin@${PRIMARY_DOMAIN}}" \
+            || warn "certbot не смог перенастроить nginx — проверь вручную: certbot --nginx${CERT_DOMAINS}"
+    else
+        warn "Сертификата для ${PRIMARY_DOMAIN} нет — сайт будет только по http."
+        warn "Выпустить: certbot --nginx -d ${APP_DOMAIN// / -d } --agree-tos -m ПОЧТА"
+    fi
+fi
 # Перезапускаем (не reload и не enable --now, который на уже работающий
 # сервис ничего не делает) обязательно КАЖДЫЙ прогон: OPcache держит
 # скомпилированный код всех .php файлов в разделяемой памяти мастер-процесса,

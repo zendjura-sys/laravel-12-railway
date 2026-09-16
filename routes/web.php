@@ -26,7 +26,10 @@ Route::get('/', function () {
 })->name('home');
 
 Route::get('/dashboard', function () {
-    return Inertia::render('Dashboard');
+    return Inertia::render('Dashboard', [
+        'memberCount' => User::query()->count(),
+        'telegramBotUrl' => Setting::get('telegram_bot_url') ?: config('services.telegram.bot_url', '#'),
+    ]);
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {

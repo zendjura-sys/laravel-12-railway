@@ -2,11 +2,21 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, Link } from '@inertiajs/vue3';
 
+defineProps({
+    memberCount: { type: Number, default: 0 },
+    telegramBotUrl: { type: String, default: '#' },
+});
+
 const cards = [
     { name: 'reports.index', title: 'Мої звіти', text: 'Подайте звіт за KAPT чи контрактом та слідкуйте за статусом розгляду.' },
     { name: 'progression.index', title: 'Мій прогрес', text: 'XP, ранг, досягнення та історія нарахувань.' },
     { name: 'progression.leaderboard', title: 'Рейтинг родини', text: 'Хто зараз попереду за очками прогресу.' },
 ];
+
+function fmtDate(iso) {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleDateString('uk-UA', { day: '2-digit', month: 'long', year: 'numeric' });
+}
 </script>
 
 <template>
@@ -24,6 +34,37 @@ const cards = [
                 <p class="text-white/50">
                     Вітаємо, <span class="text-gold-300">{{ $page.props.auth.user.name }}</span> — це ваш особистий кабінет Monsory Connect.
                 </p>
+            </div>
+
+            <!-- ================= ОБЛІКОВИЙ ЗАПИС ================= -->
+            <div v-glow class="glass-panel mb-8 grid gap-6 p-6 sm:grid-cols-3 sm:p-8">
+                <div>
+                    <p class="text-xs uppercase tracking-widest text-white/40">Ім'я</p>
+                    <p class="mt-1 font-medium text-white">{{ $page.props.auth.user.name }}</p>
+                </div>
+                <div>
+                    <p class="text-xs uppercase tracking-widest text-white/40">Email</p>
+                    <p class="mt-1 flex items-center gap-2 font-medium text-white">
+                        {{ $page.props.auth.user.email }}
+                        <span
+                            v-if="$page.props.auth.user.email_verified_at"
+                            class="rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2 py-0.5 text-[10px] uppercase tracking-wide text-emerald-300"
+                        >Підтверджено</span>
+                        <span
+                            v-else
+                            class="rounded-full border border-gold-400/30 bg-gold-400/10 px-2 py-0.5 text-[10px] uppercase tracking-wide text-gold-300"
+                        >Не підтверджено</span>
+                    </p>
+                </div>
+                <div>
+                    <p class="text-xs uppercase tracking-widest text-white/40">У родині з</p>
+                    <p class="mt-1 font-medium text-white">{{ fmtDate($page.props.auth.user.created_at) }}</p>
+                </div>
+                <div class="sm:col-span-3">
+                    <Link :href="route('profile.edit')" class="text-xs uppercase tracking-widest text-gold-300/80 hover:text-gold-200">
+                        Редагувати профіль →
+                    </Link>
+                </div>
             </div>
 
             <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
@@ -54,6 +95,24 @@ const cards = [
                     <p class="relative mt-2 text-sm leading-relaxed text-white/60">Аддони, права доступу, учасники, Telegram і Discord — керування всім сайтом.</p>
                     <span class="relative mt-4 inline-block text-xs uppercase tracking-widest text-gold-300">Відкрити →</span>
                 </Link>
+
+                <a
+                    :href="telegramBotUrl"
+                    target="_blank"
+                    rel="noopener"
+                    v-glow class="group glass-panel relative overflow-hidden p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-gold"
+                >
+                    <div class="glass-sheen"></div>
+                    <h3 class="relative font-semibold text-white">Telegram родини</h3>
+                    <p class="relative mt-2 text-sm leading-relaxed text-white/50">Оновлення, оголошення та швидкий зв'язок — усе в одному боті.</p>
+                    <span class="relative mt-4 inline-block text-xs uppercase tracking-widest text-gold-300/80">Перейти →</span>
+                </a>
+            </div>
+
+            <!-- ================= МАСШТАБ РОДИНИ ================= -->
+            <div v-glow class="glass-panel mt-8 inline-flex items-baseline gap-3 p-6">
+                <span class="font-display text-3xl text-gold-300">{{ memberCount }}</span>
+                <span class="text-xs uppercase tracking-widest text-white/40">учасників на сайті</span>
             </div>
         </div>
     </AuthenticatedLayout>

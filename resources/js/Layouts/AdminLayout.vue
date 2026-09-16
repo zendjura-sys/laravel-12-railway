@@ -2,7 +2,7 @@
 import ApplicationLogo from '@/Components/ApplicationLogo.vue';
 import { Link } from '@inertiajs/vue3';
 import { ref } from 'vue';
-import { Blocks, LayoutDashboard, ScrollText, Settings, ShieldCheck, TrendingUp, Users } from '@lucide/vue';
+import { Blocks, LayoutDashboard, ScrollText, Settings, ShieldCheck, TrendingUp, Users, X } from '@lucide/vue';
 
 defineProps({
     title: { type: String, default: '' },
@@ -38,7 +38,7 @@ const mobileOpen = ref(false);
 
 <template>
     <div class="relative min-h-screen bg-obsidian-950 font-sans text-white/80 antialiased">
-        <div class="pointer-events-none fixed inset-0 -z-30 overflow-hidden">
+        <div class="pointer-events-none fixed inset-0 -z-30 hidden overflow-hidden lg:block">
             <div class="aurora-orb animate-aurora -left-40 top-10 h-[28rem] w-[28rem] bg-gold-500/15"></div>
             <div class="aurora-orb animate-aurora right-[-10rem] bottom-0 h-[30rem] w-[30rem] bg-aurora-500/20" style="animation-delay: -8s"></div>
         </div>
@@ -49,13 +49,22 @@ const mobileOpen = ref(false);
                 class="glass-panel fixed inset-y-4 left-4 z-40 w-64 -translate-x-[120%] overflow-y-auto !rounded-2xl px-5 py-6 transition-transform duration-300 lg:translate-x-0"
                 :class="mobileOpen && 'translate-x-0'"
             >
-                <Link href="/" class="mb-8 flex items-center gap-3">
-                    <ApplicationLogo mark class="h-9 w-9 text-lg" />
-                    <div class="leading-tight">
-                        <div class="font-display text-sm tracking-[0.25em] text-white">MONSORY</div>
-                        <div class="text-[9px] tracking-[0.35em] text-gold-300/70">CONNECT CMS</div>
-                    </div>
-                </Link>
+                <div class="mb-8 flex items-center justify-between">
+                    <Link href="/" class="flex items-center gap-3">
+                        <ApplicationLogo mark class="h-9 w-9 text-lg" />
+                        <div class="leading-tight">
+                            <div class="font-display text-sm tracking-[0.25em] text-white">MONSORY</div>
+                            <div class="text-[9px] tracking-[0.35em] text-gold-300/70">CONNECT CMS</div>
+                        </div>
+                    </Link>
+                    <button
+                        class="text-white/40 hover:text-white lg:hidden"
+                        aria-label="Закрити меню"
+                        @click="mobileOpen = false"
+                    >
+                        <X class="h-5 w-5" />
+                    </button>
+                </div>
 
                 <nav class="space-y-6">
                     <div v-for="group in navGroups" :key="group.label">
@@ -83,15 +92,21 @@ const mobileOpen = ref(false);
                     швидка навігація
                 </div>
 
-                <Link :href="route('dashboard')" class="mt-3 block text-xs uppercase tracking-widest text-white/30 hover:text-gold-300">
-                    ← На сайт
-                </Link>
+                <div class="mt-3 flex flex-col gap-2">
+                    <Link :href="route('dashboard')" class="text-xs uppercase tracking-widest text-white/30 hover:text-gold-300">
+                        ← Кабінет
+                    </Link>
+                    <Link :href="route('home')" class="text-xs uppercase tracking-widest text-white/30 hover:text-gold-300">
+                        ← На головну сайту
+                    </Link>
+                </div>
             </aside>
 
             <!-- mobile toggle -->
             <button
+                v-if="!mobileOpen"
                 class="glass-pill fixed left-4 top-4 z-50 px-4 py-2 text-xs uppercase tracking-widest text-white/70 lg:hidden"
-                @click="mobileOpen = !mobileOpen"
+                @click="mobileOpen = true"
             >
                 Меню
             </button>

@@ -112,9 +112,9 @@ const pillars = [
                         <Link
                             v-if="$page.props.auth?.user"
                             :href="route('dashboard')"
-                            class="hidden text-sm text-white/60 transition-colors hover:text-white sm:block"
+                            class="glass-pill px-5 py-2 text-xs font-medium tracking-widest text-white/80 transition-all hover:text-white"
                         >
-                            Кабінет
+                            КАБІНЕТ
                         </Link>
                         <Link
                             v-else-if="canLogin"

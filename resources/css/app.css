@@ -42,7 +42,11 @@
 }
 
 .glass-panel {
-    position: relative;
+    /* НЕ задаємо тут position: relative — ця сама специфічність (0,1,0),
+       що й у fixed/absolute-утиліт Tailwind, а .glass-panel іде в CSS
+       ПІСЛЯ @tailwind utilities, тож перебивав би fixed на елементах типу
+       сайдбару адмінки. relative додається явним класом там, де він
+       реально потрібен (під glass-sheen тощо). */
     border-radius: 28px;
     background: linear-gradient(155deg, rgba(255, 255, 255, 0.09) 0%, rgba(255, 255, 255, 0.02) 45%, rgba(255, 255, 255, 0.045) 100%);
     -webkit-backdrop-filter: blur(28px) saturate(150%);
@@ -66,7 +70,8 @@
 }
 
 .glass-pill {
-    position: relative;
+    /* Так само без position: relative тут — див. коментар над .glass-panel;
+       той самий конфлікт зі fixed-утилітою (мобільна кнопка "Меню"). */
     border-radius: 9999px;
     background: linear-gradient(155deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.03) 100%);
     -webkit-backdrop-filter: blur(20px) saturate(160%);
@@ -100,7 +105,11 @@
 
 /* Курсорне світло: рухається за мишею всередині .glow-tracked, гасне коли
    курсор іде — ефект "живого" скла, а не статичний блік. */
-.glow-tracked {
+/* :where() тримає специфічність на нулі — на відміну від .glass-panel/
+   .glass-pill, тут position: relative дійсно потрібен для ::after, але
+   :where() гарантує, що будь-яка утиліта fixed/absolute з Tailwind все
+   одно переможе, незалежно від порядку в скомпільованому CSS. */
+:where(.glow-tracked) {
     position: relative;
 }
 .glow-tracked::after {

@@ -27,6 +27,7 @@ const TABS = {
             { key: 'telegram_bot_token', label: 'Bot Token', secret: true },
             { key: 'telegram_webhook_url', label: 'Webhook URL' },
             { key: 'telegram_bot_url', label: 'Посилання на бота для CTA (t.me/...)' },
+            { key: 'telegram_group_id', label: 'ID групи родини (напр. -1004369425235)' },
         ],
     },
     discord: {

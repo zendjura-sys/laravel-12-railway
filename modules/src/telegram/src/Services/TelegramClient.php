@@ -76,6 +76,80 @@ class TelegramClient
         ], static fn ($v) => $v !== null));
     }
 
+    /**
+     * Одноразовая ссылка-приглашение в группу.
+     *
+     * Bot API НЕ умеет добавлять человека в чат — такого метода нет
+     * вовсе, это доступно только клиентскому API от имени самого
+     * пользователя. Максимум, что может бот, — выдать ссылку, по которой
+     * человек входит сам в одно нажатие. Поэтому лимит в одного участника
+     * и срок жизни: ссылка не должна гулять дальше того, кому выдана.
+     *
+     * Требует, чтобы бот был администратором группы с правом приглашать.
+     *
+     * @return array{ok:bool,link:?string,message:string}
+     */
+    public function createInviteLink(string $chatId, int $ttlHours = 48): array
+    {
+        $response = $this->call('createChatInviteLink', [
+            'chat_id' => $chatId,
+            'name' => 'Monsory · заявка',
+            'member_limit' => 1,
+            'expire_date' => now()->addHours($ttlHours)->timestamp,
+        ]);
+
+        return [
+            'ok' => ($response['ok'] ?? false) === true,
+            'link' => $response['result']['invite_link'] ?? null,
+            'message' => $response['description'] ?? 'Немає відповіді від Telegram.',
+        ];
+    }
+
+    /**
+     * Пропустить заявку на вступление, если группа закрыта ссылкой с
+     * подтверждением (creates_join_request). Это единственный способ,
+     * которым бот может впустить человека без действий администратора —
+     * но и он требует, чтобы человек сам нажал на ссылку.
+     */
+    public function approveJoinRequest(string $chatId, int $userId): bool
+    {
+        return ($this->call('approveChatJoinRequest', [
+            'chat_id' => $chatId,
+            'user_id' => $userId,
+        ])['ok'] ?? false) === true;
+    }
+
+    public function declineJoinRequest(string $chatId, int $userId): bool
+    {
+        return ($this->call('declineChatJoinRequest', [
+            'chat_id' => $chatId,
+            'user_id' => $userId,
+        ])['ok'] ?? false) === true;
+    }
+
+    /**
+     * Статус человека в группе: creator/administrator/member/restricted/
+     * left/kicked. null — спросить не удалось.
+     */
+    public function chatMemberStatus(string $chatId, int $userId): ?string
+    {
+        $response = $this->call('getChatMember', ['chat_id' => $chatId, 'user_id' => $userId]);
+
+        return $response['result']['status'] ?? null;
+    }
+
+    /** @return array{ok:bool,title:?string,message:string} */
+    public function chatInfo(string $chatId): array
+    {
+        $response = $this->call('getChat', ['chat_id' => $chatId]);
+
+        return [
+            'ok' => ($response['ok'] ?? false) === true,
+            'title' => $response['result']['title'] ?? null,
+            'message' => $response['description'] ?? 'Немає відповіді від Telegram.',
+        ];
+    }
+
     public function deleteMessage(string $chatId, int $messageId): void
     {
         $this->call('deleteMessage', ['chat_id' => $chatId, 'message_id' => $messageId]);
@@ -95,7 +169,9 @@ class TelegramClient
             'secret_token' => $secret,
             // callback_query обязателен: без него Telegram не присылает
             // нажатия inline-кнопок, и всё меню бота выглядит мёртвым.
-            'allowed_updates' => json_encode(['message', 'callback_query']),
+            // chat_join_request — чтобы бот сам впускал в группу тех, чью
+            // заявку уже одобрили, без участия администратора.
+            'allowed_updates' => json_encode(['message', 'callback_query', 'chat_join_request']),
             'drop_pending_updates' => true,
         ]);
 

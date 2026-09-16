@@ -8,6 +8,7 @@ const props = defineProps({
     botUsername: { type: String, default: null },
     webhookInfo: { type: Object, default: null },
     linkedCount: { type: Number, default: 0 },
+    group: { type: Object, default: () => ({ id: null, ok: false, title: null, error: null }) },
     applications: { type: Array, default: () => [] },
     pendingCount: { type: Number, default: 0 },
 });
@@ -149,6 +150,29 @@ async function review(application, decision) {
             >
                 Зняти webhook
             </button>
+        </div>
+
+        <!-- Группа, куда попадают одобренные. Проверяется через getChat:
+             опечатка в ID или бот, не добавленный в группу, выясняются
+             здесь, а не в момент одобрения заявки. -->
+        <div v-if="configured" class="mt-8 max-w-xl">
+            <h2 class="font-display mb-3 text-lg text-white">Група родини</h2>
+            <div class="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02] text-sm">
+                <div class="flex justify-between border-b border-white/5 px-5 py-3">
+                    <span class="text-white/40">ID</span>
+                    <span class="font-mono text-white/70">{{ group.id || 'не вказано' }}</span>
+                </div>
+                <div class="flex justify-between px-5 py-3">
+                    <span class="text-white/40">Стан</span>
+                    <span :class="group.ok ? 'text-emerald-300' : 'text-ember-500'" class="max-w-[60%] text-right">
+                        {{ group.ok ? (group.title || 'доступна') : (group.error || 'недоступна') }}
+                    </span>
+                </div>
+            </div>
+            <p v-if="!group.ok" class="mt-3 text-xs leading-relaxed text-white/35">
+                Вкажіть ID у Налаштуваннях → Telegram і додайте бота адміністратором групи
+                з правом запрошувати. Без цього схвалена заявка не отримає посилання на вступ.
+            </p>
         </div>
 
         <div v-if="configured && webhookInfo" class="mt-8 max-w-xl">

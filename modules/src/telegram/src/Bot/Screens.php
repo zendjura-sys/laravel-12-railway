@@ -243,6 +243,61 @@ class Screens
 
     /* ==================== ЗАЯВКА ==================== */
 
+    /**
+     * Заявку принимаем только от привязанного аккаунта.
+     *
+     * Иначе после одобрения некого впускать: заявка живёт отдельно от
+     * профиля на сайте, и связать её с человеком можно было бы разве что
+     * вручную по нику.
+     */
+    public function applyNeedsAccount(): array
+    {
+        $text = $this->head('🔗  СПОЧАТКУ ПРИВʼЯЗКА')
+            ."Щоб подати заявку, привʼяжіть цей чат до акаунту\nна сайті — це один дотик.\n\n"
+            ."<b>Як:</b>\n"
+            ."  1. Зареєструйтесь на сайті\n"
+            ."  2. Профіль → Telegram → «Привʼязати Telegram»\n"
+            ."  3. Сайт сам відкриє цей чат\n\n"
+            ."Після цього кнопка «Подати заявку» запрацює.\n\n"
+            .self::RULE;
+
+        $rows = [];
+        if ($site = $this->siteUrl()) {
+            $rows[] = [['text' => '🌐  Відкрити профіль на сайті', 'url' => rtrim($site, '/').'/profile']];
+        }
+        $rows[] = [$this->backHome()];
+
+        return $this->screen($text, $rows);
+    }
+
+    /** Заявку схвалено — лишилось увійти до групи. */
+    public function approved(TelegramApplication $application, ?string $inviteLink): array
+    {
+        $text = $this->head('✅  ВАС ПРИЙНЯТО')
+            ."Вітаємо в Monsory Family, <b>".e($application->nickname)."</b>.\n\n";
+
+        if ($application->joined_at) {
+            $text .= "Ви вже у групі родини.\n\n".self::RULE;
+
+            return $this->screen($text, [[$this->backHome()]]);
+        }
+
+        if ($inviteLink === null) {
+            $text .= "Посилання на групу зараз недоступне —\nзверніться до керівництва.\n\n".self::RULE;
+
+            return $this->screen($text, [[$this->backHome()]]);
+        }
+
+        $text .= "Лишився один крок — увійдіть до групи родини.\n\n"
+            ."<i>Посилання персональне й одноразове.</i>\n\n"
+            .self::RULE;
+
+        return $this->screen($text, [
+            [['text' => '🚪  Увійти до групи', 'url' => $inviteLink]],
+            [$this->backHome()],
+        ]);
+    }
+
     public function applyIntro(?TelegramApplication $pending): array
     {
         if ($pending) {

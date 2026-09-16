@@ -14,7 +14,7 @@ class SettingsController extends Controller
     /** @var array<string, array<int, string>> */
     private const FIELDS = [
         'general' => ['site_name', 'site_tagline', 'support_contact'],
-        'telegram' => ['telegram_bot_username', 'telegram_bot_token', 'telegram_webhook_url', 'telegram_bot_url'],
+        'telegram' => ['telegram_bot_username', 'telegram_bot_token', 'telegram_webhook_url', 'telegram_bot_url', 'telegram_group_id'],
         'discord' => ['discord_client_id', 'discord_client_secret', 'discord_redirect_uri', 'discord_bot_token', 'discord_guild_id'],
     ];
 

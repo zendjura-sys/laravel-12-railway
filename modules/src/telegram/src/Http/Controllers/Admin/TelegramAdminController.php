@@ -4,6 +4,7 @@ namespace Addons\TelegramBot\Http\Controllers\Admin;
 
 use Addons\TelegramBot\Models\TelegramApplication;
 use Addons\TelegramBot\Models\TelegramLink;
+use Addons\TelegramBot\Services\FamilyGroup;
 use Addons\TelegramBot\Services\TelegramClient;
 use App\Models\Setting;
 use Illuminate\Http\JsonResponse;
@@ -14,10 +15,11 @@ use Inertia\Response;
 
 class TelegramAdminController
 {
-    public function index(TelegramClient $telegram): Response
+    public function index(TelegramClient $telegram, FamilyGroup $group): Response
     {
         return Inertia::render('Admin/Telegram/Index', [
             'configured' => $telegram->isConfigured(),
+            'group' => $this->groupStatus($telegram, $group),
             'botUsername' => Setting::get('telegram_bot_username'),
             'webhookInfo' => $telegram->getWebhookInfo(),
             'linkedCount' => TelegramLink::query()->whereNotNull('linked_at')->count(),
@@ -76,7 +78,7 @@ class TelegramAdminController
      * заявка пришла: заставлять его самого заходить и проверять статус —
      * ровно то, чего мы избегали, делая бота кнопочным.
      */
-    public function review(Request $request, TelegramClient $telegram, TelegramApplication $application): JsonResponse
+    public function review(Request $request, TelegramClient $telegram, FamilyGroup $group, TelegramApplication $application): JsonResponse
     {
         $data = $request->validate([
             'decision' => ['required', 'in:approve,reject'],
@@ -106,13 +108,61 @@ class TelegramAdminController
             $text .= "\n\n<b>Коментар:</b> ".e($note);
         }
 
-        $delivered = $telegram->sendMessage($application->chat_id, $text) !== null;
+        // Одобрили — сразу выдаём персональную ссылку в группу. Добавить
+        // человека самим нельзя: в Bot API нет такого метода, это умеет
+        // только клиентский API от имени самого пользователя. Вход в одно
+        // нажатие — максимум возможного.
+        $keyboard = null;
+        $inviteNote = '';
+
+        if ($approved) {
+            if (! $group->isConfigured()) {
+                $inviteNote = ' Група не вказана в налаштуваннях — посилання не надіслано.';
+            } elseif ($link = $group->inviteFor($application->fresh())) {
+                $text .= "\n\nЛишився один крок — увійдіть до групи родини.";
+                $keyboard = ['inline_keyboard' => [[['text' => '🚪  Увійти до групи', 'url' => $link]]]];
+            } else {
+                $inviteNote = ' Посилання створити не вдалося — перевірте, що бот є адміністратором групи з правом запрошувати.';
+            }
+        }
+
+        $delivered = $telegram->sendMessage($application->chat_id, $text, $keyboard) !== null;
 
         return $this->json(
             true,
             ($approved ? 'Заявку схвалено.' : 'Заявку відхилено.')
-                .($delivered ? ' Повідомлення надіслано.' : ' Повідомлення в Telegram надіслати не вдалося.'),
+                .($delivered ? ' Повідомлення надіслано.' : ' Повідомлення в Telegram надіслати не вдалося.')
+                .$inviteNote,
         );
+    }
+
+    /**
+     * Готова ли группа принимать людей. Проверяем именно через getChat:
+     * записанный в настройках ID может быть опечаткой или чатом, куда
+     * бота не добавили, и выяснять это в момент одобрения заявки поздно.
+     *
+     * @return array<string,mixed>
+     */
+    private function groupStatus(TelegramClient $telegram, FamilyGroup $group): array
+    {
+        $id = $group->id();
+
+        if ($id === null) {
+            return ['id' => null, 'ok' => false, 'title' => null, 'error' => 'Не вказано ID групи.'];
+        }
+
+        if (! $telegram->isConfigured()) {
+            return ['id' => $id, 'ok' => false, 'title' => null, 'error' => 'Не вказано Bot Token.'];
+        }
+
+        $info = $telegram->chatInfo($id);
+
+        return [
+            'id' => $id,
+            'ok' => $info['ok'],
+            'title' => $info['title'],
+            'error' => $info['ok'] ? null : $info['message'],
+        ];
     }
 
     private function json(bool $ok, string $message): JsonResponse

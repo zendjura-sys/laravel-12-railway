@@ -5,6 +5,7 @@ namespace Addons\TelegramBot\Bot;
 use Addons\TelegramBot\Models\TelegramApplication;
 use Addons\TelegramBot\Models\TelegramChat;
 use Addons\TelegramBot\Models\TelegramLink;
+use Addons\TelegramBot\Services\FamilyGroup;
 use Addons\TelegramBot\Services\TelegramClient;
 use App\Models\User;
 
@@ -26,6 +27,7 @@ class BotHandler
     public function __construct(
         private readonly TelegramClient $telegram,
         private readonly Screens $screens,
+        private readonly FamilyGroup $group,
     ) {}
 
     /** @param array<string,mixed> $update */
@@ -37,8 +39,39 @@ class BotHandler
             return;
         }
 
+        if (isset($update['chat_join_request'])) {
+            $this->onJoinRequest($update['chat_join_request']);
+
+            return;
+        }
+
         if (isset($update['message'])) {
             $this->onMessage($update['message']);
+        }
+    }
+
+    /**
+     * Заявка на вступление в группу. Единственный способ, которым бот
+     * может впустить человека без действий администратора — и он же
+     * требует, чтобы человек сам нажал на ссылку: добавить его в чат
+     * Bot API не умеет в принципе.
+     *
+     * @param array<string,mixed> $request
+     */
+    private function onJoinRequest(array $request): void
+    {
+        $chatId = (string) ($request['chat']['id'] ?? '');
+        $userId = (int) ($request['from']['id'] ?? 0);
+
+        if ($chatId === '' || $userId === 0) {
+            return;
+        }
+
+        if ($this->group->handleJoinRequest($chatId, $userId)) {
+            $this->telegram->sendMessage(
+                (string) $userId,
+                "◆  <b>ВІТАЄМО В РОДИНІ</b>\n━━━━━━━━━━━━━━━\n\nВас додано до групи Monsory Family.",
+            );
         }
     }
 
@@ -157,7 +190,7 @@ class BotHandler
         [$key, $value] = array_pad(explode(':', (string) $arg, 2), 2, null);
 
         return match ($key) {
-            null, '' => $this->screens->applyIntro(TelegramApplication::pendingFor($chat->chat_id)),
+            null, '' => $this->applyEntry($chat),
             'start' => $this->startApplication($chat),
             'age' => $this->answer($chat, 'age_range', Screens::AGES, $value, 'playtime'),
             'time' => $this->answer($chat, 'playtime', Screens::PLAYTIME, $value, 'experience'),
@@ -166,14 +199,46 @@ class BotHandler
             'skip' => $this->skipAbout($chat),
             'send' => $this->submit($chat),
             'cancel' => $this->cancel($chat),
-            default => $this->screens->applyIntro(TelegramApplication::pendingFor($chat->chat_id)),
+            default => $this->applyEntry($chat),
         };
+    }
+
+    /**
+     * Точка входа в раздел заявки: что показать зависит от того, есть ли
+     * привязка и в каком состоянии последняя заявка.
+     */
+    private function applyEntry(TelegramChat $chat): array
+    {
+        $application = TelegramApplication::currentFor($chat->chat_id);
+
+        if ($application?->isApproved()) {
+            $this->group->refreshMembership($application);
+
+            return $this->screens->approved(
+                $application->fresh(),
+                $application->joined_at ? null : $this->group->inviteFor($application),
+            );
+        }
+
+        if ($application) {
+            return $this->screens->applyIntro($application);
+        }
+
+        if (! $this->linkedUser($chat)) {
+            return $this->screens->applyNeedsAccount();
+        }
+
+        return $this->screens->applyIntro(null);
     }
 
     /* ==================== АНКЕТА ==================== */
 
     private function startApplication(TelegramChat $chat): array
     {
+        if (! $this->linkedUser($chat)) {
+            return $this->screens->applyNeedsAccount();
+        }
+
         if ($pending = TelegramApplication::pendingFor($chat->chat_id)) {
             return $this->screens->applyIntro($pending);
         }
@@ -195,7 +260,7 @@ class BotHandler
         // отменена или отправлена — тогда возвращаем на экран заявки,
         // а не пишем в пустой черновик.
         if ($chat->step === null) {
-            return $this->screens->applyIntro(TelegramApplication::pendingFor($chat->chat_id));
+            return $this->applyEntry($chat);
         }
 
         $i = (int) $index;
@@ -212,7 +277,7 @@ class BotHandler
     private function skipAbout(TelegramChat $chat): array
     {
         if ($chat->step === null) {
-            return $this->screens->applyIntro(TelegramApplication::pendingFor($chat->chat_id));
+            return $this->applyEntry($chat);
         }
 
         $chat->putDraft('about', null);
@@ -248,7 +313,7 @@ class BotHandler
         if (($draft['nickname'] ?? '') === '') {
             $chat->clearDraft();
 
-            return $this->screens->applyIntro(TelegramApplication::pendingFor($chat->chat_id));
+            return $this->applyEntry($chat);
         }
 
         if ($pending = TelegramApplication::pendingFor($chat->chat_id)) {

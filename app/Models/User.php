@@ -19,6 +19,8 @@ class User extends Authenticatable implements MustVerifyEmail
      * @var list<string>
      */
     protected $fillable = [
+        'first_name',
+        'last_name',
         'name',
         'email',
         'password',
@@ -45,5 +47,37 @@ class User extends Authenticatable implements MustVerifyEmail
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    /**
+     * name — производная от имени и фамилии, а не отдельное поле.
+     *
+     * На неё завязано всё отображение (приветствие в кабинете, списки
+     * участников, подписи в Telegram-боте, письма Laravel), поэтому
+     * колонка осталась, но пересобирается здесь. Иначе после правки
+     * фамилии в профиле в шапке сайта ещё неделю висело бы старое имя.
+     */
+    protected static function booted(): void
+    {
+        static::saving(function (self $user): void {
+            if (! $user->isDirty(['first_name', 'last_name'])) {
+                return;
+            }
+
+            $full = trim(($user->first_name ?? '').' '.($user->last_name ?? ''));
+
+            // Пустым name не перетираем: у аккаунтов, заведённых до
+            // разделения полей, фамилии может не быть вовсе.
+            if ($full !== '') {
+                $user->name = $full;
+            }
+        });
+    }
+
+    public function fullName(): string
+    {
+        $full = trim(($this->first_name ?? '').' '.($this->last_name ?? ''));
+
+        return $full !== '' ? $full : (string) $this->name;
     }
 }

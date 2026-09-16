@@ -13,6 +13,10 @@ defineProps({
     status: {
         type: String,
     },
+    telegramReady: {
+        type: Boolean,
+        default: false,
+    },
 });
 </script>
 
@@ -35,7 +39,7 @@ defineProps({
                 />
             </div>
 
-            <div v-if="route().has('telegram.status')" v-reveal:100 v-glow class="glass-panel p-6 sm:p-8">
+            <div v-if="telegramReady" v-reveal:100 v-glow class="glass-panel p-6 sm:p-8">
                 <TelegramLinkForm class="max-w-xl" />
             </div>
 

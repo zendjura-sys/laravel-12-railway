@@ -23,6 +23,7 @@ class MakeAdminCommand extends Command
     protected $signature = 'monsory:make-admin
                             {email : Email пользователя}
                             {--name= : Имя, если пользователя ещё нет}
+                            {--last-name= : Фамилия, если пользователя ещё нет}
                             {--reset-password : Задать новый пароль существующему пользователю}';
 
     protected $description = 'Выдать пользователю роль admin, создав его при необходимости';
@@ -48,19 +49,21 @@ class MakeAdminCommand extends Command
 
         if (! $user) {
             $name = (string) ($this->option('name') ?: $this->ask('Имя', 'Admin'));
+            $lastName = (string) ($this->option('last-name') ?: $this->ask('Фамилия (можно пропустить)', ''));
             $password = $this->askForPassword();
             if ($password === null) {
                 return self::FAILURE;
             }
 
             $user = User::create([
-                'name' => $name,
+                'first_name' => $name,
+                'last_name' => $lastName !== '' ? $lastName : null,
                 'email' => $email,
                 'password' => Hash::make($password),
             ]);
             $this->info("Пользователь создан: {$email}");
         } else {
-            $this->line("Пользователь найден: {$user->name} <{$email}>");
+            $this->line("Пользователь найден: {$user->fullName()} <{$email}>");
 
             if ($this->option('reset-password')) {
                 $password = $this->askForPassword();

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ProfileUpdateRequest;
+use App\Models\Setting;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -21,7 +22,22 @@ class ProfileController extends Controller
         return Inertia::render('Profile/Edit', [
             'mustVerifyEmail' => $request->user() instanceof MustVerifyEmail,
             'status' => session('status'),
+            'telegramReady' => $this->telegramReady(),
         ]);
+    }
+
+    /**
+     * Блок привязки Telegram показываем, только если бот реально готов
+     * принять человека: модуль установлен И в настройках есть токен с
+     * юзернеймом. Раньше проверялось лишь наличие маршрута, поэтому на
+     * свежем сервере в профиле висела кнопка, которая упиралась в бота
+     * без токена.
+     */
+    private function telegramReady(): bool
+    {
+        return \Illuminate\Support\Facades\Route::has('telegram.status')
+            && trim((string) Setting::get('telegram_bot_token')) !== ''
+            && trim((string) Setting::get('telegram_bot_username')) !== '';
     }
 
     /**

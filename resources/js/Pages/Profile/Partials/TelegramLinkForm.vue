@@ -4,6 +4,7 @@ import { onMounted, ref } from 'vue';
 const state = ref(null);
 const loading = ref(true);
 const busy = ref(false);
+const error = ref(null);
 
 async function refresh() {
     const { data } = await window.axios.get(route('telegram.status'));
@@ -11,11 +12,32 @@ async function refresh() {
     loading.value = false;
 }
 
-async function generateCode() {
+/**
+ * Одно нажатие вместо трёх шагов. Раньше тут выдавался код и предлагалось
+ * отправить боту команду `/link КОД` — это ровно то, от чего мы ушли,
+ * сделав бота кнопочным. Теперь код выписывается молча и сразу
+ * подставляется в deep-link: человек просто попадает в чат, где привязка
+ * уже произошла.
+ */
+async function link() {
     busy.value = true;
+    error.value = null;
     try {
-        await window.axios.post(route('telegram.generate-code'));
+        const { data } = await window.axios.post(route('telegram.generate-code'));
+        const code = data.data?.code;
+        const bot = data.data?.bot_username;
+
+        if (!code || !bot) {
+            error.value = 'Бот ще не налаштований. Зверніться до адміністратора.';
+            return;
+        }
+
+        // Открываем ДО await refresh(): браузеры блокируют window.open,
+        // если между кликом и вызовом успел вклиниться лишний запрос.
+        window.open(`https://t.me/${bot.replace(/^@/, '')}?start=${code}`, '_blank', 'noopener');
         await refresh();
+    } catch (e) {
+        error.value = e.response?.data?.message || 'Не вдалося отримати посилання.';
     } finally {
         busy.value = false;
     }
@@ -45,40 +67,34 @@ onMounted(refresh);
         </header>
 
         <div v-if="!loading" class="mt-6">
-            <div v-if="state.linked" class="flex items-center justify-between rounded-lg border border-emerald-400/30 bg-emerald-400/10 px-4 py-3">
+            <div
+                v-if="state.linked"
+                class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-400/30 bg-emerald-400/10 px-4 py-3"
+            >
                 <p class="text-sm text-emerald-200">
                     Привʼязано<span v-if="state.telegram_username"> · @{{ state.telegram_username }}</span>
                 </p>
-                <button :disabled="busy" class="text-xs uppercase tracking-widest text-white/40 hover:text-white disabled:opacity-40" @click="unlink">
+                <button
+                    :disabled="busy"
+                    class="text-xs uppercase tracking-widest text-white/40 transition-colors hover:text-white disabled:opacity-40"
+                    @click="unlink"
+                >
                     Відвʼязати
                 </button>
             </div>
 
             <div v-else>
-                <div v-if="state.pending_code" class="rounded-lg border border-gold-400/30 bg-gold-400/10 px-4 py-4">
-                    <p class="text-sm text-white/70">
-                        Надішліть боту команду:
-                        <code class="ml-1 rounded bg-obsidian-950 px-2 py-1 text-gold-200">/link {{ state.pending_code }}</code>
-                    </p>
-                    <a
-                        v-if="state.bot_username"
-                        :href="`https://t.me/${state.bot_username}?start=${state.pending_code}`"
-                        target="_blank"
-                        rel="noopener"
-                        class="mt-3 inline-block rounded-full bg-gradient-to-r from-gold-500 via-gold-300 to-gold-500 px-5 py-2 text-xs font-semibold uppercase tracking-widest text-obsidian-950"
-                    >
-                        Відкрити бота одним кліком →
-                    </a>
-                    <p class="mt-2 text-xs text-white/30">Код дійсний 10 хвилин.</p>
-                </div>
                 <button
-                    v-else
                     :disabled="busy"
-                    class="glass-pill px-5 py-2.5 text-xs font-semibold uppercase tracking-widest text-white/70 hover:text-white disabled:opacity-40"
-                    @click="generateCode"
+                    class="rounded-full bg-gradient-to-r from-gold-500 via-gold-300 to-gold-500 px-6 py-3 text-xs font-semibold uppercase tracking-widest text-obsidian-950 shadow-gold transition-transform hover:scale-[1.03] disabled:opacity-40"
+                    @click="link"
                 >
-                    Згенерувати код
+                    {{ busy ? 'Відкриваємо…' : 'Привʼязати Telegram' }}
                 </button>
+                <p class="mt-3 text-xs text-white/30">
+                    Відкриється чат з ботом — нічого вводити не потрібно.
+                </p>
+                <p v-if="error" class="mt-2 text-xs text-ember-500">{{ error }}</p>
             </div>
         </div>
     </section>

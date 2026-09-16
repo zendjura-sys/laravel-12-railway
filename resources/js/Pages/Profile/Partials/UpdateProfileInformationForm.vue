@@ -17,7 +17,8 @@ defineProps({
 const user = usePage().props.auth.user;
 
 const form = useForm({
-    name: user.name,
+    first_name: user.first_name ?? '',
+    last_name: user.last_name ?? '',
     email: user.email,
 });
 </script>
@@ -30,7 +31,7 @@ const form = useForm({
             </h2>
 
             <p class="mt-1 text-sm text-white/40">
-                Оновіть ім'я та email вашого акаунту.
+                Оновіть ім'я, прізвище та email вашого акаунту.
             </p>
         </header>
 
@@ -38,19 +39,34 @@ const form = useForm({
             @submit.prevent="form.patch(route('profile.update'))"
             class="mt-6 space-y-6"
         >
-            <div>
-                <InputLabel for="name" value="Ім'я" />
+            <div class="grid gap-6 sm:grid-cols-2">
+                <div>
+                    <InputLabel for="first_name" value="Ім'я" />
 
-                <TextInput
-                    id="name"
-                    type="text"
-                    v-model="form.name"
-                    required
-                    autofocus
-                    autocomplete="name"
-                />
+                    <TextInput
+                        id="first_name"
+                        type="text"
+                        v-model="form.first_name"
+                        required
+                        autofocus
+                        autocomplete="given-name"
+                    />
 
-                <InputError :message="form.errors.name" />
+                    <InputError :message="form.errors.first_name" />
+                </div>
+
+                <div>
+                    <InputLabel for="last_name" value="Прізвище" />
+
+                    <TextInput
+                        id="last_name"
+                        type="text"
+                        v-model="form.last_name"
+                        autocomplete="family-name"
+                    />
+
+                    <InputError :message="form.errors.last_name" />
+                </div>
             </div>
 
             <div>

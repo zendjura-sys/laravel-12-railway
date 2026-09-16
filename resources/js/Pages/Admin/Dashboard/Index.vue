@@ -11,6 +11,7 @@ const sections = [
     { name: 'admin.reports.index', can: 'manageReports', title: 'Модерація звітів', text: 'Розгляд звітів учасників за KAPT та контрактами.' },
     { name: 'admin.progression.index', can: 'manageProgression', title: 'Прогресія', text: 'XP, ранги, досягнення та тижневі бонуси родини.' },
     { name: 'admin.members.index', can: 'manageMembers', title: 'Кадровий облік', text: 'Статуси учасників, приватні нотатки HR та заявки на відпустку.' },
+    { name: 'admin.family-goals.index', can: 'manageGoals', title: 'Цілі родини', text: 'Спільні цілі з прогресом та загальна стрічка активності.' },
     { name: 'admin.roles.index', can: 'manageRoles', title: 'Права доступу', text: 'Ролі та права: хто що бачить і чим керує в CMS.' },
     { name: 'admin.users.index', can: 'manageUsers', title: 'Учасники', text: 'Список учасників сайту та призначення їм ролей.' },
     { name: 'admin.settings.index', can: 'manageSettings', title: 'Налаштування', text: 'Загальні параметри, інтеграція з Telegram та Discord.' },

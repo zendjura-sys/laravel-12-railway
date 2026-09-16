@@ -2,7 +2,7 @@
 import ApplicationLogo from '@/Components/ApplicationLogo.vue';
 import { Link } from '@inertiajs/vue3';
 import { ref } from 'vue';
-import { Blocks, IdCard, LayoutDashboard, Menu, ScrollText, Settings, ShieldCheck, TrendingUp, Users, X } from '@lucide/vue';
+import { Blocks, IdCard, LayoutDashboard, Menu, ScrollText, Settings, ShieldCheck, Target, TrendingUp, Users, X } from '@lucide/vue';
 
 defineProps({
     title: { type: String, default: '' },
@@ -21,6 +21,7 @@ const navGroups = [
             { name: 'admin.reports.index', label: 'Модерація звітів', can: 'manageReports', icon: ScrollText },
             { name: 'admin.progression.index', label: 'Прогресія', can: 'manageProgression', icon: TrendingUp },
             { name: 'admin.members.index', label: 'Кадровий облік', can: 'manageMembers', icon: IdCard },
+            { name: 'admin.family-goals.index', label: 'Цілі родини', can: 'manageGoals', icon: Target },
             { name: 'admin.users.index', label: 'Учасники', can: 'manageUsers', icon: Users },
         ],
     },

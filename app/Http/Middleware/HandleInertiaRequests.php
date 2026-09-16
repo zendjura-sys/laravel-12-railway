@@ -42,6 +42,7 @@ class HandleInertiaRequests extends Middleware
                 'manageRoles' => $request->user()?->can('roles.manage') ?? false,
                 'manageUsers' => $request->user()?->can('users.manage') ?? false,
                 'manageMembers' => $request->user()?->can('members.manage') ?? false,
+                'manageGoals' => $request->user()?->can('goals.manage') ?? false,
             ],
         ];
     }

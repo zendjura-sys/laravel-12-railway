@@ -1,6 +1,7 @@
 <script setup>
 import { Head, Link } from '@inertiajs/vue3';
 import { onMounted, onUnmounted, ref } from 'vue';
+import ApplicationLogo from '@/Components/ApplicationLogo.vue';
 
 const props = defineProps({
     canLogin: { type: Boolean, default: false },
@@ -93,11 +94,7 @@ const pillars = [
                     :class="scrolled ? 'glass-panel border-white/10' : 'border border-transparent'"
                 >
                     <div class="flex items-center gap-3">
-                        <span
-                            class="flex h-9 w-9 rotate-45 items-center justify-center rounded-md border border-gold-400/40 bg-gradient-to-br from-gold-400/20 to-transparent"
-                        >
-                            <span class="-rotate-45 font-display text-lg text-gold-300">M</span>
-                        </span>
+                        <ApplicationLogo mark class="h-9 w-9 text-lg" />
                         <div class="leading-tight">
                             <div class="font-display text-lg tracking-[0.25em] text-white">MONSORY</div>
                             <div class="text-[10px] tracking-[0.35em] text-gold-300/70">CONNECT</div>

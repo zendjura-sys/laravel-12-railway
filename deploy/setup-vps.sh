@@ -214,6 +214,24 @@ else
     warn ".env уже есть — оставляю как есть."
 fi
 
+# Локаль сайта — украинская. В отличие от остального .env (который трогаем
+# только при первом создании), эти два ключа поправляем всегда: сайт уже мог
+# быть развёрнут раньше со старым APP_LOCALE=en, и без этого редеплой не
+# донесёт до продакшена системную украинскую локализацию.
+php -r '
+    $f = ".env"; $s = file_get_contents($f);
+    $set = function ($k, $v) use (&$s) {
+        $line = $k . "=" . $v;
+        $s = preg_match("/^#?\s*" . preg_quote($k, "/") . "=.*$/m", $s)
+            ? preg_replace("/^#?\s*" . preg_quote($k, "/") . "=.*$/m", $line, $s)
+            : $s . "\n" . $line;
+    };
+    $set("APP_LOCALE", "uk");
+    $set("APP_FALLBACK_LOCALE", "en");
+    $set("APP_NAME", "\"Monsory Connect\"");
+    file_put_contents($f, $s);
+'
+
 log "Устанавливаю зависимости (без dev)"
 export COMPOSER_ALLOW_SUPERUSER=1
 export COMPOSER_MEMORY_LIMIT=-1
@@ -237,6 +255,7 @@ log "Сею RBAC (право addons.manage + роль admin)"
 # что само право и роль существуют. Назначение роли конкретному
 # пользователю — отдельный ручной шаг.
 php artisan db:seed --class="Database\\Seeders\\AddonPermissionsSeeder" --force
+php artisan db:seed --class="Database\\Seeders\\SystemPermissionsSeeder" --force
 
 log "Кэширую конфигурацию"
 php artisan config:cache

@@ -23,37 +23,38 @@ const verificationLinkSent = computed(
 
 <template>
     <GuestLayout>
-        <Head title="Email Verification" />
+        <Head title="Підтвердження email" />
 
-        <div class="mb-4 text-sm text-gray-600">
-            Thanks for signing up! Before getting started, could you verify your
-            email address by clicking on the link we just emailed to you? If you
-            didn't receive the email, we will gladly send you another.
+        <h1 class="font-display mb-4 text-2xl font-semibold text-white">Підтвердьте email</h1>
+
+        <div class="mb-4 text-sm text-white/50">
+            Дякуємо за реєстрацію! Перш ніж почати, підтвердіть свою email-адресу,
+            перейшовши за посиланням, яке ми щойно надіслали. Якщо лист не
+            прийшов — ми радо надішлемо ще один.
         </div>
 
         <div
-            class="mb-4 text-sm font-medium text-green-600"
+            class="mb-4 text-sm font-medium text-emerald-300"
             v-if="verificationLinkSent"
         >
-            A new verification link has been sent to the email address you
-            provided during registration.
+            Нове посилання для підтвердження надіслано на email, вказаний
+            під час реєстрації.
         </div>
 
         <form @submit.prevent="submit">
-            <div class="mt-4 flex items-center justify-between">
+            <div class="flex items-center justify-between">
                 <PrimaryButton
-                    :class="{ 'opacity-25': form.processing }"
                     :disabled="form.processing"
                 >
-                    Resend Verification Email
+                    Надіслати ще раз
                 </PrimaryButton>
 
                 <Link
                     :href="route('logout')"
                     method="post"
                     as="button"
-                    class="rounded-md text-sm text-gray-600 underline hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-                    >Log Out</Link
+                    class="text-sm text-white/40 underline hover:text-white"
+                    >Вийти</Link
                 >
             </div>
         </form>

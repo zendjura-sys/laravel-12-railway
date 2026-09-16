@@ -1,5 +1,6 @@
 <script setup>
-import { Head, Link } from '@inertiajs/vue3';
+import AdminLayout from '@/Layouts/AdminLayout.vue';
+import { Head } from '@inertiajs/vue3';
 import { ref } from 'vue';
 
 const props = defineProps({
@@ -49,7 +50,7 @@ async function submitAdjust(userId) {
 <template>
     <Head title="Progression — адміністрування" />
 
-    <div class="min-h-screen bg-obsidian-950 font-sans text-white/80">
+    <AdminLayout title="Progression — адміністрування">
         <div class="pointer-events-none fixed right-6 top-6 z-[100] flex w-full max-w-sm flex-col gap-3">
             <TransitionGroup name="toast">
                 <div
@@ -63,20 +64,7 @@ async function submitAdjust(userId) {
             </TransitionGroup>
         </div>
 
-        <header class="border-b border-white/5 bg-obsidian-900/60 backdrop-blur-md">
-            <div class="mx-auto flex max-w-5xl items-center justify-between px-6 py-6">
-                <div>
-                    <Link :href="route('dashboard')" class="text-xs uppercase tracking-widest text-white/40 hover:text-gold-300">
-                        ← Кабінет
-                    </Link>
-                    <h1 class="font-display mt-2 text-3xl font-semibold text-white">
-                        Progression <span class="text-gradient-gold italic">адміністрування</span>
-                    </h1>
-                </div>
-            </div>
-        </header>
-
-        <div class="mx-auto max-w-5xl px-6 py-10">
+        <div class="max-w-5xl">
             <div class="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02]">
                 <div v-for="p in profiles.data" :key="p.id" class="border-b border-white/5 px-6 py-4 last:border-0">
                     <div class="flex items-center justify-between gap-4">
@@ -118,7 +106,7 @@ async function submitAdjust(userId) {
                 </div>
             </div>
         </div>
-    </div>
+    </AdminLayout>
 </template>
 
 <style scoped>

@@ -1,8 +1,13 @@
 <?php
 
 use App\Http\Controllers\Admin\AddonController;
+use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\RoleController;
+use App\Http\Controllers\Admin\SettingsController;
+use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ThemeAssetController;
+use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -16,7 +21,7 @@ Route::get('/', function () {
         'canLogin' => Route::has('login'),
         'canRegister' => Route::has('register'),
         'memberCount' => User::query()->count(),
-        'telegramBotUrl' => config('services.telegram.bot_url', '#'),
+        'telegramBotUrl' => Setting::get('telegram_bot_url') ?: config('services.telegram.bot_url', '#'),
     ]);
 });
 
@@ -37,6 +42,10 @@ Route::get('/theme-assets/{path}', [ThemeAssetController::class, 'show'])
     ->where('path', '.*')
     ->name('theme.asset');
 
+Route::middleware(['auth', 'verified', 'permission:addons.manage|reports.manage|progression.manage|settings.manage|roles.manage|users.manage'])
+    ->get('/admin', [DashboardController::class, 'index'])
+    ->name('admin.dashboard');
+
 Route::middleware(['auth', 'verified', 'permission:addons.manage'])
     ->prefix('admin/addons')
     ->name('admin.addons.')
@@ -49,6 +58,34 @@ Route::middleware(['auth', 'verified', 'permission:addons.manage'])
         Route::post('/{addon}/deactivate', [AddonController::class, 'deactivate'])->name('deactivate');
         Route::post('/{addon}/migrate', [AddonController::class, 'migrate'])->name('migrate');
         Route::delete('/{addon}', [AddonController::class, 'destroy'])->name('destroy');
+    });
+
+Route::middleware(['auth', 'verified', 'permission:settings.manage'])
+    ->prefix('admin/settings')
+    ->name('admin.settings.')
+    ->group(function () {
+        Route::get('/', [SettingsController::class, 'index'])->name('index');
+        Route::put('/{group}', [SettingsController::class, 'update'])
+            ->where('group', 'general|telegram|discord')
+            ->name('update');
+    });
+
+Route::middleware(['auth', 'verified', 'permission:roles.manage'])
+    ->prefix('admin/roles')
+    ->name('admin.roles.')
+    ->group(function () {
+        Route::get('/', [RoleController::class, 'index'])->name('index');
+        Route::post('/', [RoleController::class, 'store'])->name('store');
+        Route::put('/{role}', [RoleController::class, 'update'])->name('update');
+        Route::delete('/{role}', [RoleController::class, 'destroy'])->name('destroy');
+    });
+
+Route::middleware(['auth', 'verified', 'permission:users.manage'])
+    ->prefix('admin/users')
+    ->name('admin.users.')
+    ->group(function () {
+        Route::get('/', [UserController::class, 'index'])->name('index');
+        Route::put('/{user}/roles', [UserController::class, 'updateRoles'])->name('roles');
     });
 
 // Rota que o Base44 vai acessar

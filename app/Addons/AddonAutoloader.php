@@ -75,11 +75,14 @@ final class AddonAutoloader
      */
     private function activeCodeAddons(): array
     {
-        return Cache::remember('addons.active', 300, function () {
-            // На свежем деплое таблица addons может ещё не существовать
-            // (миграции этого пакета применяются позже первого запроса) —
-            // в этом случае просто ничего не подключаем, а не роняем сайт.
-            try {
+        // На свежем деплое (до первой миграции) не существует ни таблицы
+        // addons, ни, что легко упустить, самой таблицы cache — а
+        // CACHE_STORE=database означает, что Cache::remember() тоже бьёт
+        // в БД. Оборачиваем весь вызов целиком, а не только запрос внутри
+        // него, иначе именно первый artisan-вызов (key:generate) на чистой
+        // базе роняет весь деплой.
+        try {
+            return Cache::remember('addons.active', 300, function () {
                 return Addon::query()
                     ->whereIn('type', ['core', 'module', 'plugin'])
                     ->where('status', 'active')
@@ -91,9 +94,9 @@ final class AddonAutoloader
                         'manifest' => $a->manifest,
                     ])
                     ->all();
-            } catch (\Throwable) {
-                return [];
-            }
-        });
+            });
+        } catch (\Throwable) {
+            return [];
+        }
     }
 }

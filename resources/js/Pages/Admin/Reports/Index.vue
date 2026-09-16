@@ -1,5 +1,6 @@
 <script setup>
-import { Head, Link, router } from '@inertiajs/vue3';
+import AdminLayout from '@/Layouts/AdminLayout.vue';
+import { Head, router } from '@inertiajs/vue3';
 import { ref } from 'vue';
 
 const props = defineProps({
@@ -42,7 +43,7 @@ function fmtDate(iso) {
 <template>
     <Head title="Модерація звітів" />
 
-    <div class="min-h-screen bg-obsidian-950 font-sans text-white/80">
+    <AdminLayout title="Модерація звітів">
         <div class="pointer-events-none fixed right-6 top-6 z-[100] flex w-full max-w-sm flex-col gap-3">
             <TransitionGroup name="toast">
                 <div
@@ -56,20 +57,7 @@ function fmtDate(iso) {
             </TransitionGroup>
         </div>
 
-        <header class="border-b border-white/5 bg-obsidian-900/60 backdrop-blur-md">
-            <div class="mx-auto flex max-w-6xl items-center justify-between px-6 py-6">
-                <div>
-                    <Link :href="route('dashboard')" class="text-xs uppercase tracking-widest text-white/40 hover:text-gold-300">
-                        ← Кабінет
-                    </Link>
-                    <h1 class="font-display mt-2 text-3xl font-semibold text-white">
-                        Модерація <span class="text-gradient-gold italic">звітів</span>
-                    </h1>
-                </div>
-            </div>
-        </header>
-
-        <div class="mx-auto max-w-6xl px-6 py-10">
+        <div class="max-w-6xl">
             <div class="mb-6 flex gap-2">
                 <button
                     v-for="s in ['pending', 'approved', 'rejected']"
@@ -123,7 +111,7 @@ function fmtDate(iso) {
                 </div>
             </div>
         </div>
-    </div>
+    </AdminLayout>
 </template>
 
 <style scoped>

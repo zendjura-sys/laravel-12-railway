@@ -7,7 +7,7 @@ defineProps({
 </script>
 
 <template>
-    <Head title="Leaderboard" />
+    <Head title="Рейтинг родини" />
 
     <div class="min-h-screen bg-obsidian-950 font-sans text-white/80">
         <header class="border-b border-white/5 bg-obsidian-900/60 backdrop-blur-md">
@@ -21,7 +21,7 @@ defineProps({
                         ← Мій прогрес
                     </Link>
                     <h1 class="font-display mt-2 text-3xl font-semibold text-white">
-                        <span class="text-gradient-gold italic">Leaderboard</span>
+                        Рейтинг <span class="text-gradient-gold italic">родини</span>
                     </h1>
                 </div>
             </div>

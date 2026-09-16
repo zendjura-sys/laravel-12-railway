@@ -169,7 +169,7 @@ const totalInstalled = computed(() =>
 </script>
 
 <template>
-    <Head title="Аддони — Core / Modules / Plugins / Themes" />
+    <Head title="Аддони — Core / Modules / Plugins" />
 
     <AdminLayout>
         <!-- ================= TOASTS ================= -->
@@ -193,7 +193,7 @@ const totalInstalled = computed(() =>
                 Керування <span class="text-gradient-gold italic">аддонами</span>
             </h1>
             <p class="mt-1 text-sm text-white/40">
-                Core Updater · Modules · Plugins · Themes — встановлено {{ totalInstalled }} пакет(ів)
+                Core Updater · Modules · Plugins — встановлено {{ totalInstalled }} пакет(ів)
             </p>
         </div>
 

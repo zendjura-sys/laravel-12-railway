@@ -89,12 +89,16 @@ final class AddonInstaller
                 ));
             }
 
+            // Один пакет — одна запись. Раньше каждая новая версия
+            // заводила ВТОРУЮ строку рядом со старой, и в списке аддонов
+            // копились дубликаты одного и того же модуля, которые
+            // приходилось деактивировать и удалять руками.
             $existing = Addon::query()
                 ->where('type', $manifest->type)
                 ->where('slug', $manifest->slug)
-                ->where('version', $manifest->version)
                 ->first();
-            if ($existing) {
+
+            if ($existing && $existing->version === $manifest->version) {
                 throw new InvalidArgumentException(
                     "Версия {$manifest->version} пакета \"{$manifest->slug}\" уже загружена"
                 );
@@ -104,8 +108,21 @@ final class AddonInstaller
             $permanentAbsolute = storage_path('app/' . $permanentPath);
 
             if (is_dir($permanentAbsolute)) {
-                throw new RuntimeException('Каталог назначения уже существует — возможен незавершённый предыдущий импорт');
+                // Каталог есть, а записи, которая на него ссылается, нет —
+                // это мусор от прерванного импорта. Раньше он навсегда
+                // блокировал повторную загрузку этой версии, и выйти из
+                // положения можно было только руками на сервере.
+                $claimed = Addon::query()->where('path', $permanentPath)->exists();
+
+                if ($claimed) {
+                    throw new RuntimeException('Каталог назначения уже занят установленной версией пакета');
+                }
+
+                $this->cleanupDir($permanentAbsolute);
             }
+
+            $previousPath = $existing?->path;
+            $previousVersion = $existing?->version;
 
             // rename() не создаёт промежуточные каталоги сам — storage/app/addons/{type}/{slug}/
             // на этот момент может ещё не существовать (первый пакет этого типа/slug).
@@ -118,29 +135,64 @@ final class AddonInstaller
                 throw new RuntimeException('Не удалось перенести файлы пакета в постоянное хранилище');
             }
 
-            $addon = DB::transaction(function () use ($manifest, $permanentPath, $actor) {
-                $addon = Addon::create([
+            $addon = DB::transaction(function () use ($manifest, $permanentPath, $actor, $existing, $previousVersion) {
+                $fields = [
                     'type' => $manifest->type,
                     'slug' => $manifest->slug,
                     'name' => $manifest->name,
                     'version' => $manifest->version,
                     'manifest' => $manifest->raw,
-                    'status' => 'inactive',
                     'path' => $permanentPath,
+                    // Новая версия может принести новые миграции, поэтому
+                    // флаг сбрасываем: админ увидит кнопку «Міграції».
+                    // Уже применённые повторно не выполнятся — Laravel
+                    // ведёт их по именам файлов.
                     'migrations_applied' => false,
                     'installed_by' => $actor?->id,
-                ]);
+                ];
+
+                if ($existing) {
+                    // Состояние сохраняем: активный модуль остаётся
+                    // активным и после обновления начинает работать на
+                    // новом коде, без лишнего шага «активувати».
+                    $existing->update($fields);
+                    $addon = $existing;
+                } else {
+                    $addon = Addon::create($fields + ['status' => 'inactive']);
+                }
 
                 AddonAuditLog::create([
                     'addon_id' => $addon->id,
                     'user_id' => $actor?->id,
-                    'action' => 'installed',
-                    'meta' => ['version' => $manifest->version, 'slug' => $manifest->slug],
+                    'action' => $existing ? 'updated' : 'installed',
+                    'meta' => array_filter([
+                        'slug' => $manifest->slug,
+                        'version' => $manifest->version,
+                        'from_version' => $previousVersion,
+                    ]),
                     'ip' => request()?->ip(),
                 ]);
 
                 return $addon;
             });
+
+            // Файлы прошлой версии больше не нужны: строка на них уже не
+            // ссылается, и без уборки storage копил бы каждый выпуск.
+            if ($previousPath && $previousPath !== $permanentPath) {
+                $this->cleanupDir(storage_path('app/' . $previousPath));
+            }
+
+            // Код активного аддона подменился прямо сейчас — старые
+            // маршруты и список активных аддонов в кэше уже неверны.
+            if ($existing) {
+                Cache::forget('addons.active');
+                $this->clearRouteCache();
+            }
+
+            // Контроллеру нужно знать, обновление это было или первая
+            // установка, чтобы не писать «Активируйте его» тому, у кого
+            // аддон уже работает.
+            $addon->setAttribute('previous_version', $previousVersion);
 
             return $addon;
         } finally {

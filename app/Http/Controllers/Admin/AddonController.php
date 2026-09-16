@@ -67,9 +67,14 @@ class AddonController extends Controller
             return $this->fail('Внутренняя ошибка при установке пакета', 500);
         }
 
-        return $this->ok('Пакет загружен. Активируйте его, чтобы включить.', [
-            'addon' => $addon,
-        ]);
+        $from = $addon->getAttribute('previous_version');
+
+        return $this->ok(
+            $from
+                ? "Оновлено з {$from} до {$addon->version}. Натисніть «Міграції», якщо у версії є нові."
+                : 'Пакет завантажено. Активуйте його, щоб увімкнути.',
+            ['addon' => $addon],
+        );
     }
 
     public function activate(Request $request, Addon $addon): JsonResponse

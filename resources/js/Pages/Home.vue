@@ -147,17 +147,17 @@ const paths = [
     {
         title: 'Виконавець',
         text: 'Операції, контракти, робота "в полі". Результат вимірюється закритими задачами, а не словами в чаті.',
-        image: '/images/roles/franklin.webp',
+        image: '/images/roles/role-executor.webp',
     },
     {
         title: 'Організатор',
         text: 'Координація складу, розподіл ролей і контроль строків. Тримає структуру родини в робочому стані.',
-        image: '/images/roles/michael-rifle.webp',
+        image: '/images/roles/role-organizer.webp',
     },
     {
         title: 'Стратег',
         text: 'Довгі цілі, репутація родини та відносини з іншими організаціями на сервері.',
-        image: '/images/roles/michael-pistol.webp',
+        image: '/images/roles/role-strategist.webp',
     },
 ];
 </script>

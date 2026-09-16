@@ -46,6 +46,22 @@ const showingNavigationDropdown = ref(false);
                                 >
                                     Аддоны
                                 </NavLink>
+                                <!-- route().has(...) — маршрутов модулей нет, пока модуль не
+                                     активирован, поэтому пункт меню просто не рендерится -->
+                                <NavLink
+                                    v-if="route().has('reports.index')"
+                                    :href="route('reports.index')"
+                                    :active="route().current('reports.*')"
+                                >
+                                    Мої звіти
+                                </NavLink>
+                                <NavLink
+                                    v-if="route().has('admin.reports.index') && $page.props.can?.manageReports"
+                                    :href="route('admin.reports.index')"
+                                    :active="route().current('admin.reports.*')"
+                                >
+                                    Модерація звітів
+                                </NavLink>
                             </div>
                         </div>
 
@@ -159,6 +175,20 @@ const showingNavigationDropdown = ref(false);
                             :active="route().current('admin.addons.*')"
                         >
                             Аддоны
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink
+                            v-if="route().has('reports.index')"
+                            :href="route('reports.index')"
+                            :active="route().current('reports.*')"
+                        >
+                            Мої звіти
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink
+                            v-if="route().has('admin.reports.index') && $page.props.can?.manageReports"
+                            :href="route('admin.reports.index')"
+                            :active="route().current('admin.reports.*')"
+                        >
+                            Модерація звітів
                         </ResponsiveNavLink>
                     </div>
 

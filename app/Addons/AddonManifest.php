@@ -66,7 +66,7 @@ final class AddonManifest
         if (! is_array($entrypoints)) {
             throw new InvalidArgumentException('manifest.entrypoints должен быть объектом');
         }
-        $allowedEntrypoints = ['web', 'admin', 'bot', 'api'];
+        $allowedEntrypoints = ['web', 'admin', 'bot', 'api', 'events'];
         foreach (array_keys($entrypoints) as $key) {
             if (! in_array($key, $allowedEntrypoints, true)) {
                 throw new InvalidArgumentException(

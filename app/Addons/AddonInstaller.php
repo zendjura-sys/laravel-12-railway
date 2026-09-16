@@ -176,6 +176,7 @@ final class AddonInstaller
         });
 
         Cache::forget('addons.active');
+        $this->clearRouteCache();
     }
 
     public function deactivate(Addon $addon, ?User $actor): void
@@ -190,6 +191,7 @@ final class AddonInstaller
         ]);
 
         Cache::forget('addons.active');
+        $this->clearRouteCache();
     }
 
     public function uninstall(Addon $addon, ?User $actor): void
@@ -211,6 +213,30 @@ final class AddonInstaller
 
         $addon->delete();
         Cache::forget('addons.active');
+        $this->clearRouteCache();
+    }
+
+    /**
+     * `php artisan route:cache` (гоняется при каждом деплое) замораживает
+     * ВСЮ таблицу маршрутов на момент сборки — если после этого активировать
+     * аддон через админку, его роуты физически не появятся, пока кэш не
+     * пересоберут вручную. Поэтому очищаем его сразу при любом изменении
+     * активности аддона: следующий запрос соберёт таблицу маршрутов заново
+     * (уже с учётом новых активных аддонов) без кэша.
+     *
+     * Важно: НЕ вызываем здесь `route:cache` повторно — на момент этого
+     * вызова ServiceProvider'ы текущего запроса уже отбутстрапились по
+     * СТАРОМУ состоянию (до этой активации), так что пересборка кэша
+     * прямо сейчас заморозила бы снова устаревшую таблицу.
+     */
+    private function clearRouteCache(): void
+    {
+        try {
+            Artisan::call('route:clear');
+        } catch (Throwable) {
+            // Не критично: в худшем случае кэш останется старым до
+            // следующего деплоя, когда setup-vps.sh пересоберёт его сам.
+        }
     }
 
     /**

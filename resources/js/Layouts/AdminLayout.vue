@@ -113,7 +113,12 @@ const mobileOpen = ref(false);
                  fixed) — саме тому вона більше не може перекрити заголовок
                  сторінки: контент під нею відштовхується самою розміткою,
                  а не підбором відступу навмання. -->
-            <div class="min-h-screen flex-1 lg:ml-[17rem]">
+            <!-- min-w-0: без цього єдиний flex-елемент має неявний
+                 min-width: auto і не стискається нижче внутрішнього вмісту
+                 (напр. широкої таблиці) — overflow-x-auto ВСЕРЕДИНІ нього
+                 тоді не рятує, бо вже сам контейнер розпирає всю сторінку
+                 на мобільних екранах. -->
+            <div class="min-h-screen min-w-0 flex-1 lg:ml-[17rem]">
                 <div class="sticky top-0 z-30 flex items-center gap-3 border-b border-white/5 bg-obsidian-950/90 px-6 py-4 backdrop-blur-md lg:hidden">
                     <button class="text-white/70 hover:text-white" aria-label="Відкрити меню" @click="mobileOpen = true">
                         <Menu class="h-5 w-5" />

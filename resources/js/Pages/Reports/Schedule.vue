@@ -91,7 +91,7 @@ function isToday(iso) {
                     </button>
                 </div>
 
-                <div class="flex items-center gap-3">
+                <div class="flex flex-wrap items-center gap-3">
                     <button
                         class="rounded-full border border-white/10 px-3 py-1.5 text-sm text-white/60 transition-colors hover:border-gold-400/40 hover:text-white"
                         @click="shiftDate(-1)"

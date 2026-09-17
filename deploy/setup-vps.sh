@@ -409,7 +409,16 @@ ExecStart=/usr/bin/php artisan queue:work --sleep=3 --tries=3 --max-time=3600
 WantedBy=multi-user.target
 UNIT
 systemctl daemon-reload
-systemctl enable --now laravel-worker >/dev/null 2>&1 || warn "Не удалось запустить laravel-worker — проверь: systemctl status laravel-worker"
+systemctl enable laravel-worker >/dev/null 2>&1 || true
+# `enable --now` НЕ перезапускає вже запущений сервіс — на другому й
+# кожному наступному деплої воркер продовжував крутитись на старому коді
+# в пам'яті (він, як і php-fpm, вантажить весь застосунок ОДИН РАЗ при
+# старті і тримає, поки не перезапуститься). Через це нові/оновлені
+# аддон-класи (job'и, listener'и) не бачив ніхто, доки не мине
+# --max-time=3600 і Restart=always не підніме процес заново сам —
+# тобто до години затримки. Restart тут обов'язковий на КОЖНОМУ прогоні,
+# так само як і для php-fpm нижче.
+systemctl restart laravel-worker >/dev/null 2>&1 || warn "Не удалось запустить laravel-worker — проверь: systemctl status laravel-worker"
 
 # ---------------------------------------------------------------------- nginx
 log "Настраиваю nginx"

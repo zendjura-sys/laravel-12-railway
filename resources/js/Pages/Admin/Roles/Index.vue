@@ -19,6 +19,19 @@ function createRole() {
     });
 }
 
+/**
+ * Той самий підхід до діагностики, що на сторінці «Учасники»: без цього
+ * будь-який провал тут падав тихим unhandled rejection у консоль, а UI
+ * лишався в оптимістично зміненому стані, ніби все вдалося.
+ */
+function describeFailure(e, fallback) {
+    const serverMessage = e.response?.data?.message;
+    if (serverMessage) return serverMessage;
+    if (!e.response) return `${fallback} (немає відповіді сервера — перевірте з'єднання)`;
+    if (e.response.status === 403) return `${fallback} (немає прав)`;
+    return `${fallback} (код ${e.response.status})`;
+}
+
 const savingRole = ref(null);
 async function togglePermission(role, permission) {
     const has = role.permissions.includes(permission);
@@ -28,14 +41,22 @@ async function togglePermission(role, permission) {
     savingRole.value = role.id;
     try {
         await window.axios.put(route('admin.roles.update', role.id), { permissions: next });
+    } catch (e) {
+        alert(describeFailure(e, 'Не вдалося оновити права'));
+        role.permissions = has ? [...next, permission] : next.filter((p) => p !== permission);
     } finally {
         savingRole.value = null;
     }
 }
 
-function destroyRole(role) {
+async function destroyRole(role) {
     if (!confirm(`Видалити роль «${role.name}»?`)) return;
-    window.axios.delete(route('admin.roles.destroy', role.id)).then(() => window.location.reload());
+    try {
+        await window.axios.delete(route('admin.roles.destroy', role.id));
+        window.location.reload();
+    } catch (e) {
+        alert(describeFailure(e, 'Не вдалося видалити роль'));
+    }
 }
 </script>
 

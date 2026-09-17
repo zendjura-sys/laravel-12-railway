@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -46,7 +47,14 @@ class RoleController extends Controller
         return back()->with('status', 'role-created');
     }
 
-    public function update(Request $request, Role $role): RedirectResponse
+    /**
+     * Викликається сирим axios.put() (Admin/Roles/Index.vue), не через
+     * Inertia-роутер — тому JSON, а не back(): 302 без заголовка
+     * X-Inertia браузер сам повторив би тим самим методом на Referer,
+     * тобто на /admin/roles без id, а там лише GET (див. те саме
+     * виправлення для admin.users.roles/position).
+     */
+    public function update(Request $request, Role $role): JsonResponse
     {
         $data = $request->validate([
             'permissions' => ['array'],
@@ -55,10 +63,10 @@ class RoleController extends Controller
 
         $role->syncPermissions($data['permissions'] ?? []);
 
-        return back()->with('status', 'role-updated');
+        return response()->json(['status' => 'role-updated']);
     }
 
-    public function destroy(Role $role): RedirectResponse
+    public function destroy(Role $role): JsonResponse
     {
         // Роль "admin" — несущая конструкция всей системы прав; удалить
         // её означало бы мгновенно лишить всех админов доступа без
@@ -67,6 +75,6 @@ class RoleController extends Controller
 
         $role->delete();
 
-        return back()->with('status', 'role-deleted');
+        return response()->json(['status' => 'role-deleted']);
     }
 }

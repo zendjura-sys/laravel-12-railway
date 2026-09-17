@@ -4,6 +4,8 @@ namespace App\Http\Middleware;
 
 use App\Support\DesignSettings;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
@@ -54,6 +56,26 @@ class HandleInertiaRequests extends Middleware
                 'manageTelegram' => $request->user()?->can('telegram.manage') ?? false,
                 'manageBonuses' => $request->user()?->can('bonuses.manage') ?? false,
             ],
+            // Бейдж у навігації видно з будь-якої сторінки, тому лічильник
+            // рахується тут, а не в NotificationController — той бачить
+            // "непрочитане" лише той, хто вже й так відкрив "Сповіщення".
+            // Через таблицю, а не Addons\Notifications\Models\Notification:
+            // ядро ніде не імпортує класи аддонів (лише Settings/permissions
+            // як спільні джерела), і Schema::hasTable() рятує від помилки,
+            // якщо модуль Notifications ще не встановлено взагалі.
+            'unreadNotifications' => $this->unreadNotificationsCount($request),
         ];
+    }
+
+    private function unreadNotificationsCount(Request $request): int
+    {
+        if (! $request->user() || ! Schema::hasTable('notifications')) {
+            return 0;
+        }
+
+        return DB::table('notifications')
+            ->where('user_id', $request->user()->id)
+            ->whereNull('read_at')
+            ->count();
     }
 }

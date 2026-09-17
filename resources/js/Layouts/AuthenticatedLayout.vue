@@ -71,6 +71,12 @@ const showingNavigationDropdown = ref(false);
                                 :active="route().current('notifications.*')"
                             >
                                 Сповіщення
+                                <span
+                                    v-if="$page.props.unreadNotifications > 0"
+                                    class="ml-1.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-gold-400 px-1 text-[10px] font-semibold text-obsidian-950"
+                                >
+                                    {{ $page.props.unreadNotifications > 99 ? '99+' : $page.props.unreadNotifications }}
+                                </span>
                             </NavLink>
                             <NavLink
                                 :href="route('guide')"
@@ -230,6 +236,12 @@ const showingNavigationDropdown = ref(false);
                         :active="route().current('notifications.*')"
                     >
                         Сповіщення
+                        <span
+                            v-if="$page.props.unreadNotifications > 0"
+                            class="ml-1.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-gold-400 px-1 text-[10px] font-semibold text-obsidian-950"
+                        >
+                            {{ $page.props.unreadNotifications > 99 ? '99+' : $page.props.unreadNotifications }}
+                        </span>
                     </ResponsiveNavLink>
                     <ResponsiveNavLink
                         :href="route('guide')"

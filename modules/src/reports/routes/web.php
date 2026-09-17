@@ -9,5 +9,6 @@ use Illuminate\Support\Facades\Route;
 Route::middleware(['web', 'auth'])->prefix('reports')->name('reports.')->group(function () {
     Route::get('/', [ReportController::class, 'index'])->name('index');
     Route::post('/', [ReportController::class, 'store'])->name('store');
+    Route::get('/schedule', [ReportController::class, 'schedule'])->name('schedule');
     Route::get('/members/search', [ReportController::class, 'searchMembers'])->name('members.search');
 });

@@ -5,6 +5,7 @@ namespace Addons\Reports\Http\Controllers;
 use Addons\Reports\Events\ReportCreated;
 use Addons\Reports\Models\Report;
 use App\Models\User;
+use Illuminate\Support\Carbon;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Http\JsonResponse;
@@ -36,6 +37,68 @@ class ReportController
         return Inertia::render('Reports/Index', [
             'reports' => $reports,
             'myId' => $request->user()->id,
+        ]);
+    }
+
+    /**
+     * Розклад капта: хто в який час був присутній і який результат за
+     * фактом. Один звіт бізвару покриває ОДРАЗУ набір годин (людина могла
+     * вибрати кілька) з ОДНИМ підсумковим W/L на весь цей набір — тому
+     * кілька людей, які звітують за той самий бій, групуються за
+     * однаковим набором годин на ту саму дату, а не рахуються поодинці.
+     *
+     * Без цього групування підсумок бою, де взяли участь 10 людей із
+     * рахунком 2/1 кожен, виглядав би як 20 перемог і 10 поразок — хоча
+     * бій був один. Показуємо результат, який назвала більшість учасників
+     * сесії, і позначаємо явно, якщо хтось назвав інший рахунок.
+     */
+    public function schedule(Request $request): Response
+    {
+        $date = $request->query('date');
+        $date = $date ? Carbon::parse($date)->startOfDay() : Carbon::today();
+
+        $reports = Report::query()
+            ->where('type', 'bizwar')
+            ->whereDate('report_date', $date)
+            ->with('user:id,name')
+            ->oldest('created_at')
+            ->get();
+
+        $sessions = $reports
+            ->groupBy(fn (Report $r) => collect($r->kapt_times ?? [])->sort()->implode(','))
+            ->map(function ($group, string $key) {
+                $resultCounts = $group
+                    ->groupBy(fn (Report $r) => ($r->wins_count ?? 0).':'.($r->losses_count ?? 0))
+                    ->map->count()
+                    ->sortDesc();
+
+                [$wins, $losses] = array_map('intval', explode(':', $resultCounts->keys()->first()));
+
+                return [
+                    'times' => $key === '' ? [] : explode(',', $key),
+                    'result' => ['wins' => $wins, 'losses' => $losses],
+                    'agreement' => $resultCounts->count() === 1,
+                    'result_breakdown' => $resultCounts->map(function (int $count, string $pair) {
+                        [$w, $l] = array_map('intval', explode(':', $pair));
+
+                        return ['wins' => $w, 'losses' => $l, 'count' => $count];
+                    })->values(),
+                    'participants' => $group->map(fn (Report $r) => [
+                        'report_id' => $r->id,
+                        'user_id' => $r->user_id,
+                        'name' => $r->user?->name,
+                        'wins' => $r->wins_count,
+                        'losses' => $r->losses_count,
+                        'status' => $r->status,
+                    ])->values(),
+                ];
+            })
+            ->sortBy(fn (array $s) => $s['times'][0] ?? '')
+            ->values();
+
+        return Inertia::render('Reports/Schedule', [
+            'date' => $date->toDateString(),
+            'sessions' => $sessions,
         ]);
     }
 

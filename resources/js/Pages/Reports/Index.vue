@@ -130,12 +130,20 @@ function fmtDateOnly(iso) {
                         Мої <span class="text-gradient-gold italic">звіти</span>
                     </h1>
                 </div>
-                <button
-                    class="rounded-full bg-gradient-to-r from-gold-500 via-gold-300 to-gold-500 px-6 py-3 text-sm font-semibold uppercase tracking-widest text-obsidian-950 shadow-gold transition-transform hover:scale-[1.03]"
-                    @click="showForm = !showForm"
-                >
-                    {{ showForm ? 'Скасувати' : 'Подати звіт' }}
-                </button>
+                <div class="flex items-center gap-3">
+                    <Link
+                        :href="route('reports.schedule')"
+                        class="rounded-full border border-white/10 px-5 py-3 text-sm font-medium tracking-wide text-white/60 transition-colors hover:border-gold-400/40 hover:text-white"
+                    >
+                        Розклад капта
+                    </Link>
+                    <button
+                        class="rounded-full bg-gradient-to-r from-gold-500 via-gold-300 to-gold-500 px-6 py-3 text-sm font-semibold uppercase tracking-widest text-obsidian-950 shadow-gold transition-transform hover:scale-[1.03]"
+                        @click="showForm = !showForm"
+                    >
+                        {{ showForm ? 'Скасувати' : 'Подати звіт' }}
+                    </button>
+                </div>
             </div>
         </header>
 

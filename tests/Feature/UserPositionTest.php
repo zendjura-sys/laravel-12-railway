@@ -187,4 +187,45 @@ class UserPositionTest extends TestCase
             ->put(route('admin.users.position', $target), ['position_key' => 'assistant'])
             ->assertForbidden();
     }
+
+    /** Підвищення відбуваються в грі — учасник сам оновлює собі посаду на сайті. */
+    public function test_a_member_can_set_their_own_position(): void
+    {
+        $member = User::factory()->create(['position_key' => 'trainee']);
+
+        $response = $this->actingAs($member)->patch(route('profile.position'), [
+            'position_key' => 'senior-manager',
+        ]);
+
+        $response->assertSessionHasNoErrors();
+        $this->assertSame('senior-manager', $member->fresh()->position_key);
+    }
+
+    public function test_a_member_can_clear_their_own_position(): void
+    {
+        $member = User::factory()->create(['position_key' => 'manager']);
+
+        $this->actingAs($member)->patch(route('profile.position'), ['position_key' => null]);
+
+        $this->assertNull($member->fresh()->position_key);
+    }
+
+    /** Ключ, якого немає в поточному списку, — відмова і для самостійної зміни теж. */
+    public function test_a_member_cannot_set_an_unknown_position_key(): void
+    {
+        $member = User::factory()->create(['position_key' => 'trainee']);
+
+        $response = $this->actingAs($member)->patch(route('profile.position'), [
+            'position_key' => 'made-up-key-that-does-not-exist',
+        ]);
+
+        $response->assertSessionHasErrors('position_key');
+        $this->assertSame('trainee', $member->fresh()->position_key);
+    }
+
+    public function test_a_guest_cannot_set_a_position(): void
+    {
+        $this->patch(route('profile.position'), ['position_key' => 'trainee'])
+            ->assertRedirect(route('login'));
+    }
 }

@@ -4,10 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\ProfileUpdateRequest;
 use App\Models\Setting;
+use App\Support\FamilyContent;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Redirect;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -24,6 +26,12 @@ class ProfileController extends Controller
             'status' => session('status'),
             'telegramReady' => $this->telegramReady(),
             'promptTelegramLink' => $request->boolean('link_telegram'),
+            // key+title — той самий порядок і текст, що на сайті й у боті
+            // (FamilyContent — спільне джерело для позицій).
+            'positions' => array_map(
+                fn (array $p) => ['key' => $p['key'], 'title' => $p['title']],
+                FamilyContent::positions(),
+            ),
         ]);
     }
 
@@ -53,6 +61,37 @@ class ProfileController extends Controller
         }
 
         $request->user()->save();
+
+        return Redirect::route('profile.edit');
+    }
+
+    /**
+     * Учасник сам вказує свою посаду в родині — підвищення відбуваються в
+     * грі, і раніше про них треба було окремо просити адміна оновити сайт,
+     * а це забувалось. Посада лишається декоративною (не дає жодних прав
+     * доступу — ті керуються ролями, окремо), тому самостійна зміна тут
+     * безпечна; єдиний запобіжник — валідність ключа і лог зміни.
+     */
+    public function updatePosition(Request $request): RedirectResponse
+    {
+        $keys = FamilyContent::positionKeys();
+
+        $data = $request->validate([
+            'position_key' => ['nullable', 'string', 'in:'.implode(',', $keys)],
+        ]);
+
+        $user = $request->user();
+        $previous = $user->position_key;
+
+        $user->update(['position_key' => $data['position_key'] ?? null]);
+
+        if ($previous !== $user->position_key) {
+            Log::info('profile.position: учасник сам змінив собі посаду', [
+                'user_id' => $user->id,
+                'from' => $previous,
+                'to' => $user->position_key,
+            ]);
+        }
 
         return Redirect::route('profile.edit');
     }

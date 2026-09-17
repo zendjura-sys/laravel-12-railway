@@ -3,6 +3,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import DeleteUserForm from './Partials/DeleteUserForm.vue';
 import TelegramLinkForm from './Partials/TelegramLinkForm.vue';
 import UpdatePasswordForm from './Partials/UpdatePasswordForm.vue';
+import UpdatePositionForm from './Partials/UpdatePositionForm.vue';
 import UpdateProfileInformationForm from './Partials/UpdateProfileInformationForm.vue';
 import { Head } from '@inertiajs/vue3';
 import { onMounted } from 'vue';
@@ -21,6 +22,10 @@ const props = defineProps({
     promptTelegramLink: {
         type: Boolean,
         default: false,
+    },
+    positions: {
+        type: Array,
+        default: () => [],
     },
 });
 
@@ -70,10 +75,14 @@ onMounted(() => {
             </div>
 
             <div v-reveal:150 v-glow class="glass-panel p-6 sm:p-8">
-                <UpdatePasswordForm class="max-w-xl" />
+                <UpdatePositionForm :positions="positions" class="max-w-xl" />
             </div>
 
             <div v-reveal:200 v-glow class="glass-panel p-6 sm:p-8">
+                <UpdatePasswordForm class="max-w-xl" />
+            </div>
+
+            <div v-reveal:250 v-glow class="glass-panel p-6 sm:p-8">
                 <DeleteUserForm class="max-w-xl" />
             </div>
         </div>

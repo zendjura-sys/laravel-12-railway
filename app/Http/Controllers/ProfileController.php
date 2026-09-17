@@ -23,6 +23,7 @@ class ProfileController extends Controller
             'mustVerifyEmail' => $request->user() instanceof MustVerifyEmail,
             'status' => session('status'),
             'telegramReady' => $this->telegramReady(),
+            'promptTelegramLink' => $request->boolean('link_telegram'),
         ]);
     }
 

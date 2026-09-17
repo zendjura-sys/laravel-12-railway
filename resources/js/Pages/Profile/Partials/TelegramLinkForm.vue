@@ -22,6 +22,14 @@ async function refresh() {
 async function link() {
     busy.value = true;
     error.value = null;
+
+    // Вкладку треба відкрити СИНХРОННО, першим рядком обробника кліку —
+    // будь-який await перед window.open() (навіть швидкий запит коду)
+    // руйнує "довіру" браузера до жесту користувача, і мобільні браузери
+    // (особливо iOS Safari) тихо блокують спливаюче вікно. Тому спершу
+    // відкриваємо порожню вкладку, а вже потім підставляємо їй адресу.
+    const popup = window.open('', '_blank', 'noopener');
+
     try {
         const { data } = await window.axios.post(route('telegram.generate-code'));
         const code = data.data?.code;
@@ -29,15 +37,20 @@ async function link() {
 
         if (!code || !bot) {
             error.value = 'Бот ще не налаштований. Зверніться до адміністратора.';
+            popup?.close();
             return;
         }
 
-        // Открываем ДО await refresh(): браузеры блокируют window.open,
-        // если между кликом и вызовом успел вклиниться лишний запрос.
-        window.open(`https://t.me/${bot.replace(/^@/, '')}?start=${code}`, '_blank', 'noopener');
+        const url = `https://t.me/${bot.replace(/^@/, '')}?start=${code}`;
+        if (popup) {
+            popup.location.href = url;
+        } else {
+            window.location.href = url;
+        }
         await refresh();
     } catch (e) {
         error.value = e.response?.data?.message || 'Не вдалося отримати посилання.';
+        popup?.close();
     } finally {
         busy.value = false;
     }

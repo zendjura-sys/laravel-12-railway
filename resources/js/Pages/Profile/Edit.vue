@@ -5,8 +5,9 @@ import TelegramLinkForm from './Partials/TelegramLinkForm.vue';
 import UpdatePasswordForm from './Partials/UpdatePasswordForm.vue';
 import UpdateProfileInformationForm from './Partials/UpdateProfileInformationForm.vue';
 import { Head } from '@inertiajs/vue3';
+import { onMounted } from 'vue';
 
-defineProps({
+const props = defineProps({
     mustVerifyEmail: {
         type: Boolean,
     },
@@ -17,6 +18,20 @@ defineProps({
         type: Boolean,
         default: false,
     },
+    promptTelegramLink: {
+        type: Boolean,
+        default: false,
+    },
+});
+
+const highlightTelegram = props.promptTelegramLink && props.telegramReady;
+
+onMounted(() => {
+    if (highlightTelegram) {
+        document
+            .getElementById('telegram-link-section')
+            ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
 });
 </script>
 
@@ -39,7 +54,18 @@ defineProps({
                 />
             </div>
 
-            <div v-if="telegramReady" v-reveal:100 v-glow class="glass-panel p-6 sm:p-8">
+            <div
+                v-if="telegramReady"
+                id="telegram-link-section"
+                v-reveal:100
+                v-glow
+                class="glass-panel p-6 sm:p-8"
+                :class="highlightTelegram && 'ring-2 ring-gold-400/60 shadow-gold'"
+            >
+                <p v-if="highlightTelegram" class="mb-4 text-sm font-medium text-gold-300">
+                    Пошту підтверджено! Залишився останній крок — привʼяжіть Telegram,
+                    щоб отримувати особисті сповіщення.
+                </p>
                 <TelegramLinkForm class="max-w-xl" />
             </div>
 

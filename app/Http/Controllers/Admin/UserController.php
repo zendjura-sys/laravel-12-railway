@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Support\FamilyContent;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -29,12 +30,19 @@ class UserController extends Controller
                 'name' => $user->name,
                 'email' => $user->email,
                 'roles' => $user->roles->pluck('name'),
+                'position_index' => $user->position_index,
             ]);
 
         return Inertia::render('Admin/Users/Index', [
             'users' => $users,
             'roles' => Role::query()->orderBy('name')->pluck('name'),
             'search' => $search,
+            // Список должностей одним запросом — тот же порядок и текст,
+            // что на сайте и в боте (FamilyContent — общий источник).
+            'positions' => array_map(
+                fn (array $p) => $p['title'],
+                FamilyContent::positions(),
+            ),
         ]);
     }
 
@@ -58,5 +66,23 @@ class UserController extends Controller
         $user->syncRoles($data['roles'] ?? []);
 
         return back()->with('status', 'roles-updated');
+    }
+
+    /**
+     * Посада в родині — окрема від ролей доступу. Призначається вручну:
+     * підвищення тут якісне рішення керівництва (див. критерії росту на
+     * сайті), а не щось, що можна порахувати автоматично.
+     */
+    public function updatePosition(Request $request, User $user): RedirectResponse
+    {
+        $max = max(0, count(FamilyContent::positions()) - 1);
+
+        $data = $request->validate([
+            'position_index' => ['nullable', 'integer', 'min:0', "max:{$max}"],
+        ]);
+
+        $user->update(['position_index' => $data['position_index'] ?? null]);
+
+        return back()->with('status', 'position-updated');
     }
 }

@@ -44,6 +44,9 @@ class RegisteredUserController extends Controller
             'last_name' => $request->last_name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
+            // "Починають усі однаково — зі Стажера" (config/family.php,
+            // позиция 0) — та же формулировка, что на сайте и в боте.
+            'position_index' => 0,
         ]);
 
         event(new Registered($user));

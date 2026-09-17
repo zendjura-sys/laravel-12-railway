@@ -31,13 +31,18 @@ class Screens
     /**
      * @return array{text:string,keyboard:array<string,mixed>}
      */
-    public function home(TelegramChat $chat, ?string $memberName): array
+    public function home(TelegramChat $chat, ?string $memberName, ?string $positionTitle = null): array
     {
         if ($memberName !== null) {
             $text = $this->head('MONSORY FAMILY')
                 ."Вітаємо, <b>".e($memberName)."</b>.\n"
-                ."Ваш акаунт привʼязано до цього чату.\n\n"
-                .'Оберіть розділ:';
+                ."Ваш акаунт привʼязано до цього чату.\n";
+
+            if ($positionTitle !== null) {
+                $text .= 'Посада: <b>'.e($positionTitle)."</b>\n";
+            }
+
+            $text .= "\n".'Оберіть розділ:';
 
             $rows = [
                 [$this->btn('👤  Мій акаунт', 'account')],
@@ -209,14 +214,17 @@ class Screens
 
     /* ==================== АККАУНТ ==================== */
 
-    public function account(?string $memberName, ?string $memberEmail): array
+    public function account(?string $memberName, ?string $memberEmail, ?string $positionTitle = null): array
     {
         if ($memberName !== null) {
             $text = $this->head('👤  МІЙ АКАУНТ')
                 ."Чат привʼязано до акаунту на сайті.\n\n"
                 .'<b>'.e($memberName)."</b>\n"
-                .'<code>'.e((string) $memberEmail)."</code>\n\n"
-                .self::RULE;
+                .'<code>'.e((string) $memberEmail)."</code>\n";
+
+            $text .= $positionTitle !== null
+                ? 'Посада: <b>'.e($positionTitle)."</b>\n\n".self::RULE
+                : "Посаду ще не призначено.\n\n".self::RULE;
 
             $rows = [[$this->btn('🔓  Відвʼязати акаунт', 'unlink')]];
         } else {

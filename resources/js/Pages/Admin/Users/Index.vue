@@ -6,6 +6,7 @@ import { ref } from 'vue';
 const props = defineProps({
     users: { type: Object, required: true },
     roles: { type: Array, required: true },
+    positions: { type: Array, required: true },
     search: { type: String, default: '' },
 });
 
@@ -26,6 +27,25 @@ async function toggleRole(user, role) {
     } catch (e) {
         alert(e.response?.data?.errors?.roles?.[0] || 'Не вдалося оновити ролі');
         user.roles = has ? [...next, role] : next.filter((r) => r !== role);
+    } finally {
+        savingUser.value = null;
+    }
+}
+
+// Посада — окремо від ролей доступу: одна ставить доступ до адмінки,
+// друга показує статус у родині на сайті й у боті.
+async function changePosition(user, event) {
+    const raw = event.target.value;
+    const prev = user.position_index;
+    const next = raw === '' ? null : Number(raw);
+    user.position_index = next;
+
+    savingUser.value = user.id;
+    try {
+        await window.axios.put(route('admin.users.position', user.id), { position_index: next });
+    } catch (e) {
+        alert(e.response?.data?.errors?.position_index?.[0] || 'Не вдалося оновити посаду');
+        user.position_index = prev;
     } finally {
         savingUser.value = null;
     }
@@ -57,18 +77,33 @@ async function toggleRole(user, role) {
                     <p class="font-medium text-white">{{ user.name }}</p>
                     <p class="text-xs text-white/40">{{ user.email }}</p>
                 </div>
-                <div class="flex flex-wrap gap-2">
-                    <label
-                        v-for="role in roles"
-                        :key="role"
-                        class="cursor-pointer rounded-full border px-3 py-1.5 text-xs font-medium tracking-wide transition-colors"
-                        :class="user.roles.includes(role)
-                            ? 'border-gold-400/50 bg-gold-400/10 text-gold-200'
-                            : 'border-white/10 text-white/40 hover:border-white/25 hover:text-white'"
-                    >
-                        <input type="checkbox" class="hidden" :checked="user.roles.includes(role)" @change="toggleRole(user, role)" />
-                        {{ role }}
-                    </label>
+                <div class="flex flex-wrap items-center gap-4">
+                    <div class="flex flex-col gap-1">
+                        <span class="text-[10px] uppercase tracking-widest text-white/30">Посада</span>
+                        <select
+                            :value="user.position_index ?? ''"
+                            class="rounded-lg border border-white/10 bg-obsidian-900/60 px-2 py-1.5 text-xs text-white focus:border-gold-400/50 focus:outline-none focus:ring-1 focus:ring-gold-400/40"
+                            @change="changePosition(user, $event)"
+                        >
+                            <option value="">— не призначено —</option>
+                            <option v-for="(title, idx) in positions" :key="idx" :value="idx">
+                                {{ String(idx + 1).padStart(2, '0') }}. {{ title }}
+                            </option>
+                        </select>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <label
+                            v-for="role in roles"
+                            :key="role"
+                            class="cursor-pointer rounded-full border px-3 py-1.5 text-xs font-medium tracking-wide transition-colors"
+                            :class="user.roles.includes(role)
+                                ? 'border-gold-400/50 bg-gold-400/10 text-gold-200'
+                                : 'border-white/10 text-white/40 hover:border-white/25 hover:text-white'"
+                        >
+                            <input type="checkbox" class="hidden" :checked="user.roles.includes(role)" @change="toggleRole(user, role)" />
+                            {{ role }}
+                        </label>
+                    </div>
                 </div>
             </div>
             <div v-if="users.data.length === 0" class="px-6 py-12 text-center text-white/30">

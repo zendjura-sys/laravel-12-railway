@@ -115,6 +115,7 @@ Route::middleware(['auth', 'verified', 'permission:users.manage'])
     ->group(function () {
         Route::get('/', [UserController::class, 'index'])->name('index');
         Route::put('/{user}/roles', [UserController::class, 'updateRoles'])->name('roles');
+        Route::put('/{user}/position', [UserController::class, 'updatePosition'])->name('position');
     });
 
 /*

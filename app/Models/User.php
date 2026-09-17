@@ -2,7 +2,9 @@
 
 namespace App\Models;
 
+use App\Support\FamilyContent;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -24,6 +26,10 @@ class User extends Authenticatable implements MustVerifyEmail
         'name',
         'email',
         'password',
+        // Только контролируемые пути пишут его явным литералом
+        // (регистрация — 0, адмінка — через провалідований UserController).
+        // Ни один путь не берёт значение прямо из $request-массива.
+        'position_index',
     ];
 
     /**
@@ -34,6 +40,17 @@ class User extends Authenticatable implements MustVerifyEmail
     protected $hidden = [
         'password',
         'remember_token',
+    ];
+
+    /**
+     * position_title вычисляемый — расшаривается вместе с моделью везде,
+     * где она уже сериализуется (Inertia auth.user, список учасників в
+     * адмінці), без ручного докидывания в каждый контроллер.
+     *
+     * @var list<string>
+     */
+    protected $appends = [
+        'position_title',
     ];
 
     /**
@@ -79,5 +96,18 @@ class User extends Authenticatable implements MustVerifyEmail
         $full = trim(($this->first_name ?? '').' '.($this->last_name ?? ''));
 
         return $full !== '' ? $full : (string) $this->name;
+    }
+
+    /**
+     * Посада в родині — окрема річ від ролей доступу (admin/тощо, тут ні
+     * до чого) і від XP у модулі Progression (той окремий ігровий бал, а
+     * не офіційна посада). Єдине джерело правди — config/family.php через
+     * FamilyContent, те саме, що читають сайт і бот.
+     */
+    protected function positionTitle(): Attribute
+    {
+        return Attribute::make(
+            get: fn () => FamilyContent::positionAt($this->position_index)['title'] ?? null,
+        );
     }
 }

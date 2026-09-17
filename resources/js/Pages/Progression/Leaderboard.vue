@@ -44,7 +44,7 @@ defineProps({
                         </span>
                         <div>
                             <div class="font-medium text-white">{{ entry.name }}</div>
-                            <div class="text-xs text-white/40">{{ entry.rank }} · рівень {{ entry.level }}</div>
+                            <div class="text-xs text-white/40">{{ entry.position || 'без посади' }} · рівень активності {{ entry.level }}</div>
                         </div>
                     </div>
                     <span class="font-display text-xl text-gold-300">{{ entry.xp }} XP</span>

@@ -32,6 +32,23 @@ class FamilyContent
         return self::list('positions');
     }
 
+    /**
+     * Одна должность по индексу — им хранится назначение участника
+     * (users.position_index), а не заголовком: если админ переименует или
+     * переставит должности в Дизайн → Розділи, привязка участника
+     * останется верной.
+     *
+     * @return array<string,string>|null
+     */
+    public static function positionAt(?int $index): ?array
+    {
+        if ($index === null) {
+            return null;
+        }
+
+        return self::positions()[$index] ?? null;
+    }
+
     /** @return array<int,array<string,string>> */
     public static function directions(): array
     {

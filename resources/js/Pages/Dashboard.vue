@@ -40,15 +40,26 @@ function fmtDate(iso) {
             </div>
 
             <!-- ================= ОБЛІКОВИЙ ЗАПИС ================= -->
-            <div v-reveal v-glow class="glass-panel mb-8 grid gap-6 p-6 sm:grid-cols-3 sm:p-8">
+            <div v-reveal v-glow class="glass-panel mb-8 grid gap-6 p-6 sm:grid-cols-2 sm:p-8 lg:grid-cols-4">
                 <div>
                     <p class="text-xs uppercase tracking-widest text-white/40">Ім'я</p>
                     <p class="mt-1 font-medium text-white">{{ $page.props.auth.user.name }}</p>
                 </div>
                 <div>
+                    <p class="text-xs uppercase tracking-widest text-white/40">Посада</p>
+                    <p class="mt-1 font-medium text-white">
+                        <span v-if="$page.props.auth.user.position_title" class="text-gold-300">{{ $page.props.auth.user.position_title }}</span>
+                        <span v-else class="text-white/30">не призначено</span>
+                    </p>
+                </div>
+                <div>
                     <p class="text-xs uppercase tracking-widest text-white/40">Email</p>
-                    <p class="mt-1 flex items-center gap-2 font-medium text-white">
-                        {{ $page.props.auth.user.email }}
+                    <!-- flex-wrap обов'язковий: у 4-колонковій розкладці
+                         клітинка вужча, і без переносу бейдж
+                         "Підтверджено" наїжджав на сусідню колонку
+                         замість того, щоб піти на новий рядок. -->
+                    <p class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 font-medium text-white">
+                        <span class="break-all">{{ $page.props.auth.user.email }}</span>
                         <span
                             v-if="$page.props.auth.user.email_verified_at"
                             class="rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2 py-0.5 text-[10px] uppercase tracking-wide text-emerald-300"
@@ -63,7 +74,7 @@ function fmtDate(iso) {
                     <p class="text-xs uppercase tracking-widest text-white/40">У родині з</p>
                     <p class="mt-1 font-medium text-white">{{ fmtDate($page.props.auth.user.created_at) }}</p>
                 </div>
-                <div class="sm:col-span-3">
+                <div class="sm:col-span-2 lg:col-span-4">
                     <Link :href="route('profile.edit')" class="text-xs uppercase tracking-widest text-gold-300/80 hover:text-gold-200">
                         Редагувати профіль →
                     </Link>

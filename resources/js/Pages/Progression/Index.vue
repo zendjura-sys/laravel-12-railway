@@ -41,9 +41,11 @@ const sourceLabels = { report: 'звіт', weekly_bonus: 'тижневий бо�
         <div class="mx-auto max-w-5xl px-6 py-10">
             <!-- Основная карточка: XP / рівень / ранг -->
             <div class="mb-10 rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.05] to-transparent p-8 text-center">
-                <p class="text-xs uppercase tracking-[0.4em] text-gold-300/80">{{ profile.rank }}</p>
+                <p class="text-xs uppercase tracking-[0.4em] text-gold-300/80">
+                    {{ profile.position || 'Посаду ще не призначено' }}
+                </p>
                 <div class="font-display mt-3 text-6xl font-semibold text-gradient-gold">{{ profile.xp }}</div>
-                <p class="mt-1 text-sm text-white/40">XP · Рівень {{ profile.level }}</p>
+                <p class="mt-1 text-sm text-white/40">XP · Рівень активності {{ profile.level }}</p>
 
                 <div class="mx-auto mt-8 grid max-w-lg grid-cols-4 gap-4 border-t border-white/10 pt-6 text-center">
                     <div>

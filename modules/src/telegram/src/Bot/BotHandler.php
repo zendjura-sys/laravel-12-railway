@@ -416,14 +416,16 @@ class BotHandler
 
     private function homeScreen(TelegramChat $chat): array
     {
-        return $this->screens->home($chat, $this->linkedUser($chat)?->name);
+        $user = $this->linkedUser($chat);
+
+        return $this->screens->home($chat, $user?->name, $user?->position_title);
     }
 
     private function accountScreen(TelegramChat $chat): array
     {
         $user = $this->linkedUser($chat);
 
-        return $this->screens->account($user?->name, $user?->email);
+        return $this->screens->account($user?->name, $user?->email, $user?->position_title);
     }
 
     private function unlink(TelegramChat $chat): array

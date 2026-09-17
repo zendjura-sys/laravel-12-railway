@@ -40,7 +40,10 @@ class ProgressController
             'profile' => [
                 'xp' => $profile->xp,
                 'level' => $profile->level(),
-                'rank' => $profile->rank(),
+                // Посада родини — окрема річ від XP-рівня тут: перша
+                // призначається керівництвом за якісними критеріями,
+                // другий — просто лічильник активності.
+                'position' => $request->user()->position_title,
                 'kapt_wins' => $profile->kapt_wins,
                 'kapt_losses' => $profile->kapt_losses,
                 'contracts_count' => $profile->contracts_count,
@@ -54,7 +57,7 @@ class ProgressController
 
     public function leaderboard(): Response
     {
-        $top = ProgressionProfile::with('user:id,name')
+        $top = ProgressionProfile::with('user:id,name,first_name,last_name,position_index')
             ->orderByDesc('xp')
             ->limit(50)
             ->get()
@@ -62,7 +65,7 @@ class ProgressController
                 'name' => $p->user?->name ?? '—',
                 'xp' => $p->xp,
                 'level' => $p->level(),
-                'rank' => $p->rank(),
+                'position' => $p->user?->position_title,
             ]);
 
         return Inertia::render('Progression/Leaderboard', ['leaderboard' => $top]);

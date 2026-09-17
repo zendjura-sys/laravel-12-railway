@@ -46,18 +46,10 @@ class ProgressionProfile extends Model
         return (int) floor(sqrt($this->xp / 250)) + 1;
     }
 
-    /** Ranks: Recruit lv1, Fighter lv3, Senior Fighter lv5, Veteran lv7, Elite lv9, Officer lv12. */
-    public function rank(): string
-    {
-        $level = $this->level();
-
-        return match (true) {
-            $level >= 12 => 'Officer',
-            $level >= 9 => 'Elite',
-            $level >= 7 => 'Veteran',
-            $level >= 5 => 'Senior Fighter',
-            $level >= 3 => 'Fighter',
-            default => 'Recruit',
-        };
-    }
+    // Метод rank() (Recruit/Fighter/.../Officer) отсюда убран намеренно.
+    // Это был generic-заголовок из черновика ТЗ ещё до того, как
+    // появилась настоящая драбина посад родини (config/family.php,
+    // 10 позицій від Стажера до Директора). XP/рівень тут — окремий
+    // ігровий лічильник активності, а офіційну посаду показує
+    // User::position_title — та сама, що на сайті й у боті.
 }

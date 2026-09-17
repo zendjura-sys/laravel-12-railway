@@ -110,29 +110,55 @@ class ProgressionService
                 }
             }
         } elseif ($report->type === 'contract') {
-            $amount = self::XP_CONTRACT[$report->weight] ?? 0;
+            $contractsBefore = $profile->contracts_count;
+            $heavyBefore = $profile->heavy_contracts_count;
 
-            $profile->increment('contracts_count');
-            if ($report->weight === 'heavy') {
-                $profile->increment('heavy_contracts_count');
+            if ($report->weight !== null) {
+                // Історичний формат: один звіт — один контракт однієї ваги.
+                $light = $report->weight === 'light' ? 1 : 0;
+                $medium = $report->weight === 'medium' ? 1 : 0;
+                $heavy = $report->weight === 'heavy' ? 1 : 0;
+                $reason = "Контракт ({$report->weight})";
+            } else {
+                // Пакетний формат: скільки контрактів кожної ваги набралось за дату.
+                $light = $report->light_count ?? 0;
+                $medium = $report->medium_count ?? 0;
+                $heavy = $report->heavy_count ?? 0;
+                $reason = "Контракти (л:{$light} с:{$medium} т:{$heavy})";
             }
 
-            $this->awardXp($user, $amount, "Контракт ({$report->weight})", 'report', $report->id);
+            $amount = $light * self::XP_CONTRACT['light']
+                + $medium * self::XP_CONTRACT['medium']
+                + $heavy * self::XP_CONTRACT['heavy'];
 
+            $profile->increment('contracts_count', $light + $medium + $heavy);
+            if ($heavy > 0) {
+                $profile->increment('heavy_contracts_count', $heavy);
+            }
+
+            $this->awardXp($user, $amount, $reason, 'report', $report->id);
+
+            // Пакетний звіт може одразу перестрибнути поріг (наприклад,
+            // з 23 на 28) — тому дивимось, чи поріг ліг МІЖ старим і новим
+            // значенням, а не чи новe значення рівне порогу.
             $freshProfile = $profile->fresh();
             foreach ([25, 100, 250] as $threshold) {
-                if ($freshProfile->contracts_count === $threshold) {
+                if ($contractsBefore < $threshold && $freshProfile->contracts_count >= $threshold) {
                     $this->unlock($user, "contracts_{$threshold}");
                 }
             }
-            if ($freshProfile->heavy_contracts_count === self::SHARPSHOOTER_HEAVY_CONTRACTS) {
+            if ($heavyBefore < self::SHARPSHOOTER_HEAVY_CONTRACTS && $freshProfile->heavy_contracts_count >= self::SHARPSHOOTER_HEAVY_CONTRACTS) {
                 $this->unlock($user, 'sharpshooter');
             }
         } elseif ($report->type === 'bizwar') {
-            $isWin = $report->outcome === 'win';
-            $amount = $isWin ? self::XP_BIZWAR_WIN : self::XP_BIZWAR_LOSS;
+            // Пакетний звіт (кілька перемог/поразок за дату відразу), тому
+            // без стріків і особистих лічильників — на відміну від kapt,
+            // тут немає послідовності окремих подій, яку можна порахувати.
+            $wins = $report->wins_count ?? 0;
+            $losses = $report->losses_count ?? 0;
+            $amount = $wins * self::XP_BIZWAR_WIN + $losses * self::XP_BIZWAR_LOSS;
 
-            $this->awardXp($user, $amount, "Бізвар ({$report->outcome})", 'report', $report->id);
+            $this->awardXp($user, $amount, "Бізвар (W:{$wins} L:{$losses})", 'report', $report->id);
         } elseif ($report->type === 'investment') {
             $this->awardXp($user, self::XP_INVESTMENT, "Інвестиція ({$report->amount})", 'report', $report->id);
         }

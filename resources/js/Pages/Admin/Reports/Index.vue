@@ -83,11 +83,19 @@ function fmtDate(iso) {
                             <span>{{ typeLabels[report.type] }}</span>
                             <span v-if="report.outcome" class="text-xs uppercase text-white/40">{{ report.outcome }}</span>
                             <span v-if="report.weight" class="text-xs uppercase text-white/40">{{ report.weight }}</span>
+                            <span v-if="report.wins_count !== null" class="text-xs uppercase text-white/40">W: {{ report.wins_count }}</span>
+                            <span v-if="report.losses_count !== null" class="text-xs uppercase text-white/40">L: {{ report.losses_count }}</span>
+                            <span v-if="report.kapt_times?.length" class="text-xs uppercase text-white/40">{{ report.kapt_times.join(', ') }}</span>
+                            <span v-if="report.light_count !== null" class="text-xs uppercase text-white/40">
+                                л:{{ report.light_count }} с:{{ report.medium_count }} т:{{ report.heavy_count }}
+                            </span>
                             <span v-if="report.amount" class="text-xs uppercase text-white/40">{{ report.amount.toLocaleString('uk-UA') }}</span>
                         </div>
                         <p v-if="report.description" class="mt-1 text-sm text-white/50">{{ report.description }}</p>
                         <p class="mt-1 text-xs text-white/30">
-                            подав {{ report.submitter?.name }} · {{ fmtDate(report.created_at) }}
+                            подав {{ report.submitter?.name }}
+                            <span v-if="report.report_date">· дата {{ new Date(report.report_date).toLocaleDateString('uk-UA') }}</span>
+                            · {{ fmtDate(report.created_at) }}
                         </p>
                     </div>
                     <div v-if="report.status === 'pending'" class="flex gap-2">

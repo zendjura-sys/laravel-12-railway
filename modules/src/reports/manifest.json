@@ -2,8 +2,8 @@
     "type": "module",
     "slug": "reports",
     "name": "Reports",
-    "version": "1.1.0",
-    "description": "Канонічна система звітності родини: KAPT (win/loss), контракти (light/medium/heavy), бізвари (win/loss) та інвестиції (сума). Джерело подій report.created і report.reviewed для інших модулів (Progression, Family Goals).",
+    "version": "1.2.0",
+    "description": "Канонічна система звітності родини: контракти й бізвари подаються пакетом за дату (скільки набралось), а не по одному на подію; бізвар фіксує час капта для майбутнього підрахунку премій; інвестиції — сумою. KAPT прибрано з форми подачі (лишається лише в історичних звітах). Джерело подій report.created і report.reviewed для інших модулів (Progression, Family Goals).",
     "min_core_version": "1.0.0",
     "entrypoints": {
         "web": "routes/web.php",

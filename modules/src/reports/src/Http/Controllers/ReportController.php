@@ -54,17 +54,89 @@ class ReportController
      */
     public function schedule(Request $request): Response
     {
-        $date = $request->query('date');
-        $date = $date ? Carbon::parse($date)->startOfDay() : Carbon::today();
+        $view = $request->query('view') === 'week' ? 'week' : 'day';
+
+        $anchor = $request->query('date');
+        $anchor = $anchor ? Carbon::parse($anchor)->startOfDay() : Carbon::today();
+
+        if ($view === 'week') {
+            return $this->weekSchedule($anchor);
+        }
 
         $reports = Report::query()
             ->where('type', 'bizwar')
-            ->whereDate('report_date', $date)
+            ->whereDate('report_date', $anchor)
             ->with('user:id,name')
             ->oldest('created_at')
             ->get();
 
-        $sessions = $reports
+        return Inertia::render('Reports/Schedule', [
+            'view' => 'day',
+            'date' => $anchor->toDateString(),
+            'sessions' => $this->buildSessions($reports),
+        ]);
+    }
+
+    /**
+     * Тижневий перегляд: один запит на весь тиждень (а не сім по одному на
+     * день), далі розкладається по конкретних датах у пам'яті — тиждень
+     * завжди Пн–Нд, незалежно від тижня для нарахування премій (той рахує
+     * від неділі 20:00, це геть інша межа й не має тут значення).
+     */
+    private function weekSchedule(Carbon $anchor): Response
+    {
+        $weekStart = $anchor->copy()->startOfWeek(Carbon::MONDAY);
+        $weekEnd = $weekStart->copy()->addDays(6);
+
+        // Не whereBetween(): report_date у SQLite зберігається як рядок
+        // "YYYY-MM-DD 00:00:00", і верхня межа-дата без часу лексикографічно
+        // менша за нього — крайній день тижня мовчки відрізало б. Явний "<
+        // наступний день" безпечний незалежно від формату зберігання.
+        $reports = Report::query()
+            ->where('type', 'bizwar')
+            ->where('report_date', '>=', $weekStart->toDateString())
+            ->where('report_date', '<', $weekEnd->copy()->addDay()->toDateString())
+            ->with('user:id,name')
+            ->oldest('created_at')
+            ->get();
+
+        $days = [];
+        for ($i = 0; $i < 7; $i++) {
+            $day = $weekStart->copy()->addDays($i);
+            $days[] = [
+                'date' => $day->toDateString(),
+                'sessions' => $this->buildSessions(
+                    $reports->filter(fn (Report $r) => $r->report_date?->isSameDay($day))
+                ),
+            ];
+        }
+
+        return Inertia::render('Reports/Schedule', [
+            'view' => 'week',
+            'date' => $anchor->toDateString(),
+            'weekStart' => $weekStart->toDateString(),
+            'weekEnd' => $weekEnd->toDateString(),
+            'days' => $days,
+        ]);
+    }
+
+    /**
+     * Групування звітів у "сесії бою": один звіт бізвару покриває ОДРАЗУ
+     * набір годин (людина могла вибрати кілька) з ОДНИМ підсумковим W/L на
+     * весь цей набір — тому кілька людей, які звітують за той самий бій,
+     * групуються за однаковим набором годин, а не рахуються поодинці.
+     *
+     * Без цього групування підсумок бою, де взяли участь 10 людей із
+     * рахунком 2/1 кожен, виглядав би як 20 перемог і 10 поразок — хоча
+     * бій був один. Показуємо результат, який назвала більшість учасників
+     * сесії, і позначаємо явно, якщо хтось назвав інший рахунок.
+     *
+     * @param  \Illuminate\Support\Collection<int,Report>  $reports
+     * @return array<int,array<string,mixed>>
+     */
+    private function buildSessions($reports): array
+    {
+        return $reports
             ->groupBy(fn (Report $r) => collect($r->kapt_times ?? [])->sort()->implode(','))
             ->map(function ($group, string $key) {
                 $resultCounts = $group
@@ -94,12 +166,8 @@ class ReportController
                 ];
             })
             ->sortBy(fn (array $s) => $s['times'][0] ?? '')
-            ->values();
-
-        return Inertia::render('Reports/Schedule', [
-            'date' => $date->toDateString(),
-            'sessions' => $sessions,
-        ]);
+            ->values()
+            ->all();
     }
 
     /**

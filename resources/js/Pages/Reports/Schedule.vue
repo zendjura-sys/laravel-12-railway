@@ -1,31 +1,53 @@
 <script setup>
 import { Head, Link, router } from '@inertiajs/vue3';
+import KaptSessionCard from './Partials/KaptSessionCard.vue';
 
 const props = defineProps({
+    view: { type: String, default: 'day' },
     date: { type: String, required: true },
     sessions: { type: Array, default: () => [] },
+    days: { type: Array, default: () => [] },
+    weekStart: { type: String, default: null },
+    weekEnd: { type: String, default: null },
 });
 
-function changeDate(event) {
-    router.get(route('reports.schedule'), { date: event.target.value }, { preserveState: true });
+function go(extra) {
+    router.get(route('reports.schedule'), { view: props.view, date: props.date, ...extra }, { preserveState: true });
 }
 
-function shiftDate(days) {
+function switchView(view) {
+    router.get(route('reports.schedule'), { view, date: props.date }, { preserveState: true });
+}
+
+function changeDate(event) {
+    go({ date: event.target.value });
+}
+
+function shiftDate(steps) {
+    const days = props.view === 'week' ? steps * 7 : steps;
     const d = new Date(props.date + 'T00:00:00');
     d.setDate(d.getDate() + days);
-    router.get(route('reports.schedule'), { date: d.toISOString().slice(0, 10) }, { preserveState: true });
+    go({ date: d.toISOString().slice(0, 10) });
 }
 
-function fmtTimes(times) {
-    if (!times.length) return '—';
-    return times.join(', ');
+const weekdayNames = ['Понеділок', 'Вівторок', 'Середа', 'Четвер', "П'ятниця", 'Субота', 'Неділя'];
+
+function fmtDayLabel(iso) {
+    const d = new Date(iso + 'T00:00:00');
+    const name = weekdayNames[(d.getDay() + 6) % 7];
+    const label = d.toLocaleDateString('uk-UA', { day: '2-digit', month: '2-digit' });
+    return `${name}, ${label}`;
 }
 
-const statusMeta = {
-    pending: { label: 'На розгляді', class: 'bg-gold-400/15 text-gold-300 border-gold-400/30' },
-    approved: { label: 'Затверджено', class: 'bg-emerald-400/15 text-emerald-300 border-emerald-400/30' },
-    rejected: { label: 'Відхилено', class: 'bg-ember-500/15 text-ember-500 border-ember-500/30' },
-};
+function fmtRange(a, b) {
+    const da = new Date(a + 'T00:00:00').toLocaleDateString('uk-UA', { day: '2-digit', month: '2-digit' });
+    const db = new Date(b + 'T00:00:00').toLocaleDateString('uk-UA', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    return `${da} – ${db}`;
+}
+
+function isToday(iso) {
+    return iso === new Date().toISOString().slice(0, 10);
+}
 </script>
 
 <template>
@@ -51,72 +73,77 @@ const statusMeta = {
                 коли за один і той самий бій звітує кілька людей.
             </p>
 
-            <div class="mb-8 flex items-center gap-3">
-                <button
-                    class="rounded-full border border-white/10 px-3 py-1.5 text-sm text-white/60 transition-colors hover:border-gold-400/40 hover:text-white"
-                    @click="shiftDate(-1)"
-                >
-                    ← Попередній день
-                </button>
-                <input
-                    type="date"
-                    :value="date"
-                    class="rounded-lg border border-white/10 bg-obsidian-900 px-3 py-2 text-white"
-                    @change="changeDate"
-                />
-                <button
-                    class="rounded-full border border-white/10 px-3 py-1.5 text-sm text-white/60 transition-colors hover:border-gold-400/40 hover:text-white"
-                    @click="shiftDate(1)"
-                >
-                    Наступний день →
-                </button>
-            </div>
-
-            <div v-if="sessions.length === 0" class="rounded-2xl border border-white/10 bg-white/[0.02] px-6 py-12 text-center text-white/30">
-                На цю дату бізвар-звітів немає.
-            </div>
-
-            <div v-for="session in sessions" :key="session.times.join(',')" class="mb-5 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02]">
-                <div class="flex flex-wrap items-center justify-between gap-4 border-b border-white/5 px-6 py-4">
-                    <div>
-                        <p class="text-xs uppercase tracking-widest text-white/40">Час капта</p>
-                        <p class="mt-1 text-lg font-medium text-white">{{ fmtTimes(session.times) }}</p>
-                    </div>
-
-                    <div class="text-right">
-                        <p class="text-xs uppercase tracking-widest text-white/40">Підсумок бою</p>
-                        <p class="mt-1 text-2xl font-semibold">
-                            <span class="text-emerald-300">{{ session.result.wins }}</span>
-                            <span class="text-white/30"> – </span>
-                            <span class="text-ember-500">{{ session.result.losses }}</span>
-                        </p>
-                    </div>
-                </div>
-
-                <div v-if="!session.agreement" class="border-b border-gold-400/20 bg-gold-400/5 px-6 py-3 text-xs text-gold-300">
-                    ⚠ Учасники назвали різний рахунок —
-                    <span v-for="(b, i) in session.result_breakdown" :key="i">
-                        {{ b.wins }}–{{ b.losses }} ({{ b.count }}){{ i < session.result_breakdown.length - 1 ? ', ' : '' }}
-                    </span>
-                    . Показано найпоширеніший варіант; варто уточнити в модерації.
-                </div>
-
-                <div class="divide-y divide-white/5">
-                    <div
-                        v-for="p in session.participants"
-                        :key="p.report_id"
-                        class="flex items-center justify-between gap-4 px-6 py-3"
+            <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
+                <div class="flex gap-2">
+                    <button
+                        class="rounded-full border px-4 py-1.5 text-xs font-medium uppercase tracking-widest transition-colors"
+                        :class="view === 'day' ? 'border-gold-400/50 bg-gold-400/10 text-gold-200' : 'border-white/10 text-white/40 hover:text-white'"
+                        @click="switchView('day')"
                     >
-                        <span class="text-sm text-white/80">{{ p.name ?? '—' }}</span>
-                        <div class="flex items-center gap-3">
-                            <span class="text-xs text-white/40">{{ p.wins }}–{{ p.losses }}</span>
-                            <span class="shrink-0 rounded-full border px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-wide" :class="statusMeta[p.status]?.class">
-                                {{ statusMeta[p.status]?.label }}
-                            </span>
-                        </div>
-                    </div>
+                        День
+                    </button>
+                    <button
+                        class="rounded-full border px-4 py-1.5 text-xs font-medium uppercase tracking-widest transition-colors"
+                        :class="view === 'week' ? 'border-gold-400/50 bg-gold-400/10 text-gold-200' : 'border-white/10 text-white/40 hover:text-white'"
+                        @click="switchView('week')"
+                    >
+                        Тиждень
+                    </button>
+                </div>
+
+                <div class="flex items-center gap-3">
+                    <button
+                        class="rounded-full border border-white/10 px-3 py-1.5 text-sm text-white/60 transition-colors hover:border-gold-400/40 hover:text-white"
+                        @click="shiftDate(-1)"
+                    >
+                        ← {{ view === 'week' ? 'Попередній тиждень' : 'Попередній день' }}
+                    </button>
+                    <input
+                        v-if="view === 'day'"
+                        type="date"
+                        :value="date"
+                        class="rounded-lg border border-white/10 bg-obsidian-900 px-3 py-2 text-white"
+                        @change="changeDate"
+                    />
+                    <span v-else class="rounded-lg border border-white/10 bg-obsidian-900 px-3 py-2 text-sm text-white">
+                        {{ fmtRange(weekStart, weekEnd) }}
+                    </span>
+                    <button
+                        class="rounded-full border border-white/10 px-3 py-1.5 text-sm text-white/60 transition-colors hover:border-gold-400/40 hover:text-white"
+                        @click="shiftDate(1)"
+                    >
+                        {{ view === 'week' ? 'Наступний тиждень' : 'Наступний день' }} →
+                    </button>
                 </div>
             </div>
+
+            <!-- ================= ДЕНЬ ================= -->
+            <template v-if="view === 'day'">
+                <div v-if="sessions.length === 0" class="rounded-2xl border border-white/10 bg-white/[0.02] px-6 py-12 text-center text-white/30">
+                    На цю дату бізвар-звітів немає.
+                </div>
+                <KaptSessionCard v-for="session in sessions" :key="session.times.join(',')" :session="session" />
+            </template>
+
+            <!-- ================= ТИЖДЕНЬ ================= -->
+            <template v-else>
+                <div v-for="day in days" :key="day.date" class="mb-8">
+                    <h2
+                        class="font-display mb-3 flex items-center gap-2 text-lg text-white"
+                        :class="isToday(day.date) ? 'text-gold-300' : ''"
+                    >
+                        {{ fmtDayLabel(day.date) }}
+                        <span v-if="isToday(day.date)" class="rounded-full border border-gold-400/40 px-2 py-0.5 text-[10px] uppercase tracking-widest text-gold-300">
+                            Сьогодні
+                        </span>
+                    </h2>
+
+                    <div v-if="day.sessions.length === 0" class="rounded-xl border border-white/5 bg-white/[0.01] px-5 py-3 text-sm text-white/25">
+                        Бізвар-звітів немає
+                    </div>
+                    <KaptSessionCard v-for="session in day.sessions" :key="session.times.join(',')" :session="session" />
+                </div>
+            </template>
         </div>
     </div>
 </template>

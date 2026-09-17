@@ -51,8 +51,8 @@ const mobileOpen = ref(false);
         <div class="flex">
             <!-- ================= SIDEBAR ================= -->
             <aside
-                class="glass-panel fixed inset-y-4 left-4 z-40 w-64 -translate-x-[120%] overflow-y-auto !rounded-2xl px-5 py-6 transition-transform duration-300 lg:translate-x-0"
-                :class="mobileOpen && 'translate-x-0'"
+                class="glass-panel fixed inset-y-4 left-4 z-40 w-64 overflow-y-auto !rounded-2xl px-5 py-6 transition-transform duration-300 lg:translate-x-0"
+                :class="mobileOpen ? 'translate-x-0' : 'translate-x-[-120%]'"
             >
                 <div class="mb-8 flex items-center justify-between">
                     <Link href="/" class="flex items-center gap-3">

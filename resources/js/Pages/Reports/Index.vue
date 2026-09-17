@@ -1,9 +1,10 @@
 <script setup>
 import { Head, Link, useForm } from '@inertiajs/vue3';
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
 
-defineProps({
+const props = defineProps({
     reports: { type: Object, required: true },
+    myId: { type: Number, required: true },
 });
 
 const today = new Date().toISOString().slice(0, 10);
@@ -23,9 +24,55 @@ const form = useForm({
     heavy_count: 0,
     amount: null,
     description: '',
+    subject_type: 'self',
+    subject_user_id: null,
+    subject_first_name: '',
+    subject_last_name: '',
 });
 
 const showForm = ref(false);
+
+/* ================= За себе / за друга ================= */
+
+const friendQuery = ref('');
+const friendMatches = ref([]);
+const friendSelected = ref(null);
+let friendSearchTimer = null;
+
+function setSubjectType(type) {
+    form.subject_type = type;
+    form.subject_user_id = null;
+    friendSelected.value = null;
+    friendQuery.value = '';
+    friendMatches.value = [];
+    form.subject_first_name = '';
+    form.subject_last_name = '';
+}
+
+watch(friendQuery, (q) => {
+    friendSelected.value = null;
+    form.subject_user_id = null;
+    clearTimeout(friendSearchTimer);
+    const [first, ...rest] = q.trim().split(/\s+/);
+    form.subject_first_name = first || '';
+    form.subject_last_name = rest.join(' ');
+
+    if (q.trim().length < 2) {
+        friendMatches.value = [];
+        return;
+    }
+    friendSearchTimer = setTimeout(async () => {
+        const { data } = await window.axios.get(route('reports.members.search'), { params: { q } });
+        friendMatches.value = data.data.members;
+    }, 300);
+});
+
+function pickFriend(member) {
+    friendSelected.value = member;
+    form.subject_user_id = member.id;
+    friendQuery.value = member.name;
+    friendMatches.value = [];
+}
 
 function toggleKaptTime(time) {
     const idx = form.kapt_times.indexOf(time);
@@ -40,7 +87,13 @@ function submit() {
     form.post(route('reports.store'), {
         preserveScroll: true,
         onSuccess: () => {
-            form.reset('description', 'wins_count', 'losses_count', 'kapt_times', 'light_count', 'medium_count', 'heavy_count', 'amount');
+            form.reset(
+                'description', 'wins_count', 'losses_count', 'kapt_times', 'light_count', 'medium_count', 'heavy_count', 'amount',
+                'subject_type', 'subject_user_id', 'subject_first_name', 'subject_last_name',
+            );
+            friendQuery.value = '';
+            friendSelected.value = null;
+            friendMatches.value = [];
             showForm.value = false;
         },
     });
@@ -89,6 +142,53 @@ function fmtDateOnly(iso) {
         <div class="mx-auto max-w-5xl px-6 py-10">
             <Transition name="fade-slide">
                 <form v-if="showForm" class="mb-10 rounded-2xl border border-white/10 bg-white/[0.03] p-6" @submit.prevent="submit">
+                    <div class="mb-5">
+                        <label class="mb-2 block text-xs uppercase tracking-widest text-white/40">Подаю</label>
+                        <div class="flex gap-2">
+                            <button
+                                type="button"
+                                class="rounded-full border px-4 py-1.5 text-xs uppercase tracking-widest transition-colors"
+                                :class="form.subject_type === 'self' ? 'border-gold-400/50 bg-gold-400/10 text-gold-200' : 'border-white/10 text-white/40 hover:text-white'"
+                                @click="setSubjectType('self')"
+                            >
+                                За себе
+                            </button>
+                            <button
+                                type="button"
+                                class="rounded-full border px-4 py-1.5 text-xs uppercase tracking-widest transition-colors"
+                                :class="form.subject_type === 'friend' ? 'border-gold-400/50 bg-gold-400/10 text-gold-200' : 'border-white/10 text-white/40 hover:text-white'"
+                                @click="setSubjectType('friend')"
+                            >
+                                За друга
+                            </button>
+                        </div>
+
+                        <div v-if="form.subject_type === 'friend'" class="relative mt-3 max-w-sm">
+                            <input
+                                v-model="friendQuery"
+                                type="text"
+                                placeholder="Ім'я та прізвище друга"
+                                class="w-full rounded-lg border border-white/10 bg-obsidian-900 px-3 py-2 text-white"
+                            />
+                            <div v-if="friendMatches.length" class="absolute z-10 mt-1 w-full overflow-hidden rounded-lg border border-white/10 bg-obsidian-900 shadow-xl">
+                                <button
+                                    v-for="m in friendMatches"
+                                    :key="m.id"
+                                    type="button"
+                                    class="block w-full px-3 py-2 text-left text-sm text-white hover:bg-white/5"
+                                    @click="pickFriend(m)"
+                                >
+                                    {{ m.name }}
+                                </button>
+                            </div>
+                            <p v-if="friendSelected" class="mt-1 text-xs text-emerald-400/70">Обрано: {{ friendSelected.name }}</p>
+                            <p v-else-if="friendQuery.trim().length >= 2 && !friendMatches.length" class="mt-1 text-xs text-white/30">
+                                Збігів немає — звіт буде подано на нове ім'я «{{ friendQuery }}». Якщо друг зареєструється з таким самим ім'ям, статистика підтягнеться до нього.
+                            </p>
+                            <p v-if="form.errors.subject_first_name" class="mt-1 text-xs text-ember-500">{{ form.errors.subject_first_name }}</p>
+                        </div>
+                    </div>
+
                     <div>
                         <label class="mb-2 block text-xs uppercase tracking-widest text-white/40">Тип</label>
                         <select v-model="form.type" class="w-full max-w-xs rounded-lg border border-white/10 bg-obsidian-900 px-3 py-2 text-white">
@@ -207,6 +307,9 @@ function fmtDateOnly(iso) {
                     <div>
                         <div class="flex flex-wrap items-center gap-2">
                             <span class="font-medium text-white">{{ typeLabels[report.type] }}</span>
+                            <span v-if="report.user?.id !== myId" class="rounded-full border border-gold-400/30 px-2 py-0.5 text-[10px] uppercase tracking-wide text-gold-300/80">
+                                за {{ report.user?.name }}
+                            </span>
                             <span v-if="report.outcome" class="text-xs uppercase text-white/40">{{ report.outcome }}</span>
                             <span v-if="report.weight" class="text-xs uppercase text-white/40">{{ report.weight }}</span>
                             <span v-if="report.wins_count !== null" class="text-xs uppercase text-white/40">W: {{ report.wins_count }}</span>
@@ -219,6 +322,7 @@ function fmtDateOnly(iso) {
                         </div>
                         <p class="mt-1 text-xs text-white/30">
                             {{ report.report_date ? fmtDateOnly(report.report_date) + ' · подано ' : '' }}{{ fmtDate(report.created_at) }}
+                            <span v-if="report.submitter?.id !== myId && report.submitter?.id !== report.user?.id">· подав {{ report.submitter?.name }}</span>
                         </p>
                     </div>
                     <span class="shrink-0 rounded-full border px-3 py-1 text-[11px] font-medium uppercase tracking-wide" :class="statusMeta[report.status]?.class">

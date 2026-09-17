@@ -71,7 +71,7 @@ class BonusCalculator
                 && $contracts['count'] >= $settings->contracts_count_threshold)
                 ? (int) $settings->contracts_count_bonus_amount
                 : 0;
-            $investmentBonus = $this->calculateInvestmentBonus($user);
+            $investmentBonus = $this->calculateInvestmentBonus($user, $weekStart, $weekEnd);
 
             $total = $bizwar['amount'] + $contracts['amount'] + $streakBonus + $contractsCountBonus + $investmentBonus;
 
@@ -106,58 +106,85 @@ class BonusCalculator
         return $weekStart;
     }
 
-    /** @return array{amount:int,winrate:?float} */
+    /**
+     * Рахує КОЖЕН звіт (день) окремо — власний winrate дня × ставка ×
+     * множник оцінки цього конкретного звіту — і сумує за тиждень. Раніше
+     * тут був один агрегатний winrate на весь тиждень, але оцінка
+     * ставиться на кожен звіт при затвердженні, а не на тиждень в цілому,
+     * тож без посуточного рахунку не було б куди її прикласти.
+     *
+     * @return array{amount:int,winrate:?float}
+     */
     private function calculateBizwar(int $userId, SupportCarbon $weekStart, SupportCarbon $weekEnd, BonusSettings $settings): array
     {
-        $totals = Report::query()
+        $reports = Report::query()
             ->where('user_id', $userId)->where('status', 'approved')->where('type', 'bizwar')
             ->whereBetween('reviewed_at', [$weekStart, $weekEnd])
-            ->selectRaw('COALESCE(SUM(wins_count),0) as wins, COALESCE(SUM(losses_count),0) as losses')
-            ->first();
+            ->get(['wins_count', 'losses_count', 'grade']);
 
-        $wins = (int) $totals->wins;
-        $losses = (int) $totals->losses;
-        $played = $wins + $losses;
+        $amount = 0;
+        $totalWins = 0;
+        $totalPlayed = 0;
 
-        if ($played === 0) {
-            return ['amount' => 0, 'winrate' => null];
+        foreach ($reports as $report) {
+            $wins = (int) ($report->wins_count ?? 0);
+            $losses = (int) ($report->losses_count ?? 0);
+            $played = $wins + $losses;
+            if ($played === 0) {
+                continue;
+            }
+
+            $dayWinrate = $wins / $played;
+            $amount += (int) round($settings->bizwar_base_rate * $dayWinrate * $report->gradeMultiplier());
+
+            $totalWins += $wins;
+            $totalPlayed += $played;
         }
 
-        $winrate = $wins / $played;
-
         return [
-            'amount' => (int) round($settings->bizwar_base_rate * $winrate),
-            'winrate' => round($winrate * 100, 2),
+            'amount' => $amount,
+            // Сумарний winrate тижня лишається тільки для відображення в
+            // адмінці/особистому кабінеті — на суму він більше не впливає.
+            'winrate' => $totalPlayed > 0 ? round($totalWins / $totalPlayed * 100, 2) : null,
         ];
     }
 
-    /** @return array{amount:int,count:int} */
+    /**
+     * Так само посуточно: сума ставок ЦЬОГО звіту × множник ЙОГО оцінки.
+     *
+     * @return array{amount:int,count:int}
+     */
     private function calculateContracts(int $userId, SupportCarbon $weekStart, SupportCarbon $weekEnd, BonusSettings $settings): array
     {
         $reports = Report::query()
             ->where('user_id', $userId)->where('status', 'approved')->where('type', 'contract')
             ->whereBetween('reviewed_at', [$weekStart, $weekEnd])
-            ->get(['weight', 'light_count', 'medium_count', 'heavy_count']);
+            ->get(['weight', 'light_count', 'medium_count', 'heavy_count', 'grade']);
 
-        $light = $medium = $heavy = 0;
+        $amount = 0;
+        $totalCount = 0;
+
         foreach ($reports as $report) {
             if ($report->weight !== null) {
                 // Історичний формат: один звіт — один контракт однієї ваги.
-                $light += $report->weight === 'light' ? 1 : 0;
-                $medium += $report->weight === 'medium' ? 1 : 0;
-                $heavy += $report->weight === 'heavy' ? 1 : 0;
+                $light = $report->weight === 'light' ? 1 : 0;
+                $medium = $report->weight === 'medium' ? 1 : 0;
+                $heavy = $report->weight === 'heavy' ? 1 : 0;
             } else {
-                $light += $report->light_count ?? 0;
-                $medium += $report->medium_count ?? 0;
-                $heavy += $report->heavy_count ?? 0;
+                $light = $report->light_count ?? 0;
+                $medium = $report->medium_count ?? 0;
+                $heavy = $report->heavy_count ?? 0;
             }
+
+            $dayAmount = $light * $settings->contract_light_rate
+                + $medium * $settings->contract_medium_rate
+                + $heavy * $settings->contract_heavy_rate;
+
+            $amount += (int) round($dayAmount * $report->gradeMultiplier());
+            $totalCount += $light + $medium + $heavy;
         }
 
-        $amount = $light * $settings->contract_light_rate
-            + $medium * $settings->contract_medium_rate
-            + $heavy * $settings->contract_heavy_rate;
-
-        return ['amount' => (int) $amount, 'count' => $light + $medium + $heavy];
+        return ['amount' => $amount, 'count' => $totalCount];
     }
 
     private function calculateStreakBonus(int $userId, BonusSettings $settings): int
@@ -174,37 +201,69 @@ class BonusCalculator
         return (int) $settings->streak_bonus_amount;
     }
 
-    private function calculateInvestmentBonus(User $user): int
+    /**
+     * Тір — одноразова премія за кумулятивну суму, не за конкретний
+     * звіт, але оцінка все одно ставиться на звіт. Тому: тіри, вже
+     * перетнуті сумою ДО цього тижня, зараховуються нейтрально (1.0,
+     * жодного звіту цього тижня їх не спричинив); тіри, перетнуті ВЖЕ В
+     * ЦЬОМУ тижні — множник оцінки того конкретного звіту, який довів
+     * кумулятивну суму до порогу.
+     */
+    private function calculateInvestmentBonus(User $user, SupportCarbon $weekStart, SupportCarbon $weekEnd): int
     {
-        $cumulative = (int) Report::query()
+        $baseline = (int) Report::query()
             ->where('user_id', $user->id)->where('status', 'approved')->where('type', 'investment')
+            ->where('reviewed_at', '<', $weekStart)
             ->sum('amount');
 
-        if ($cumulative <= 0) {
+        $thisWeekReports = Report::query()
+            ->where('user_id', $user->id)->where('status', 'approved')->where('type', 'investment')
+            ->whereBetween('reviewed_at', [$weekStart, $weekEnd])
+            ->orderBy('reviewed_at')
+            ->get(['amount', 'grade']);
+
+        $earnedTierIds = UserInvestmentAchievement::query()->where('user_id', $user->id)->pluck('tier_id');
+        $tiers = InvestmentAchievementTier::query()->whereNotIn('id', $earnedTierIds)->orderBy('threshold_amount')->get();
+
+        if ($tiers->isEmpty()) {
             return 0;
         }
 
-        $earnedTierIds = UserInvestmentAchievement::query()->where('user_id', $user->id)->pluck('tier_id');
-
-        $newlyEligible = InvestmentAchievementTier::query()
-            ->where('threshold_amount', '<=', $cumulative)
-            ->whereNotIn('id', $earnedTierIds)
-            ->get();
-
         $bonus = 0;
-        foreach ($newlyEligible as $tier) {
-            $achievement = UserInvestmentAchievement::firstOrCreate(
-                ['user_id' => $user->id, 'tier_id' => $tier->id],
-                ['earned_at' => now()],
-            );
+        $running = $baseline;
 
-            if ($achievement->wasRecentlyCreated) {
-                $bonus += $tier->bonus_amount;
-                $this->notifyInvestmentTier($user, $tier);
+        foreach ($tiers as $tier) {
+            if ($running >= $tier->threshold_amount) {
+                $bonus += $this->awardTierIfNew($user, $tier, 1.0);
+            }
+        }
+
+        foreach ($thisWeekReports as $report) {
+            $running += (int) $report->amount;
+            foreach ($tiers as $tier) {
+                if ($running >= $tier->threshold_amount) {
+                    $bonus += $this->awardTierIfNew($user, $tier, $report->gradeMultiplier());
+                }
             }
         }
 
         return $bonus;
+    }
+
+    private function awardTierIfNew(User $user, InvestmentAchievementTier $tier, float $multiplier): int
+    {
+        $achievement = UserInvestmentAchievement::firstOrCreate(
+            ['user_id' => $user->id, 'tier_id' => $tier->id],
+            ['earned_at' => now()],
+        );
+
+        if (! $achievement->wasRecentlyCreated) {
+            return 0;
+        }
+
+        $this->notifyInvestmentTier($user, $tier);
+
+        return (int) round($tier->bonus_amount * $multiplier);
     }
 
     private function notifyInvestmentTier(User $user, InvestmentAchievementTier $tier): void

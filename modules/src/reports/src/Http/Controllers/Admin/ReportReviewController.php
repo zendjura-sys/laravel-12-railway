@@ -6,6 +6,7 @@ use Addons\Reports\Events\ReportReviewed;
 use Addons\Reports\Models\Report;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -28,45 +29,86 @@ class ReportReviewController
         ]);
     }
 
+    /**
+     * Оцінка ставиться ЛИШЕ при затвердженні — відхилений звіт премії не
+     * приносить, оцінювати там нема що.
+     */
     public function approve(Request $request, Report $report): JsonResponse
     {
-        return $this->review($request, $report, 'approved');
-    }
-
-    public function reject(Request $request, Report $report): JsonResponse
-    {
-        return $this->review($request, $report, 'rejected');
-    }
-
-    private function review(Request $request, Report $report, string $status): JsonResponse
-    {
         if (! $report->isPending()) {
+            return $this->alreadyReviewed();
+        }
+
+        $data = $request->validate([
+            'note' => ['nullable', 'string', 'max:1000'],
+            'grade' => ['required', Rule::in(Report::GRADES)],
+            'grade_reason' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        if (in_array($data['grade'], Report::LOW_GRADES, true) && trim((string) ($data['grade_reason'] ?? '')) === '') {
             return response()->json([
                 'ok' => false,
-                'message' => 'Звіт вже розглянуто раніше.',
+                'message' => 'Для низької оцінки потрібно вказати причину.',
                 'data' => null,
-                'errors' => null,
+                'errors' => ['grade_reason' => ['Вкажіть причину низької оцінки.']],
                 'redirect' => null,
             ], 422);
         }
 
-        $request->validate(['note' => ['nullable', 'string', 'max:1000']]);
-
         $report->update([
-            'status' => $status,
+            'status' => 'approved',
             'reviewed_by' => $request->user()->id,
             'reviewed_at' => now(),
-            'review_note' => $request->input('note'),
+            'review_note' => $data['note'] ?? null,
+            'grade' => $data['grade'],
+            'grade_reason' => $data['grade_reason'] ?? null,
         ]);
 
         ReportReviewed::dispatch($report->fresh());
 
         return response()->json([
             'ok' => true,
-            'message' => $status === 'approved' ? 'Звіт затверджено.' : 'Звіт відхилено.',
+            'message' => 'Звіт затверджено.',
             'data' => ['report' => $report->fresh()],
             'errors' => null,
             'redirect' => null,
         ]);
+    }
+
+    public function reject(Request $request, Report $report): JsonResponse
+    {
+        if (! $report->isPending()) {
+            return $this->alreadyReviewed();
+        }
+
+        $data = $request->validate(['note' => ['nullable', 'string', 'max:1000']]);
+
+        $report->update([
+            'status' => 'rejected',
+            'reviewed_by' => $request->user()->id,
+            'reviewed_at' => now(),
+            'review_note' => $data['note'] ?? null,
+        ]);
+
+        ReportReviewed::dispatch($report->fresh());
+
+        return response()->json([
+            'ok' => true,
+            'message' => 'Звіт відхилено.',
+            'data' => ['report' => $report->fresh()],
+            'errors' => null,
+            'redirect' => null,
+        ]);
+    }
+
+    private function alreadyReviewed(): JsonResponse
+    {
+        return response()->json([
+            'ok' => false,
+            'message' => 'Звіт вже розглянуто раніше.',
+            'data' => null,
+            'errors' => null,
+            'redirect' => null,
+        ], 422);
     }
 }

@@ -6,12 +6,19 @@ import PrimaryButton from '@/Components/PrimaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
 import { Head, Link, useForm } from '@inertiajs/vue3';
 
+const props = defineProps({
+    shadowMatch: { type: Object, default: null },
+    previousInput: { type: Object, default: null },
+});
+
 const form = useForm({
-    first_name: '',
-    last_name: '',
-    email: '',
+    first_name: props.previousInput?.first_name ?? '',
+    last_name: props.previousInput?.last_name ?? '',
+    email: props.previousInput?.email ?? '',
     password: '',
     password_confirmation: '',
+    claim_shadow_id: null,
+    skip_shadow_check: false,
 });
 
 const submit = () => {
@@ -19,6 +26,11 @@ const submit = () => {
         onFinish: () => form.reset('password', 'password_confirmation'),
     });
 };
+
+function chooseClaim(claim) {
+    form.claim_shadow_id = claim ? props.shadowMatch.id : null;
+    form.skip_shadow_check = !claim;
+}
 </script>
 
 <template>
@@ -26,6 +38,33 @@ const submit = () => {
         <Head title="Реєстрація" />
 
         <h1 class="font-display mb-6 text-2xl font-semibold text-white">Створення акаунту</h1>
+
+        <div v-if="shadowMatch" class="mb-6 rounded-lg border border-gold-400/30 bg-gold-400/[0.06] p-4">
+            <p class="text-sm text-white">
+                Знайдено профіль <b>«{{ shadowMatch.name }}»</b> — за нього вже подавали звіти. Це ви?
+            </p>
+            <div class="mt-3 flex gap-2">
+                <button
+                    type="button"
+                    class="rounded-full border px-4 py-1.5 text-xs uppercase tracking-widest transition-colors"
+                    :class="form.claim_shadow_id ? 'border-gold-400/50 bg-gold-400/10 text-gold-200' : 'border-white/15 text-white/50 hover:border-white/30'"
+                    @click="chooseClaim(true)"
+                >
+                    Так, це я — забрати профіль
+                </button>
+                <button
+                    type="button"
+                    class="rounded-full border px-4 py-1.5 text-xs uppercase tracking-widest transition-colors"
+                    :class="form.skip_shadow_check ? 'border-gold-400/50 bg-gold-400/10 text-gold-200' : 'border-white/15 text-white/50 hover:border-white/30'"
+                    @click="chooseClaim(false)"
+                >
+                    Ні, це новий акаунт
+                </button>
+            </div>
+            <p v-if="form.claim_shadow_id" class="mt-2 text-xs text-white/40">
+                Уся статистика й звіти, подані за «{{ shadowMatch.name }}», стануть вашими після реєстрації.
+            </p>
+        </div>
 
         <form @submit.prevent="submit">
             <div>
@@ -117,7 +156,7 @@ const submit = () => {
 
                 <PrimaryButton
                     class="ms-4"
-                    :disabled="form.processing"
+                    :disabled="form.processing || (shadowMatch && !form.claim_shadow_id && !form.skip_shadow_check)"
                 >
                     Зареєструватися
                 </PrimaryButton>

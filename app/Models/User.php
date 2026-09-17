@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Str;
 use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable implements MustVerifyEmail
@@ -31,6 +32,7 @@ class User extends Authenticatable implements MustVerifyEmail
         // UserController). Ни один путь не берёт значение прямо из
         // $request-массива.
         'position_key',
+        'is_shadow',
     ];
 
     /**
@@ -64,7 +66,27 @@ class User extends Authenticatable implements MustVerifyEmail
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'is_shadow' => 'boolean',
         ];
+    }
+
+    /**
+     * Заводить акаунт "за друга" — звіт мусить мати реальний user_id
+     * (усі зв'язки в Progression/Bonuses/Notifications зав'язані на FK),
+     * тому це не текстова заглушка, а справжній рядок users. Email/пароль —
+     * непридатний плейсхолдер: увійти цим ніхто не зможе, аж поки сама
+     * людина не зареєструється й не забере акаунт (RegisteredUserController).
+     */
+    public static function createShadow(string $firstName, ?string $lastName): self
+    {
+        return self::create([
+            'first_name' => $firstName,
+            'last_name' => $lastName,
+            'email' => 'shadow-'.Str::random(20).'@monsory.invalid',
+            'password' => Str::random(40),
+            'is_shadow' => true,
+            'position_key' => FamilyContent::positionKeys()[0] ?? null,
+        ]);
     }
 
     /**

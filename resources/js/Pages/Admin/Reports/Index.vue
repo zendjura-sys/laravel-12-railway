@@ -17,17 +17,44 @@ function pushToast(ok, message) {
 }
 
 const busy = ref(null);
-async function act(report, action) {
+async function act(report, action, payload = {}) {
     busy.value = report.id;
     try {
-        const { data } = await window.axios.post(`/admin/reports/${report.id}/${action}`);
+        const { data } = await window.axios.post(`/admin/reports/${report.id}/${action}`, payload);
         pushToast(data.ok, data.message);
-        if (data.ok) router.reload({ only: ['reports'] });
+        if (data.ok) {
+            router.reload({ only: ['reports'] });
+            gradingReportId.value = null;
+        } else if (data.errors?.grade_reason) {
+            pushToast(false, data.errors.grade_reason[0]);
+        }
     } catch (e) {
         pushToast(false, e.response?.data?.message || 'Помилка');
     } finally {
         busy.value = null;
     }
+}
+
+/* ================= Оцінка при затвердженні ================= */
+
+const GRADES = ['S', 'A', 'B', 'C', 'D', 'F', 'G'];
+const LOW_GRADES = ['D', 'F', 'G'];
+const GRADE_LABELS = { S: '+30%', A: '+20%', B: '+10%', C: '0%', D: '-10%', F: '-20%', G: '-30%' };
+
+const gradingReportId = ref(null);
+const selectedGrade = ref(null);
+const gradeReason = ref('');
+
+function startGrading(report) {
+    gradingReportId.value = report.id;
+    selectedGrade.value = null;
+    gradeReason.value = '';
+}
+
+function confirmApprove(report) {
+    if (!selectedGrade.value) return;
+    if (LOW_GRADES.includes(selectedGrade.value) && !gradeReason.value.trim()) return;
+    act(report, 'approve', { grade: selectedGrade.value, grade_reason: gradeReason.value || null });
 }
 
 function switchStatus(s) {
@@ -96,13 +123,46 @@ function fmtDate(iso) {
                             подав {{ report.submitter?.name }}
                             <span v-if="report.report_date">· дата {{ new Date(report.report_date).toLocaleDateString('uk-UA') }}</span>
                             · {{ fmtDate(report.created_at) }}
+                            <span v-if="report.grade" class="ml-1 font-medium text-gold-300/80">· оцінка {{ report.grade }} ({{ GRADE_LABELS[report.grade] }})</span>
                         </p>
+                        <p v-if="report.grade_reason" class="mt-1 text-xs text-ember-500/70">Причина: {{ report.grade_reason }}</p>
+
+                        <div v-if="gradingReportId === report.id" class="mt-3 rounded-lg border border-white/10 bg-obsidian-900/60 p-3">
+                            <div class="flex flex-wrap gap-1.5">
+                                <button
+                                    v-for="g in GRADES"
+                                    :key="g"
+                                    class="rounded-full border px-3 py-1 text-xs font-medium transition-colors"
+                                    :class="selectedGrade === g ? 'border-gold-400/60 bg-gold-400/15 text-gold-200' : 'border-white/15 text-white/50 hover:border-white/30'"
+                                    @click="selectedGrade = g"
+                                >
+                                    {{ g }} <span class="text-white/30">{{ GRADE_LABELS[g] }}</span>
+                                </button>
+                            </div>
+                            <textarea
+                                v-if="selectedGrade && LOW_GRADES.includes(selectedGrade)"
+                                v-model="gradeReason"
+                                rows="2"
+                                placeholder="Причина низької оцінки (обов'язково)"
+                                class="mt-2 w-full rounded-lg border border-white/10 bg-obsidian-900 px-3 py-2 text-sm text-white"
+                            ></textarea>
+                            <div class="mt-2 flex gap-2">
+                                <button
+                                    :disabled="busy === report.id || !selectedGrade || (LOW_GRADES.includes(selectedGrade) && !gradeReason.trim())"
+                                    class="rounded-full border border-emerald-400/30 bg-emerald-400/10 px-4 py-1.5 text-xs font-medium text-emerald-300 hover:bg-emerald-400/20 disabled:opacity-30"
+                                    @click="confirmApprove(report)"
+                                >
+                                    Підтвердити затвердження
+                                </button>
+                                <button class="text-xs text-white/40 hover:text-white" @click="gradingReportId = null">Скасувати</button>
+                            </div>
+                        </div>
                     </div>
-                    <div v-if="report.status === 'pending'" class="flex gap-2">
+                    <div v-if="report.status === 'pending' && gradingReportId !== report.id" class="flex gap-2">
                         <button
                             :disabled="busy === report.id"
                             class="rounded-full border border-emerald-400/30 bg-emerald-400/10 px-4 py-1.5 text-xs font-medium text-emerald-300 hover:bg-emerald-400/20 disabled:opacity-40"
-                            @click="act(report, 'approve')"
+                            @click="startGrading(report)"
                         >
                             Затвердити
                         </button>

@@ -29,11 +29,29 @@ class Report extends Model
         '17:00', '18:00', '19:00', '20:00', '21:00', '22:00',
     ];
 
+    /** Порядок від найвищої до найнижчої — навмисно без "E". */
+    public const GRADES = ['S', 'A', 'B', 'C', 'D', 'F', 'G'];
+
+    /** Множник до премії за цю оцінку: +0.3 = +30% до суми звіту. */
+    public const GRADE_MODIFIERS = [
+        'S' => 0.30,
+        'A' => 0.20,
+        'B' => 0.10,
+        'C' => 0.00,
+        'D' => -0.10,
+        'F' => -0.20,
+        'G' => -0.30,
+    ];
+
+    /** Оцінки, для яких причина в адмінці обов'язкова. */
+    public const LOW_GRADES = ['D', 'F', 'G'];
+
     protected $fillable = [
         'user_id', 'submitted_by', 'type', 'report_date',
         'outcome', 'wins_count', 'losses_count', 'kapt_times',
         'weight', 'light_count', 'medium_count', 'heavy_count',
         'amount', 'description', 'status', 'reviewed_by', 'reviewed_at', 'review_note',
+        'grade', 'grade_reason',
     ];
 
     protected function casts(): array
@@ -49,6 +67,12 @@ class Report extends Model
             'medium_count' => 'integer',
             'heavy_count' => 'integer',
         ];
+    }
+
+    /** 1.0 = без змін, 1.3 = +30% тощо. */
+    public function gradeMultiplier(): float
+    {
+        return 1 + (self::GRADE_MODIFIERS[$this->grade] ?? 0);
     }
 
     public function user(): BelongsTo

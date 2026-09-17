@@ -6,6 +6,7 @@ use Addons\TelegramBot\Models\TelegramApplication;
 use Addons\TelegramBot\Models\TelegramChat;
 use App\Support\FamilyContent;
 use App\Support\GuideContent;
+use Illuminate\Support\Facades\Route;
 
 /**
  * Все экраны бота в одном месте: текст + клавиатура для каждого.
@@ -55,6 +56,10 @@ class Screens
             if ($site = $this->siteUrl()) {
                 $rows[] = [['text' => '📝  Подати звіт', 'url' => rtrim($site, '/').'/reports']];
             }
+
+            foreach (array_chunk($this->siteFeatureLinks(), 2) as $chunk) {
+                $rows[] = $chunk;
+            }
         } else {
             $text = $this->head('MONSORY FAMILY')
                 ."<i>Закрите коло, де кожного знають в обличчя.</i>\n\n"
@@ -88,7 +93,6 @@ class Screens
         return $this->screen(
             $this->head('🏛  ПРО РОДИНУ').$body.self::RULE,
             [
-                [$this->btn('💼  Посади', 'positions'), $this->btn('⚔️  Напрямки', 'directions')],
                 [$this->btn('📝  Подати заявку', 'apply')],
                 [$this->backHome()],
             ]
@@ -106,10 +110,7 @@ class Screens
 
         return $this->screen(
             $this->head('⚔️  НАПРЯМКИ').$body.self::RULE,
-            [
-                [$this->btn('💼  Посади', 'positions'), $this->btn('📈  Як рости', 'growth')],
-                [$this->backHome()],
-            ]
+            [[$this->backHome()]]
         );
     }
 
@@ -194,10 +195,7 @@ class Screens
             $text .= "\n";
         }
 
-        return $this->screen($text.self::RULE, [
-            [$this->btn('💼  Посади', 'positions'), $this->btn('📈  Як рости', 'growth')],
-            [$this->backHome()],
-        ]);
+        return $this->screen($text.self::RULE, [[$this->backHome()]]);
     }
 
     public function growth(): array
@@ -212,7 +210,6 @@ class Screens
         $text .= "\nПочинають усі однаково — зі <b>Стажера</b>.\nДалі все залежить від вас.\n\n".self::RULE;
 
         return $this->screen($text, [
-            [$this->btn('💼  Посади', 'positions')],
             [$this->btn('📝  Подати заявку', 'apply')],
             [$this->backHome()],
         ]);
@@ -671,5 +668,34 @@ class Screens
         $url = trim((string) config('app.url'));
 
         return $url !== '' && str_starts_with($url, 'http') ? $url : null;
+    }
+
+    /**
+     * Прямі посилання на інші розділи сайту, доступні лише привʼязаному
+     * акаунту. route()->has() навмисно: якщо відповідний модуль (Bonuses,
+     * Progression, Family Goals, Notifications) вимкнено чи не встановлено,
+     * кнопка просто не показується замість мертвого посилання на 404.
+     *
+     * @return array<int,array<string,string>>
+     */
+    private function siteFeatureLinks(): array
+    {
+        $links = [];
+
+        $candidates = [
+            'reports.schedule' => '🗓  Розклад капта',
+            'progression.leaderboard' => '🏆  Рейтинг родини',
+            'family-goals.index' => '🎯  Цілі родини',
+            'bonuses.index' => '💰  Мої премії',
+            'notifications.index' => '🔔  Сповіщення',
+        ];
+
+        foreach ($candidates as $route => $label) {
+            if (Route::has($route)) {
+                $links[] = ['text' => $label, 'url' => route($route)];
+            }
+        }
+
+        return $links;
     }
 }

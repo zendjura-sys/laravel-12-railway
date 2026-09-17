@@ -2,8 +2,8 @@
     "type": "module",
     "slug": "member-center",
     "name": "Member Center & HR",
-    "version": "1.0.0",
-    "description": "Кадровий облік родини: статус учасника, приватні нотатки HR та заявки на відпустку/паузу. Незалежний від Reports/Progression — не слухає і не диспатчить жодних подій.",
+    "version": "1.1.0",
+    "description": "Кадровий облік родини: статус учасника, приватні нотатки HR та заявки на відпустку/паузу. Незалежний від Reports/Progression — не слухає жодних подій, але диспатчить LeaveRequestReviewed (Notifications, якщо встановлено, шле учаснику особисте сповіщення про рішення).",
     "min_core_version": "1.0.0",
     "entrypoints": {
         "web": "routes/web.php",

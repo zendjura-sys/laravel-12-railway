@@ -2,12 +2,14 @@
 
 namespace Addons\MemberCenter\Http\Controllers\Admin;
 
+use Addons\MemberCenter\Events\LeaveRequestReviewed;
 use Addons\MemberCenter\Models\LeaveRequest;
 use Addons\MemberCenter\Models\MemberNote;
 use Addons\MemberCenter\Models\MemberProfile;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -142,6 +144,8 @@ class MemberController
             'reviewed_by' => $request->user()->id,
             'reviewed_at' => now(),
         ]);
+
+        Event::dispatch(new LeaveRequestReviewed($leaveRequest));
 
         return response()->json([
             'ok' => true,

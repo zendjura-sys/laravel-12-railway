@@ -2,11 +2,13 @@
 
 namespace Addons\FamilyGoals\Http\Controllers\Admin;
 
+use Addons\FamilyGoals\Events\FamilyGoalCompleted;
 use Addons\FamilyGoals\Models\ActivityEvent;
 use Addons\FamilyGoals\Models\FamilyGoal;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Event;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -76,6 +78,7 @@ class FamilyGoalsAdminController
 
         if ($justCompleted) {
             ActivityEvent::log('goal_completed', $request->user()->id, "Ціль «{$familyGoal->title}» досягнута! 🎉");
+            Event::dispatch(new FamilyGoalCompleted($familyGoal));
         } else {
             ActivityEvent::log('goal_progress', $request->user()->id, "Прогрес цілі «{$familyGoal->title}»: {$familyGoal->current_value}" . ($familyGoal->unit ? " {$familyGoal->unit}" : ''));
         }

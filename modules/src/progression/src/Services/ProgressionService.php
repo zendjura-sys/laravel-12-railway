@@ -2,6 +2,7 @@
 
 namespace Addons\Progression\Services;
 
+use Addons\Progression\Events\AchievementUnlocked;
 use Addons\Progression\Models\Achievement;
 use Addons\Progression\Models\ProgressionProfile;
 use Addons\Progression\Models\UserAchievement;
@@ -9,6 +10,7 @@ use Addons\Progression\Models\XpLedgerEntry;
 use Addons\Reports\Models\Report;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 
 /**
  * Единая точка входа для всего, что связано с прогрессом участника.
@@ -172,10 +174,14 @@ class ProgressionService
             return;
         }
 
-        UserAchievement::firstOrCreate(
+        $userAchievement = UserAchievement::firstOrCreate(
             ['user_id' => $user->id, 'achievement_id' => $achievement->id],
             ['earned_at' => now()],
         );
+
+        if ($userAchievement->wasRecentlyCreated) {
+            Event::dispatch(new AchievementUnlocked($user->id, $achievement->code, $achievement->name));
+        }
     }
 
     /**
@@ -208,18 +214,37 @@ class ProgressionService
                 continue;
             }
 
-            $kaptWins = Report::query()
+            // KAPT прибрано з форми подачі — перемоги за тиждень тепер
+            // рахуються з бізвару (wins_count у пакетному звіті), а не з
+            // окремих type=kapt рядків. Старі kapt-рядки (approved ще ДО
+            // переходу на бізвар, але вже в межах поточного тижневого вікна)
+            // теж рахуємо — щоб не губити межовий тиждень міграції формату.
+            $legacyKaptWins = Report::query()
                 ->where('user_id', $userId)->where('status', 'approved')
                 ->where('type', 'kapt')->where('outcome', 'win')
                 ->where('reviewed_at', '>=', $weekStart)->count();
 
+            $bizwarWins = (int) Report::query()
+                ->where('user_id', $userId)->where('status', 'approved')
+                ->where('type', 'bizwar')
+                ->where('reviewed_at', '>=', $weekStart)->sum('wins_count');
+
+            $kaptWins = $legacyKaptWins + $bizwarWins;
+
+            // Контракти теж подаються пакетом (light/medium/heavy_count за
+            // одну дату) — рахуємо СКІЛЬКИ контрактів, а не скільки звітів
+            // надіслано: один пакетний звіт може одразу закрити поріг.
             $contracts = Report::query()
                 ->where('user_id', $userId)->where('status', 'approved')
                 ->where('type', 'contract')
-                ->where('reviewed_at', '>=', $weekStart)->count();
+                ->where('reviewed_at', '>=', $weekStart)
+                ->get(['weight', 'light_count', 'medium_count', 'heavy_count'])
+                ->sum(fn (Report $r) => $r->weight !== null
+                    ? 1
+                    : (($r->light_count ?? 0) + ($r->medium_count ?? 0) + ($r->heavy_count ?? 0)));
 
             if ($kaptWins >= self::WEEKLY_KAPT_WINS_THRESHOLD) {
-                $this->awardXp($user, self::WEEKLY_KAPT_WINS_BONUS, 'Тижневий бонус: 5+ перемог KAPT', 'weekly_bonus');
+                $this->awardXp($user, self::WEEKLY_KAPT_WINS_BONUS, 'Тижневий бонус: 5+ перемог бізвару', 'weekly_bonus');
             }
             if ($contracts >= self::WEEKLY_CONTRACTS_THRESHOLD) {
                 $this->awardXp($user, self::WEEKLY_CONTRACTS_BONUS, 'Тижневий бонус: 10+ контрактів', 'weekly_bonus');

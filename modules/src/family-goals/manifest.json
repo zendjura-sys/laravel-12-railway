@@ -2,8 +2,8 @@
     "type": "module",
     "slug": "family-goals",
     "name": "Family Goals & Activity",
-    "version": "1.0.0",
-    "description": "Спільні цілі родини з прогресом та загальна стрічка активності. Слухає report.created/report.reviewed від Reports (якщо Reports не встановлено — просто нічого не логує, без помилок).",
+    "version": "1.1.0",
+    "description": "Спільні цілі родини з прогресом та загальна стрічка активності. Слухає report.created/report.reviewed від Reports (якщо Reports не встановлено — просто нічого не логує, без помилок). Диспатчить FamilyGoalCompleted при досягненні цілі (Notifications, якщо встановлено, сповіщає всіх учасників і сімейний Telegram-чат).",
     "min_core_version": "1.0.0",
     "entrypoints": {
         "web": "routes/web.php",

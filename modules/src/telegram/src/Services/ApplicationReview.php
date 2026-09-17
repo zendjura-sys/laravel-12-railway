@@ -5,6 +5,7 @@ namespace Addons\TelegramBot\Services;
 use Addons\TelegramBot\Models\TelegramApplication;
 use Addons\TelegramBot\Models\TelegramLink;
 use App\Models\User;
+use Illuminate\Support\Facades\Route;
 
 /**
  * Решение по заявке — в одном месте для всех, кто его принимает.
@@ -101,10 +102,16 @@ class ApplicationReview
     {
         $text = $this->summaryText($application);
 
-        $keyboard = ['inline_keyboard' => [[
+        $rows = [[
             ['text' => '✅  Схвалити', 'callback_data' => 'rev:a:'.$application->id],
             ['text' => '✖️  Відхилити', 'callback_data' => 'rev:r:'.$application->id],
-        ]]];
+        ]];
+
+        if (Route::has('admin.telegram.index')) {
+            $rows[] = [['text' => '📋  Список заявок', 'url' => route('admin.telegram.index').'#applications']];
+        }
+
+        $keyboard = ['inline_keyboard' => $rows];
 
         $notified = [];
         foreach ($this->reviewerChats($application->chat_id) as $chatId) {

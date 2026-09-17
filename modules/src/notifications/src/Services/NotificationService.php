@@ -18,16 +18,23 @@ use App\Models\User;
  */
 class NotificationService
 {
-    public function notify(User $user, string $type, string $title, ?string $body = null): Notification
+    /**
+     * @param  array{text:string,url:string}|null  $telegramButton  Кнопка-посилання
+     *         під повідомленням у Telegram (напр. "Список заявок" на
+     *         відповідну сторінку адмінки) — на web-копію сповіщення не
+     *         впливає, там і так є свій список.
+     */
+    public function notify(User $user, string $type, string $title, ?string $body = null, ?array $telegramButton = null): Notification
     {
         $notification = Notification::notify($user->id, $type, $title, $body);
 
-        $this->deliverToTelegram($user, $title, $body);
+        $this->deliverToTelegram($user, $title, $body, $telegramButton);
 
         return $notification;
     }
 
-    private function deliverToTelegram(User $user, string $title, ?string $body): void
+    /** @param array{text:string,url:string}|null $telegramButton */
+    private function deliverToTelegram(User $user, string $title, ?string $body, ?array $telegramButton): void
     {
         if (! class_exists(TelegramLink::class) || ! class_exists(TelegramClient::class)) {
             return;
@@ -44,6 +51,7 @@ class NotificationService
         }
 
         $text = '<b>'.e($title).'</b>'.($body ? "\n\n".e($body) : '');
-        $client->sendMessage((string) $link->chat_id, $text);
+        $keyboard = $telegramButton ? ['inline_keyboard' => [[$telegramButton]]] : null;
+        $client->sendMessage((string) $link->chat_id, $text, $keyboard);
     }
 }

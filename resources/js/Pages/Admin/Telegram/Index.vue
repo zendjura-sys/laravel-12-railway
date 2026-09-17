@@ -194,7 +194,7 @@ async function review(application, decision) {
         </div>
 
         <!-- ================= ЗАЯВКИ З БОТА ================= -->
-        <div class="mt-12">
+        <div id="applications" class="mt-12">
             <div class="mb-5 flex items-baseline gap-4">
                 <h2 class="font-display text-lg text-white">Заявки з бота</h2>
                 <span v-if="pendingCount" class="rounded-full border border-gold-400/30 bg-gold-500/10 px-3 py-1 text-xs text-gold-300">

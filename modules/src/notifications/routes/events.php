@@ -10,7 +10,9 @@ use Addons\Notifications\Listeners\NotifyOnFamilyEventReminder;
 use Addons\Notifications\Listeners\NotifyOnFamilyGoalCompleted;
 use Addons\Notifications\Listeners\NotifyOnLeaveRequestReviewed;
 use Addons\Notifications\Listeners\NotifyOnReportReviewed;
+use Addons\Notifications\Listeners\NotifyReviewersOnReportCreated;
 use Addons\Progression\Events\AchievementUnlocked;
+use Addons\Reports\Events\ReportCreated;
 use Addons\Reports\Events\ReportReviewed;
 use Illuminate\Support\Facades\Event;
 
@@ -19,6 +21,7 @@ use Illuminate\Support\Facades\Event;
 // відповідний модуль-джерело не встановлено чи не активовано: подія
 // просто ніколи не диспатчиться, і listener ніколи не викличеться.
 Event::listen(ReportReviewed::class, NotifyOnReportReviewed::class);
+Event::listen(ReportCreated::class, NotifyReviewersOnReportCreated::class);
 Event::listen(AchievementUnlocked::class, NotifyOnAchievementUnlocked::class);
 Event::listen(LeaveRequestReviewed::class, NotifyOnLeaveRequestReviewed::class);
 Event::listen(FamilyGoalCompleted::class, NotifyOnFamilyGoalCompleted::class);

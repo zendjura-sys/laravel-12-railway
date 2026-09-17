@@ -413,10 +413,29 @@ log "Настраиваю nginx"
 PHP_SOCK="/run/php/php${PHP_VER}-fpm.sock"
 [ -S "$PHP_SOCK" ] || warn "Сокет ${PHP_SOCK} не найден — проверь, запущен ли php${PHP_VER}-fpm."
 
+PRIMARY_DOMAIN="${APP_DOMAIN%% *}"
+
+# Раньше конфиг на каждом прогоне писался из HTTP-only шаблона, а SSL-блок
+# в него дописывал `certbot --nginx` отдельным шагом ниже. Это било мимо:
+# если certbot падал (например на "Another instance of Certbot is already
+# running" — конфликт с systemd-таймером автопродления, который Ubuntu сам
+# ставит рядом), конфиг оставался без 443-го порта и сайт переставал
+# отвечать по https, хотя nginx и php-fpm были живы. Теперь вместо этого
+# сам скрипт решает, какой шаблон писать: если сертификат уже есть на
+# диске — сразу собираем финальный конфиг с SSL-блоком, читающим готовые
+# файлы сертификата, без обращения к certbot вообще. certbot нужен только
+# один раз — чтобы этот сертификат появился.
+if [ "$APP_DOMAIN" != "_" ] && [ -d "/etc/letsencrypt/live/${PRIMARY_DOMAIN}" ]; then
+    NGINX_TEMPLATE="${APP_DIR}/deploy/nginx-laravel-ssl.conf"
+else
+    NGINX_TEMPLATE="${APP_DIR}/deploy/nginx-laravel.conf"
+fi
+
 sed -e "s|__SERVER_NAME__|${APP_DOMAIN}|g" \
     -e "s|__APP_DIR__|${APP_DIR}|g" \
     -e "s|__PHP_SOCK__|${PHP_SOCK}|g" \
-    "${APP_DIR}/deploy/nginx-laravel.conf" > /etc/nginx/sites-available/laravel
+    -e "s|__PRIMARY_DOMAIN__|${PRIMARY_DOMAIN}|g" \
+    "$NGINX_TEMPLATE" > /etc/nginx/sites-available/laravel
 
 ln -sf /etc/nginx/sites-available/laravel /etc/nginx/sites-enabled/laravel
 rm -f /etc/nginx/sites-enabled/default
@@ -431,28 +450,34 @@ else
 fi
 
 # ----------------------------------------------------------------------- https
-# Конфиг nginx выше переписывается из шаблона на КАЖДОМ прогоне, а в шаблоне
-# только 80-й порт. Всё, что certbot дописал туда при выпуске сертификата,
-# каждый деплой стирал: сертификат оставался на диске, но nginx переставал
-# слушать 443 — сайт открывался только по http, а в браузере пользователя
-# https просто переставал отвечать. Поэтому после перезаписи конфига
-# возвращаем HTTPS на место.
-#
-# certbot --nginx идемпотентен: с --keep-until-expiring он не перевыпускает
-# живой сертификат, а только заново прописывает его в конфиг.
+# Сертификата ещё нет на диске — выпускаем его. `certonly` используется
+# намеренно вместо `--nginx`: certbot тут выступает только как ACME-клиент
+# (сам поднимет временный конфиг для HTTP-01 challenge и уберёт его), но
+# НЕ трогает наш /etc/nginx/sites-available/laravel — им теперь полностью
+# управляет этот скрипт. --deploy-hook прописывается в файл продления
+# у certbot один раз и переживает этот процесс: он гарантирует, что после
+# каждого будущего автопродления (systemd-таймер certbot.timer, который
+# работает независимо от деплоев) nginx перечитает обновлённый сертификат.
 if [ "$APP_DOMAIN" != "_" ] && command -v certbot >/dev/null 2>&1; then
-    PRIMARY_DOMAIN="${APP_DOMAIN%% *}"
-    if [ -d "/etc/letsencrypt/live/${PRIMARY_DOMAIN}" ]; then
-        log "Возвращаю HTTPS в конфиг nginx"
+    if [ ! -d "/etc/letsencrypt/live/${PRIMARY_DOMAIN}" ]; then
+        log "Выпускаю сертификат для ${APP_DOMAIN}"
         CERT_DOMAINS=""
         for d in $APP_DOMAIN; do CERT_DOMAINS="${CERT_DOMAINS} -d ${d}"; done
         # shellcheck disable=SC2086
-        certbot --nginx ${CERT_DOMAINS} --non-interactive --agree-tos --keep-until-expiring \
-            --redirect -m "${CERTBOT_EMAIL:-admin@${PRIMARY_DOMAIN}}" \
-            || warn "certbot не смог перенастроить nginx — проверь вручную: certbot --nginx${CERT_DOMAINS}"
-    else
-        warn "Сертификата для ${PRIMARY_DOMAIN} нет — сайт будет только по http."
-        warn "Выпустить: certbot --nginx -d ${APP_DOMAIN// / -d } --agree-tos -m ПОЧТА"
+        if certbot certonly --nginx ${CERT_DOMAINS} --non-interactive --agree-tos \
+            -m "${CERTBOT_EMAIL:-admin@${PRIMARY_DOMAIN}}" \
+            --deploy-hook "systemctl reload nginx"
+        then
+            log "Сертификат выпущен — переписываю nginx под https"
+            sed -e "s|__SERVER_NAME__|${APP_DOMAIN}|g" \
+                -e "s|__APP_DIR__|${APP_DIR}|g" \
+                -e "s|__PHP_SOCK__|${PHP_SOCK}|g" \
+                -e "s|__PRIMARY_DOMAIN__|${PRIMARY_DOMAIN}|g" \
+                "${APP_DIR}/deploy/nginx-laravel-ssl.conf" > /etc/nginx/sites-available/laravel
+            nginx -t && systemctl reload nginx
+        else
+            warn "Не удалось выпустить сертификат — сайт останется на http. Повтори вручную: certbot certonly --nginx${CERT_DOMAINS} --deploy-hook \"systemctl reload nginx\""
+        fi
     fi
 fi
 # Перезапускаем (не reload и не enable --now, который на уже работающий

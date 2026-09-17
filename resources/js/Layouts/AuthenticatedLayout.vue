@@ -133,6 +133,11 @@ const showingNavigationDropdown = ref(false);
                                         Профіль
                                     </DropdownLink>
                                     <DropdownLink
+                                        :href="route('home')"
+                                    >
+                                        На головну сайту
+                                    </DropdownLink>
+                                    <DropdownLink
                                         :href="route('logout')"
                                         method="post"
                                         as="button"
@@ -280,6 +285,9 @@ const showingNavigationDropdown = ref(false);
                     <div class="mt-3 space-y-1">
                         <ResponsiveNavLink :href="route('profile.edit')">
                             Профіль
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink :href="route('home')">
+                            На головну сайту
                         </ResponsiveNavLink>
                         <ResponsiveNavLink
                             :href="route('logout')"

@@ -1,6 +1,9 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+/* Тримаємо старий JS-конфіг (кастомні кольори через CSS-змінні, шрифти,
+   @tailwindcss/forms) замість переписування на CSS-native @theme —
+   значення нікуди не рухаються, ризик помилково перекласти щось при
+   ручному переносі нульовий. */
+@config "../../tailwind.config.js";
 
 @layer components {
     /* ---------- шейдерный фон ----------

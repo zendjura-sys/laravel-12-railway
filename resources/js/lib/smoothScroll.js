@@ -86,9 +86,17 @@ export function handleAnchorClick(event) {
     history.replaceState(null, '', hash);
 }
 
-/** Inertia меняет страницу без перезагрузки — скролл надо вернуть наверх. */
+/**
+ * Inertia меняет страницу без перезагрузки — скролл надо вернуть наверх.
+ * Без Lenis (телефон, reduced-motion, /admin) он просто не был бы
+ * запущен вовсе — тогда откатываем нативным способом, а не молчим.
+ */
 export function resetScroll() {
-    lenis?.scrollTo(0, { immediate: true });
+    if (lenis) {
+        lenis.scrollTo(0, { immediate: true });
+    } else {
+        window.scrollTo(0, 0);
+    }
 }
 
 export function isSmoothScrollActive() {

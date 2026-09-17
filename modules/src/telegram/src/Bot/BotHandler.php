@@ -191,6 +191,8 @@ class BotHandler
             'structure' => $this->screens->structure(),
             'pos' => $this->screens->position((int) $arg),
             'growth' => $this->screens->growth(),
+            'guide' => $this->screens->guideCategories(),
+            'guide-cat' => $this->screens->guideCategory((string) $arg),
             'account' => $this->accountScreen($chat),
             'stats' => $this->statsScreen($chat),
             'unlink' => $this->unlink($chat),

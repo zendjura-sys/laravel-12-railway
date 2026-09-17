@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\DesignController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\GuideController;
 use App\Http\Controllers\ProfileController;
 use App\Models\User;
 use App\Support\FamilyContent;
@@ -48,6 +49,11 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::patch('/profile/position', [ProfileController::class, 'updatePosition'])->name('profile.position');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
+    // Доступна одразу після реєстрації, ще до підтвердження email — саме
+    // тоді в людини найбільше питань «що тут де», а лист підтвердження
+    // може прийти не миттєво.
+    Route::get('/guide', [GuideController::class, 'index'])->name('guide');
 });
 
 require __DIR__.'/auth.php';

@@ -5,6 +5,7 @@ namespace Addons\TelegramBot\Bot;
 use Addons\TelegramBot\Models\TelegramApplication;
 use Addons\TelegramBot\Models\TelegramChat;
 use App\Support\FamilyContent;
+use App\Support\GuideContent;
 
 /**
  * Все экраны бота в одном месте: текст + клавиатура для каждого.
@@ -48,7 +49,7 @@ class Screens
                 [$this->btn('👤  Мій акаунт', 'account'), $this->btn('📊  Статистика', 'stats')],
                 [$this->btn('🏛  Про родину', 'about'), $this->btn('💼  Посади', 'positions')],
                 [$this->btn('⚔️  Напрямки', 'directions'), $this->btn('📈  Як рости', 'growth')],
-                [$this->btn('👥  Структура', 'structure')],
+                [$this->btn('👥  Структура', 'structure'), $this->btn('📖  Довідка', 'guide')],
             ];
 
             if ($site = $this->siteUrl()) {
@@ -66,6 +67,7 @@ class Screens
                 [$this->btn('🏛  Про родину', 'about'), $this->btn('💼  Посади', 'positions')],
                 [$this->btn('⚔️  Напрямки', 'directions'), $this->btn('📈  Як рости', 'growth')],
                 [$this->btn('👥  Структура', 'structure'), $this->btn('🔗  Мій акаунт', 'account')],
+                [$this->btn('📖  Довідка', 'guide')],
             ];
         }
 
@@ -214,6 +216,62 @@ class Screens
             [$this->btn('📝  Подати заявку', 'apply')],
             [$this->backHome()],
         ]);
+    }
+
+    /* ==================== ДОВІДКА ==================== */
+
+    /** Список категорій довідки, по дві в ряд — той самий текст, що на сайті. */
+    public function guideCategories(): array
+    {
+        $text = $this->head('📖  ДОВІДКА')
+            ."Як користуватись сайтом і ботом — за категоріями.\n"
+            .'Повна версія з деталями — на сайті.'."\n\n"
+            .self::RULE;
+
+        $rows = [];
+        $buffer = [];
+        foreach (GuideContent::categories() as $category) {
+            $buffer[] = $this->btn($category['icon'].'  '.$category['title'], 'guide-cat:'.$category['slug']);
+            if (count($buffer) === 2) {
+                $rows[] = $buffer;
+                $buffer = [];
+            }
+        }
+        if ($buffer) {
+            $rows[] = $buffer;
+        }
+
+        $rows[] = [$this->backHome()];
+
+        return $this->screen($text, $rows);
+    }
+
+    /**
+     * Коротко: лише пункти категорії (без розгорнутих відповідей) і
+     * посилання на сайт за деталями — Telegram-повідомлення не гумове, а
+     * повний текст уже є на сторінці «Довідка».
+     */
+    public function guideCategory(string $slug): array
+    {
+        $category = GuideContent::categoryBySlug($slug);
+
+        if ($category === null) {
+            return $this->guideCategories();
+        }
+
+        $text = $this->head($category['icon'].'  '.mb_strtoupper($category['title']));
+        foreach ($category['items'] as $item) {
+            $text .= '  ◆  '.e($item['q'])."\n";
+        }
+        $text .= "\n".self::RULE;
+
+        $rows = [];
+        if ($site = $this->siteUrl()) {
+            $rows[] = [['text' => '🌐  Детальніше на сайті', 'url' => rtrim($site, '/').'/guide#'.$category['slug']]];
+        }
+        $rows[] = [$this->btn('↩️  Усі категорії', 'guide'), $this->backHome()];
+
+        return $this->screen($text, $rows);
     }
 
     /* ==================== АККАУНТ ==================== */

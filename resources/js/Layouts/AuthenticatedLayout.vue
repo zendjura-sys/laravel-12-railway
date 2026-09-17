@@ -73,6 +73,12 @@ const showingNavigationDropdown = ref(false);
                                 Сповіщення
                             </NavLink>
                             <NavLink
+                                :href="route('guide')"
+                                :active="route().current('guide')"
+                            >
+                                Довідка
+                            </NavLink>
+                            <NavLink
                                 v-if="route().has('admin.dashboard') && (
                                     $page.props.can?.manageAddons || $page.props.can?.manageReports ||
                                     $page.props.can?.manageProgression || $page.props.can?.manageSettings ||
@@ -224,6 +230,12 @@ const showingNavigationDropdown = ref(false);
                         :active="route().current('notifications.*')"
                     >
                         Сповіщення
+                    </ResponsiveNavLink>
+                    <ResponsiveNavLink
+                        :href="route('guide')"
+                        :active="route().current('guide')"
+                    >
+                        Довідка
                     </ResponsiveNavLink>
                     <ResponsiveNavLink
                         v-if="route().has('admin.dashboard') && (

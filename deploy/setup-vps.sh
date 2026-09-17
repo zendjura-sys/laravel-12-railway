@@ -315,7 +315,19 @@ php artisan db:seed --class="Database\\Seeders\\SystemPermissionsSeeder" --force
 
 log "Кэширую конфигурацию"
 php artisan config:cache
-php artisan route:cache
+# route:cache НЕ используем и никогда не должны: таблица маршрутов здесь
+# не статична, она зависит от того, какие Module/Plugin сейчас активны в
+# БД (AddonServiceProvider::boot() регистрирует их web/admin роуты в
+# рантайме). route:cache сам запускается в консоли, а тот же boot()
+# нарочно пропускает web/admin точки входа аддонов при runningInConsole()
+# — так что закэшированная таблица навсегда замораживается БЕЗ единого
+# маршрута ни одного модуля (Reports, Telegram, Progression, Учасники,
+# Цілі, Розсилки), и вся эта часть админки отвечает голым 404 до
+# следующего route:clear. AddonInstaller уже дергает route:clear при
+# каждой активации/деактивации аддона именно из-за этого — но следующий
+# же деплой снова кэшировал бы пустую от модулей таблицу, поэтому кэша
+# тут просто не должно быть вовсе.
+php artisan route:clear
 php artisan view:cache
 
 log "Публикую storage-симлинк"

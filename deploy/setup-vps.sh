@@ -285,6 +285,14 @@ php -r '
     $set("APP_LOCALE", "uk");
     $set("APP_FALLBACK_LOCALE", "en");
     $set("APP_NAME", "\"Monsory Connect\"");
+    // Laravel 13 змінив, як фреймворк САМ обчислює запасне значення
+    // cache-префіксу і кукі сесії, коли ці ключі не задані явно в .env.
+    // Без цього перший же деплой на 13-й гілці міг би тихо підмінити
+    // назву cookie сесії — і миттєво розлогінити геть усіх, хто був
+    // залогінений на старій. Фіксуємо буквально те саме значення, яке й
+    // так обчислювалось на 12-й — апгрейд стає непомітним.
+    $set("CACHE_PREFIX", "monsory-connect-cache-");
+    $set("SESSION_COOKIE", "monsory_connect_session");
     file_put_contents($f, $s);
 '
 

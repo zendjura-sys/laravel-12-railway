@@ -13,6 +13,7 @@
         "laravel/tinker": "^2.10.1",
         "nfephp-org/sped-nfe": "^5.0",
         "spatie/laravel-permission": "^6.0",
+        "team-reflex/discord-php": "^10.56",
         "tightenco/ziggy": "^2.0"
     },
     "require-dev": {

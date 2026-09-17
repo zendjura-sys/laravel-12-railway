@@ -62,3 +62,38 @@ systemctl disable --now monsory-deploy.path
 Кнопка в адмінці лишиться, просто перестане щось запускати — статус
 зависне на "Очікує на таймер сервера…", що є явною підказкою, що
 стеження вимкнено.
+
+## Discord-бот (коли з'явиться токен)
+
+`php artisan discord:bot` (app/Console/Commands/DiscordBotServe.php) —
+заготовка під майбутній проєкт, поки без команд/логіки. На відміну від
+Telegram (вебхук, живе всередині звичайного HTTP-запиту), DiscordPHP
+тримає постійне WebSocket-з'єднання — тому це окремий довгоживучий
+процес, а не маршрут. Навмисно НЕ підключений до setup-vps.sh: без
+токена команда сама відмовляється стартувати, і тримати завжди
+запущений (і завжди падаючий без токена) сервіс під час КОЖНОГО деплою
+сайту — зайвий ризик для того, чим поки ніхто не користується.
+
+Коли з'явиться `DISCORD_BOT_TOKEN` в `.env` — той самий підхід, що й
+`laravel-worker.service` для черги (генерується прямо в setup-vps.sh):
+
+```bash
+cat > /etc/systemd/system/discord-bot.service <<'UNIT'
+[Unit]
+Description=Monsory — Discord bot (Gateway)
+After=network.target
+
+[Service]
+User=www-data
+Group=www-data
+Restart=always
+RestartSec=5
+WorkingDirectory=/var/www/laravel
+ExecStart=/usr/bin/php artisan discord:bot
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+systemctl daemon-reload
+systemctl enable --now discord-bot
+```

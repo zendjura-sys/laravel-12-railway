@@ -21,7 +21,7 @@ const submit = () => {
     <GuestLayout>
         <Head title="Підтвердження пароля" />
 
-        <h1 class="font-display mb-4 text-2xl font-semibold text-white">Підтвердіть пароль</h1>
+        <h1 class="font-display mb-4 text-2xl font-light text-white">Підтвердіть пароль</h1>
 
         <div class="mb-4 text-sm text-white/50">
             Це захищений розділ системи. Перш ніж продовжити, підтвердіть свій пароль.

@@ -33,7 +33,7 @@ const submit = () => {
     <GuestLayout>
         <Head title="Вхід" />
 
-        <h1 class="font-display mb-6 text-2xl font-semibold text-white">Вхід до кабінету</h1>
+        <h1 class="font-display mb-6 text-2xl font-light text-white">Вхід до кабінету</h1>
 
         <div v-if="status" class="mb-4 text-sm font-medium text-emerald-300">
             {{ status }}
@@ -41,7 +41,7 @@ const submit = () => {
 
         <form @submit.prevent="submit">
             <div>
-                <InputLabel for="email" value="Email" />
+                <InputLabel for="email" value="Пошта" />
 
                 <TextInput
                     id="email"

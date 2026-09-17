@@ -105,7 +105,7 @@ const statusMeta = {
     rejected: { label: 'Відхилено', class: 'bg-ember-500/15 text-ember-500 border-ember-500/30' },
 };
 
-const typeLabels = { kapt: 'KAPT', contract: 'Контракт', bizwar: 'Бізвар', investment: 'Інвестиції', other: 'Інше' };
+const typeLabels = { kapt: 'Капт', contract: 'Контракт', bizwar: 'Бізвар', investment: 'Інвестиції', other: 'Інше' };
 
 function fmtDate(iso) {
     return new Date(iso).toLocaleString('uk-UA', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
@@ -126,7 +126,7 @@ function fmtDateOnly(iso) {
                     <Link :href="route('dashboard')" class="text-xs uppercase tracking-widest text-white/40 hover:text-gold-300">
                         ← Кабінет
                     </Link>
-                    <h1 class="font-display mt-2 text-3xl font-semibold text-white">
+                    <h1 class="font-display mt-2 text-3xl font-light text-white">
                         Мої <span class="text-gradient-gold italic">звіти</span>
                     </h1>
                 </div>

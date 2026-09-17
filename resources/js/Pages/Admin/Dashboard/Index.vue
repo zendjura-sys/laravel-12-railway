@@ -8,9 +8,9 @@ defineProps({
 
 const sections = [
     { name: 'admin.addons.index', can: 'manageAddons', title: 'Аддони', text: 'Core, модулі, плагіни та теми — завантаження та керування ZIP-пакетами.' },
-    { name: 'admin.reports.index', can: 'manageReports', title: 'Модерація звітів', text: 'Розгляд звітів учасників за KAPT та контрактами.' },
-    { name: 'admin.progression.index', can: 'manageProgression', title: 'Прогресія', text: 'XP, ранги, досягнення та тижневі бонуси родини.' },
-    { name: 'admin.members.index', can: 'manageMembers', title: 'Кадровий облік', text: 'Статуси учасників, приватні нотатки HR та заявки на відпустку.' },
+    { name: 'admin.reports.index', can: 'manageReports', title: 'Модерація звітів', text: 'Розгляд звітів учасників за бізварами та контрактами.' },
+    { name: 'admin.progression.index', can: 'manageProgression', title: 'Прогресія', text: 'Досвід, ранги, досягнення та тижневі бонуси родини.' },
+    { name: 'admin.members.index', can: 'manageMembers', title: 'Кадровий облік', text: 'Статуси учасників, приватні кадрові нотатки та заявки на відпустку.' },
     { name: 'admin.family-goals.index', can: 'manageGoals', title: 'Цілі родини', text: 'Спільні цілі з прогресом та загальна стрічка активності.' },
     { name: 'admin.broadcasts.index', can: 'manageBroadcasts', title: 'Розсилки', text: 'Оголошення всім учасникам — кожен отримує особисте сповіщення.' },
     { name: 'admin.roles.index', can: 'manageRoles', title: 'Права доступу', text: 'Ролі та права: хто що бачить і чим керує в CMS.' },
@@ -26,7 +26,7 @@ const sections = [
     <AdminLayout>
         <div v-reveal class="mb-10">
             <p class="mb-2 text-sm font-medium uppercase tracking-[0.4em] text-gold-300/90">Monsory Connect</p>
-            <h1 class="font-display text-4xl font-semibold text-white">
+            <h1 class="font-display text-4xl font-light text-white">
                 Панель <span class="text-gradient-gold italic">керування</span>
             </h1>
             <p class="mt-2 text-white/40">Власна CMS родини Monsory — все в одному місці.</p>

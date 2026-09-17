@@ -350,7 +350,7 @@ const benefits = [
                         Monsory Family · Закритий набір
                     </p>
 
-                    <h1 v-reveal:150 class="text-balance font-display text-[2.75rem] font-semibold leading-[1.02] text-white sm:text-6xl lg:text-7xl">
+                    <h1 v-reveal:150 class="text-balance font-display text-[2.75rem] font-light leading-[1.02] text-white sm:text-6xl lg:text-7xl">
                         Сила. Порядок.
                         <span class="text-gradient-gold italic">Спадщина.</span>
                     </h1>
@@ -420,7 +420,7 @@ const benefits = [
         <section id="family" class="relative mx-auto max-w-7xl px-4 py-24 sm:px-6 sm:py-28">
             <div v-reveal class="mx-auto mb-16 max-w-2xl text-center">
                 <p class="mb-4 text-[11px] font-medium uppercase tracking-[0.45em] text-gold-300/90">Навіщо вступати</p>
-                <h2 class="text-balance font-display text-4xl font-semibold text-white sm:text-5xl">
+                <h2 class="text-balance font-display text-4xl font-light text-white sm:text-5xl">
                     Що дає <span class="text-gradient-gold italic">родина</span>
                 </h2>
                 <p class="mx-auto mt-6 max-w-xl leading-relaxed text-white/55">
@@ -462,7 +462,7 @@ const benefits = [
             <div class="mx-auto max-w-7xl px-4 sm:px-6">
                 <div v-reveal class="mx-auto mb-16 max-w-2xl text-center">
                     <p class="mb-4 text-[11px] font-medium uppercase tracking-[0.45em] text-gold-300/90">Чим займається родина</p>
-                    <h2 class="text-balance font-display text-4xl font-semibold text-white sm:text-5xl">
+                    <h2 class="text-balance font-display text-4xl font-light text-white sm:text-5xl">
                         Два напрямки. <span class="text-gradient-gold italic">Один результат.</span>
                     </h2>
                     <p class="mx-auto mt-6 max-w-xl leading-relaxed text-white/55">
@@ -533,7 +533,7 @@ const benefits = [
             <div class="mx-auto max-w-7xl px-4 sm:px-6">
                 <div v-reveal class="mx-auto mb-16 max-w-2xl text-center">
                     <p class="mb-4 text-[11px] font-medium uppercase tracking-[0.45em] text-gold-300/90">Система розвитку</p>
-                    <h2 class="text-balance font-display text-4xl font-semibold text-white sm:text-5xl">
+                    <h2 class="text-balance font-display text-4xl font-light text-white sm:text-5xl">
                         Шлях від <span class="text-gradient-gold italic">стажера</span>
                     </h2>
                     <p class="mx-auto mt-6 max-w-xl leading-relaxed text-white/55">
@@ -672,7 +672,7 @@ const benefits = [
             <div class="relative mx-auto max-w-7xl px-4 sm:px-6">
                 <div v-reveal class="mx-auto mb-14 max-w-2xl text-center">
                     <p class="mb-4 text-[11px] font-medium uppercase tracking-[0.45em] text-gold-300/90">Керівництво</p>
-                    <h2 class="text-balance font-display text-4xl font-semibold text-white sm:text-5xl">
+                    <h2 class="text-balance font-display text-4xl font-light text-white sm:text-5xl">
                         Хто за що <span class="text-gradient-gold italic">відповідає</span>
                     </h2>
                     <p class="mx-auto mt-6 max-w-xl leading-relaxed text-white/55">
@@ -724,7 +724,7 @@ const benefits = [
         <section id="showcase" class="relative mx-auto max-w-7xl overflow-x-clip px-4 py-20 sm:px-6">
             <div v-reveal class="mx-auto mb-14 max-w-2xl text-center">
                 <p class="mb-4 text-[11px] font-medium uppercase tracking-[0.45em] text-gold-300/90">Атмосфера</p>
-                <h2 class="text-balance font-display text-4xl font-semibold text-white sm:text-5xl">
+                <h2 class="text-balance font-display text-4xl font-light text-white sm:text-5xl">
                     Життя <span class="text-gradient-gold italic">родини</span>
                 </h2>
             </div>
@@ -801,7 +801,7 @@ const benefits = [
 
                 <div v-reveal="'right'" class="order-1 lg:order-2">
                     <p class="mb-4 text-[11px] font-medium uppercase tracking-[0.45em] text-gold-300/90">Не тільки робота</p>
-                    <h3 class="text-balance font-display text-3xl font-semibold text-white sm:text-4xl">
+                    <h3 class="text-balance font-display text-3xl font-light text-white sm:text-4xl">
                         Ми граємо <span class="text-gradient-gold italic">роль</span>, а не статистику
                     </h3>
                     <p class="mt-6 max-w-lg leading-relaxed text-white/55">
@@ -880,7 +880,7 @@ const benefits = [
                 </div>
 
                 <div v-glow class="glass-panel-gold glass-panel relative mx-auto inline-block px-7 py-10 sm:px-14 sm:py-16">
-                    <h2 v-reveal class="text-balance font-display text-4xl font-semibold text-white sm:text-5xl">
+                    <h2 v-reveal class="text-balance font-display text-4xl font-light text-white sm:text-5xl">
                         Кожна дія
                         <span class="text-gradient-gold italic">залишає слід.</span>
                     </h2>

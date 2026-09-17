@@ -45,7 +45,7 @@ onMounted(() => {
 
     <AuthenticatedLayout>
         <template #header>
-            <h2 class="font-display text-2xl font-semibold text-white">
+            <h2 class="font-display text-2xl font-light text-white">
                 Профіль
             </h2>
         </template>

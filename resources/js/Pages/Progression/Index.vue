@@ -24,7 +24,7 @@ const sourceLabels = { report: 'звіт', weekly_bonus: 'тижневий бо�
                     <Link :href="route('dashboard')" class="text-xs uppercase tracking-widest text-white/40 hover:text-gold-300">
                         ← Кабінет
                     </Link>
-                    <h1 class="font-display mt-2 text-3xl font-semibold text-white">
+                    <h1 class="font-display mt-2 text-3xl font-light text-white">
                         Мій <span class="text-gradient-gold italic">прогрес</span>
                     </h1>
                 </div>
@@ -33,28 +33,28 @@ const sourceLabels = { report: 'звіт', weekly_bonus: 'тижневий бо�
                     :href="route('progression.leaderboard')"
                     class="rounded-full border border-gold-400/40 px-5 py-2 text-xs font-medium tracking-widest text-gold-200 hover:border-gold-300"
                 >
-                    LEADERBOARD
+                    РЕЙТИНГ
                 </Link>
             </div>
         </header>
 
         <div class="mx-auto max-w-5xl px-6 py-10">
-            <!-- Основная карточка: XP / рівень / ранг -->
+            <!-- Основная карточка: досвід / рівень / ранг -->
             <div class="mb-10 rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.05] to-transparent p-8 text-center">
                 <p class="text-xs uppercase tracking-[0.4em] text-gold-300/80">
                     {{ profile.position || 'Посаду ще не призначено' }}
                 </p>
-                <div class="font-display mt-3 text-6xl font-semibold text-gradient-gold">{{ profile.xp }}</div>
-                <p class="mt-1 text-sm text-white/40">XP · Рівень активності {{ profile.level }}</p>
+                <div class="font-display mt-3 text-6xl font-light text-gradient-gold">{{ profile.xp }}</div>
+                <p class="mt-1 text-sm text-white/40">Досвід · Рівень активності {{ profile.level }}</p>
 
                 <div class="mx-auto mt-8 grid max-w-lg grid-cols-4 gap-4 border-t border-white/10 pt-6 text-center">
                     <div>
                         <div class="font-display text-2xl text-white">{{ profile.kapt_wins }}</div>
-                        <div class="text-[10px] uppercase tracking-widest text-white/40">Win</div>
+                        <div class="text-[10px] uppercase tracking-widest text-white/40">Перемоги</div>
                     </div>
                     <div>
                         <div class="font-display text-2xl text-white">{{ profile.kapt_losses }}</div>
-                        <div class="text-[10px] uppercase tracking-widest text-white/40">Loss</div>
+                        <div class="text-[10px] uppercase tracking-widest text-white/40">Поразки</div>
                     </div>
                     <div>
                         <div class="font-display text-2xl text-white">{{ profile.contracts_count }}</div>
@@ -81,8 +81,8 @@ const sourceLabels = { report: 'звіт', weekly_bonus: 'тижневий бо�
                 </div>
             </div>
 
-            <!-- Battle Log -->
-            <h2 class="font-display mb-4 text-xl text-white">Battle Log</h2>
+            <!-- Історія нарахувань -->
+            <h2 class="font-display mb-4 text-xl text-white">Історія нарахувань</h2>
             <div class="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02]">
                 <div
                     v-for="entry in battleLog"
@@ -95,7 +95,7 @@ const sourceLabels = { report: 'звіт', weekly_bonus: 'тижневий бо�
                     </div>
                     <div class="flex items-center gap-3">
                         <span :class="entry.amount >= 0 ? 'text-emerald-300' : 'text-ember-500'">
-                            {{ entry.amount >= 0 ? '+' : '' }}{{ entry.amount }} XP
+                            {{ entry.amount >= 0 ? '+' : '' }}{{ entry.amount }} очок досвіду
                         </span>
                         <span class="text-xs text-white/30">{{ fmtDate(entry.created_at) }}</span>
                     </div>

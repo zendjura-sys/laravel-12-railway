@@ -37,7 +37,7 @@ function chooseClaim(claim) {
     <GuestLayout>
         <Head title="Реєстрація" />
 
-        <h1 class="font-display mb-6 text-2xl font-semibold text-white">Створення акаунту</h1>
+        <h1 class="font-display mb-6 text-2xl font-light text-white">Створення акаунту</h1>
 
         <div v-if="shadowMatch" class="mb-6 rounded-lg border border-gold-400/30 bg-gold-400/[0.06] p-4">
             <p class="text-sm text-white">
@@ -100,7 +100,7 @@ function chooseClaim(claim) {
             </div>
 
             <div class="mt-4">
-                <InputLabel for="email" value="Email" />
+                <InputLabel for="email" value="Пошта" />
 
                 <TextInput
                     id="email"

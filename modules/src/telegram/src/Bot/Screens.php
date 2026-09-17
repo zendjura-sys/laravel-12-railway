@@ -343,7 +343,7 @@ class Screens
 
         if ($progression = $data['progression'] ?? null) {
             $text .= "<b>Прогресія</b>\n"
-                ."Рівень: {$progression['level']} ({$progression['xp']} XP)\n"
+                ."Рівень: {$progression['level']} ({$progression['xp']} очок досвіду)\n"
                 ."Серія перемог: {$progression['streak']}\n"
                 ."Ачівки: {$progression['achievements']}\n\n";
         }
@@ -352,7 +352,7 @@ class Screens
             $text .= "<b>Премія цього тижня</b>  <i>(поточний розрахунок)</i>\n";
             if ($bonus['bizwar_amount'] > 0) {
                 $text .= "Бізвар: {$this->money($bonus['bizwar_amount'])}";
-                $text .= $bonus['winrate'] !== null ? " ({$bonus['winrate']}% winrate)\n" : "\n";
+                $text .= $bonus['winrate'] !== null ? " ({$bonus['winrate']}% перемог)\n" : "\n";
             }
             if ($bonus['contract_amount'] > 0) {
                 $text .= "Контракти: {$this->money($bonus['contract_amount'])} (×{$bonus['contracts_count']})\n";

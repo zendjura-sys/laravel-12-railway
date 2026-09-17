@@ -26,7 +26,7 @@ const form = useForm({
 <template>
     <section>
         <header>
-            <h2 class="font-display text-lg font-medium text-white">
+            <h2 class="font-display text-lg font-normal text-white">
                 Дані профілю
             </h2>
 
@@ -70,7 +70,7 @@ const form = useForm({
             </div>
 
             <div>
-                <InputLabel for="email" value="Email" />
+                <InputLabel for="email" value="Пошта" />
 
                 <TextInput
                     id="email"

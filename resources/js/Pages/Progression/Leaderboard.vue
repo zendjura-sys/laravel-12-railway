@@ -33,7 +33,7 @@ function winrate(entry) {
                     >
                         ← Мій прогрес
                     </Link>
-                    <h1 class="font-display mt-2 text-3xl font-semibold text-white">
+                    <h1 class="font-display mt-2 text-3xl font-light text-white">
                         Рейтинг <span class="text-gradient-gold italic">родини</span>
                     </h1>
                 </div>
@@ -78,10 +78,10 @@ function winrate(entry) {
                         </div>
                     </div>
 
-                    <span v-if="category === 'xp'" class="font-display text-xl text-gold-300">{{ entry.xp }} XP</span>
+                    <span v-if="category === 'xp'" class="font-display text-xl text-gold-300">{{ entry.xp }} очок досвіду</span>
                     <span v-else-if="category === 'bizwar'" class="text-right font-display text-xl text-gold-300">
                         {{ entry.kapt_wins }}–{{ entry.kapt_losses }}
-                        <span v-if="winrate(entry) !== null" class="block text-xs font-normal text-white/40">{{ winrate(entry) }}% winrate</span>
+                        <span v-if="winrate(entry) !== null" class="block text-xs font-normal text-white/40">{{ winrate(entry) }}% перемог</span>
                     </span>
                     <span v-else-if="category === 'contracts'" class="text-right font-display text-xl text-gold-300">
                         {{ entry.contracts_count }}

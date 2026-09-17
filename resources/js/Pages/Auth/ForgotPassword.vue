@@ -25,7 +25,7 @@ const submit = () => {
     <GuestLayout>
         <Head title="Відновлення пароля" />
 
-        <h1 class="font-display mb-4 text-2xl font-semibold text-white">Забули пароль?</h1>
+        <h1 class="font-display mb-4 text-2xl font-light text-white">Забули пароль?</h1>
 
         <div class="mb-4 text-sm text-white/50">
             Не проблема. Вкажіть email, вказаний при реєстрації, і ми
@@ -41,7 +41,7 @@ const submit = () => {
 
         <form @submit.prevent="submit">
             <div>
-                <InputLabel for="email" value="Email" />
+                <InputLabel for="email" value="Пошта" />
 
                 <TextInput
                     id="email"

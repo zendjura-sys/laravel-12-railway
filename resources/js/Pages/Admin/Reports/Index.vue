@@ -61,7 +61,7 @@ function switchStatus(s) {
     router.get(route('admin.reports.index'), { status: s }, { preserveState: true, preserveScroll: true });
 }
 
-const typeLabels = { kapt: 'KAPT', contract: 'Контракт', bizwar: 'Бізвар', investment: 'Інвестиції', other: 'Інше' };
+const typeLabels = { kapt: 'Капт', contract: 'Контракт', bizwar: 'Бізвар', investment: 'Інвестиції', other: 'Інше' };
 function fmtDate(iso) {
     return new Date(iso).toLocaleString('uk-UA', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }

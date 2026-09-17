@@ -15,7 +15,7 @@ defineProps({
 
     <AuthenticatedLayout>
         <template #header>
-            <h2 class="font-display text-2xl font-semibold text-white">
+            <h2 class="font-display text-2xl font-light text-white">
                 Довідка
             </h2>
         </template>
@@ -45,7 +45,7 @@ defineProps({
                 v-reveal
                 class="glass-panel scroll-mt-24 p-6 sm:p-8"
             >
-                <h3 class="font-display flex items-center gap-2 text-lg font-medium text-white">
+                <h3 class="font-display flex items-center gap-2 text-lg font-normal text-white">
                     <span>{{ category.icon }}</span>
                     <span>{{ category.title }}</span>
                 </h3>

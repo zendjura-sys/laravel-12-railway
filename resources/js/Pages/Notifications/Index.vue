@@ -58,7 +58,7 @@ function fmtDateTime(iso) {
                     <Link :href="route('dashboard')" class="text-xs uppercase tracking-widest text-white/40 hover:text-gold-300">
                         ← Кабінет
                     </Link>
-                    <h1 class="font-display mt-2 text-3xl font-semibold text-white">
+                    <h1 class="font-display mt-2 text-3xl font-light text-white">
                         Сповіщення
                         <span v-if="localUnread > 0" class="text-gradient-gold italic">({{ localUnread }})</span>
                     </h1>

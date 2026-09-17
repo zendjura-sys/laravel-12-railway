@@ -73,7 +73,7 @@ onMounted(refresh);
 <template>
     <section>
         <header>
-            <h2 class="font-display text-lg font-medium text-white">Telegram</h2>
+            <h2 class="font-display text-lg font-normal text-white">Telegram</h2>
             <p class="mt-1 text-sm text-white/40">
                 Привʼяжіть Telegram, щоб отримувати особисті сповіщення прямо в чат.
             </p>

@@ -28,9 +28,10 @@
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.bunny.net" crossorigin>
         {{-- figtree убран: в теме он нигде не используется (sans — Manrope,
-             display — Cormorant), но три его начертания всё равно грузились
-             на каждой странице. --}}
-        <link href="https://fonts.bunny.net/css?family=cormorant-garamond:500,600,700|manrope:400,500,600,700&display=swap" rel="stylesheet" />
+             display — Montserrat), но три его начертания всё равно грузились
+             на каждой странице. Montserrat сюда не входит — он самостоятельно
+             хостится из public/fonts (см. app.css), а не тянется с bunny.net. --}}
+        <link href="https://fonts.bunny.net/css?family=manrope:400,500,600,700&display=swap" rel="stylesheet" />
 
         <!-- Scripts -->
         @routes

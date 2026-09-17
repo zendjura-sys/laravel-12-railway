@@ -27,7 +27,7 @@ export default {
             },
             fontFamily: {
                 sans: ['Manrope', ...defaultTheme.fontFamily.sans],
-                display: ['"Cormorant Garamond"', 'serif'],
+                display: ['Montserrat', ...defaultTheme.fontFamily.sans],
             },
             colors: {
                 obsidian: {

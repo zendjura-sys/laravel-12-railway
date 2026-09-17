@@ -38,7 +38,7 @@ const statusMeta = {
                     <Link :href="route('reports.index')" class="text-xs uppercase tracking-widest text-white/40 hover:text-gold-300">
                         ← Мої звіти
                     </Link>
-                    <h1 class="font-display mt-2 text-3xl font-semibold text-white">
+                    <h1 class="font-display mt-2 text-3xl font-light text-white">
                         Розклад <span class="text-gradient-gold italic">капта</span>
                     </h1>
                 </div>

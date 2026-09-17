@@ -107,9 +107,9 @@ async function runNow() {
             <h2 class="mb-4 font-display text-lg text-white">Ставки й пороги</h2>
             <form class="grid gap-5 sm:grid-cols-2" @submit.prevent="saveSettings">
                 <div>
-                    <label class="mb-1 block text-xs uppercase tracking-widest text-white/40">Бізвар — ставка за 100% winrate (₴)</label>
+                    <label class="mb-1 block text-xs uppercase tracking-widest text-white/40">Бізвар — ставка за 100% перемог (₴)</label>
                     <input v-model.number="settingsForm.bizwar_base_rate" type="number" min="0" class="w-full rounded-lg border border-white/10 bg-obsidian-900 px-3 py-2 text-white" />
-                    <p class="mt-1 text-[11px] text-white/30">Виплата = ставка × winrate тижня (90% winrate → 0.9 × ставка)</p>
+                    <p class="mt-1 text-[11px] text-white/30">Виплата = ставка × частка перемог за тиждень (90% перемог → 0.9 × ставка)</p>
                 </div>
                 <div></div>
 

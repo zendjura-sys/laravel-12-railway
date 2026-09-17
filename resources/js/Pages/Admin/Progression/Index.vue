@@ -48,9 +48,9 @@ async function submitAdjust(userId) {
 </script>
 
 <template>
-    <Head title="Progression — адміністрування" />
+    <Head title="Прогресія — адміністрування" />
 
-    <AdminLayout title="Progression — адміністрування">
+    <AdminLayout title="Прогресія — адміністрування">
         <div class="pointer-events-none fixed right-6 top-6 z-[100] flex w-full max-w-sm flex-col gap-3">
             <TransitionGroup name="toast">
                 <div
@@ -73,7 +73,7 @@ async function submitAdjust(userId) {
                             <div class="text-xs text-white/40">{{ p.user?.email }}</div>
                         </div>
                         <div class="flex items-center gap-4">
-                            <span class="font-display text-lg text-gold-300">{{ p.xp }} XP</span>
+                            <span class="font-display text-lg text-gold-300">{{ p.xp }} очок досвіду</span>
                             <button
                                 class="rounded-full border border-white/15 px-4 py-1.5 text-xs text-white/60 hover:border-white/30"
                                 @click="openAdjust(p.id)"
@@ -85,7 +85,7 @@ async function submitAdjust(userId) {
 
                     <div v-if="adjustingUserId === p.id" class="mt-4 flex flex-wrap items-end gap-3 rounded-xl border border-white/10 bg-obsidian-900/60 p-4">
                         <div>
-                            <label class="mb-1 block text-[11px] uppercase tracking-widest text-white/40">XP (може бути від'ємним)</label>
+                            <label class="mb-1 block text-[11px] uppercase tracking-widest text-white/40">Досвід (може бути від'ємним)</label>
                             <input v-model.number="amount" type="number" class="w-32 rounded-lg border border-white/10 bg-obsidian-900 px-3 py-2 text-white" />
                         </div>
                         <div class="flex-1">

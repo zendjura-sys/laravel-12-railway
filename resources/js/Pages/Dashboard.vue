@@ -8,8 +8,8 @@ defineProps({
 });
 
 const cards = [
-    { name: 'reports.index', title: 'Мої звіти', text: 'Подайте звіт за KAPT чи контрактом та слідкуйте за статусом розгляду.' },
-    { name: 'progression.index', title: 'Мій прогрес', text: 'XP, ранг, досягнення та історія нарахувань.' },
+    { name: 'reports.index', title: 'Мої звіти', text: 'Подайте звіт за бізваром чи контрактом та слідкуйте за статусом розгляду.' },
+    { name: 'progression.index', title: 'Мій прогрес', text: 'Досвід, рівень, досягнення та історія нарахувань.' },
     { name: 'progression.leaderboard', title: 'Рейтинг родини', text: 'Хто попереду — за активністю, бізваром, контрактами, серією перемог чи преміями.' },
     { name: 'member-center.index', title: 'Кадровий центр', text: 'Ваш статус у родині та заявки на відпустку.' },
     { name: 'family-goals.index', title: 'Цілі родини', text: 'Спільні цілі з прогресом та стрічка активності.' },
@@ -28,7 +28,7 @@ function fmtDate(iso) {
 
     <AuthenticatedLayout>
         <template #header>
-            <h2 class="font-display text-2xl font-semibold text-white">
+            <h2 class="font-display text-2xl font-light text-white">
                 Кабінет
             </h2>
         </template>
@@ -54,7 +54,7 @@ function fmtDate(iso) {
                     </p>
                 </div>
                 <div>
-                    <p class="text-xs uppercase tracking-widest text-white/40">Email</p>
+                    <p class="text-xs uppercase tracking-widest text-white/40">Пошта</p>
                     <!-- flex-wrap обов'язковий: у 4-колонковій розкладці
                          клітинка вужча, і без переносу бейдж
                          "Підтверджено" наїжджав на сусідню колонку

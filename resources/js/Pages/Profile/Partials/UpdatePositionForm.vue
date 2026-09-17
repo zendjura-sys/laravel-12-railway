@@ -21,7 +21,7 @@ const form = useForm({
 <template>
     <section>
         <header>
-            <h2 class="font-display text-lg font-medium text-white">
+            <h2 class="font-display text-lg font-normal text-white">
                 Посада в родині
             </h2>
 

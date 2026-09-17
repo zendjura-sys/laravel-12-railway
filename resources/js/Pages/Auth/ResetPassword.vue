@@ -35,11 +35,11 @@ const submit = () => {
     <GuestLayout>
         <Head title="Новий пароль" />
 
-        <h1 class="font-display mb-6 text-2xl font-semibold text-white">Встановлення нового пароля</h1>
+        <h1 class="font-display mb-6 text-2xl font-light text-white">Встановлення нового пароля</h1>
 
         <form @submit.prevent="submit">
             <div>
-                <InputLabel for="email" value="Email" />
+                <InputLabel for="email" value="Пошта" />
 
                 <TextInput
                     id="email"

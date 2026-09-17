@@ -124,7 +124,7 @@ const mobileOpen = ref(false);
 
                 <main class="px-6 py-8 lg:px-10">
                     <header v-if="title" class="mb-8">
-                        <h1 class="font-display text-3xl font-semibold text-white">{{ title }}</h1>
+                        <h1 class="font-display text-3xl font-light text-white">{{ title }}</h1>
                     </header>
                     <slot />
                 </main>

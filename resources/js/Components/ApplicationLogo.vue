@@ -36,6 +36,6 @@ const uploaded = computed(() => usePage().props.design?.logoUrl || null);
             </linearGradient>
         </defs>
         <rect x="18" y="18" width="64" height="64" rx="10" transform="rotate(45 50 50)" fill="none" stroke="url(#monsory-logo-gold)" stroke-width="3" />
-        <text x="50" y="50" text-anchor="middle" dominant-baseline="central" font-family="'Cormorant Garamond', serif" font-size="42" font-weight="600" fill="url(#monsory-logo-gold)">M</text>
+        <text x="50" y="50" text-anchor="middle" dominant-baseline="central" font-family="Montserrat, sans-serif" font-size="40" font-weight="700" fill="url(#monsory-logo-gold)">M</text>
     </svg>
 </template>

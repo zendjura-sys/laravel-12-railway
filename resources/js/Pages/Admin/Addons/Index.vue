@@ -189,7 +189,7 @@ const totalInstalled = computed(() =>
         </div>
 
         <div class="mb-8">
-            <h1 class="font-display text-3xl font-semibold text-white">
+            <h1 class="font-display text-3xl font-light text-white">
                 Керування <span class="text-gradient-gold italic">аддонами</span>
             </h1>
             <p class="mt-1 text-sm text-white/40">

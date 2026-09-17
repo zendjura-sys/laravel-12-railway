@@ -25,7 +25,7 @@ const verificationLinkSent = computed(
     <GuestLayout>
         <Head title="Підтвердження email" />
 
-        <h1 class="font-display mb-4 text-2xl font-semibold text-white">Підтвердьте email</h1>
+        <h1 class="font-display mb-4 text-2xl font-light text-white">Підтвердьте email</h1>
 
         <div class="mb-4 text-sm text-white/50">
             Дякуємо за реєстрацію! Перш ніж почати, підтвердіть свою email-адресу,

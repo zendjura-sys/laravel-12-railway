@@ -13,8 +13,10 @@ class Report extends Model
 
     protected $table = 'reports';
 
+    public const TYPES = ['kapt', 'contract', 'bizwar', 'investment', 'other'];
+
     protected $fillable = [
-        'user_id', 'submitted_by', 'type', 'outcome', 'weight',
+        'user_id', 'submitted_by', 'type', 'outcome', 'weight', 'amount',
         'description', 'status', 'reviewed_by', 'reviewed_at', 'review_note',
     ];
 
@@ -22,6 +24,7 @@ class Report extends Model
     {
         return [
             'reviewed_at' => 'datetime',
+            'amount' => 'integer',
         ];
     }
 

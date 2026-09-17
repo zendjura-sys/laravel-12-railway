@@ -22,6 +22,12 @@ class ProgressionService
     private const XP_KAPT_WIN = 120;
     private const XP_KAPT_LOSS = 40;
     private const XP_CONTRACT = ['light' => 30, 'medium' => 45, 'heavy' => 60];
+    // bizwar/investment — брифом не описані (це пізніший запит), тому
+    // значення підібрані за аналогією з KAPT/Контрактом і легко
+    // підкрутити тут однією цифрою, якщо не підійдуть.
+    private const XP_BIZWAR_WIN = 100;
+    private const XP_BIZWAR_LOSS = 35;
+    private const XP_INVESTMENT = 50;
 
     // Бонусы еженедельных челленджей.
     private const WEEKLY_KAPT_WINS_THRESHOLD = 5;
@@ -122,6 +128,13 @@ class ProgressionService
             if ($freshProfile->heavy_contracts_count === self::SHARPSHOOTER_HEAVY_CONTRACTS) {
                 $this->unlock($user, 'sharpshooter');
             }
+        } elseif ($report->type === 'bizwar') {
+            $isWin = $report->outcome === 'win';
+            $amount = $isWin ? self::XP_BIZWAR_WIN : self::XP_BIZWAR_LOSS;
+
+            $this->awardXp($user, $amount, "Бізвар ({$report->outcome})", 'report', $report->id);
+        } elseif ($report->type === 'investment') {
+            $this->awardXp($user, self::XP_INVESTMENT, "Інвестиція ({$report->amount})", 'report', $report->id);
         }
         // type=other: без начисления XP, только сам факт репорта остаётся в reports.
     }

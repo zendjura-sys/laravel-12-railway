@@ -10,6 +10,7 @@ const form = useForm({
     type: 'kapt',
     outcome: 'win',
     weight: 'light',
+    amount: null,
     description: '',
 });
 
@@ -19,7 +20,7 @@ function submit() {
     form.post(route('reports.store'), {
         preserveScroll: true,
         onSuccess: () => {
-            form.reset('description');
+            form.reset('description', 'amount');
             showForm.value = false;
         },
     });
@@ -31,7 +32,7 @@ const statusMeta = {
     rejected: { label: 'Відхилено', class: 'bg-ember-500/15 text-ember-500 border-ember-500/30' },
 };
 
-const typeLabels = { kapt: 'KAPT', contract: 'Контракт', other: 'Інше' };
+const typeLabels = { kapt: 'KAPT', contract: 'Контракт', bizwar: 'Бізвар', investment: 'Інвестиції', other: 'Інше' };
 
 function fmtDate(iso) {
     return new Date(iso).toLocaleString('uk-UA', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
@@ -70,10 +71,12 @@ function fmtDate(iso) {
                             <select v-model="form.type" class="w-full rounded-lg border border-white/10 bg-obsidian-900 px-3 py-2 text-white">
                                 <option value="kapt">KAPT</option>
                                 <option value="contract">Контракт</option>
+                                <option value="bizwar">Бізвар</option>
+                                <option value="investment">Інвестиції</option>
                                 <option value="other">Інше</option>
                             </select>
                         </div>
-                        <div v-if="form.type === 'kapt'">
+                        <div v-if="form.type === 'kapt' || form.type === 'bizwar'">
                             <label class="mb-2 block text-xs uppercase tracking-widest text-white/40">Результат</label>
                             <select v-model="form.outcome" class="w-full rounded-lg border border-white/10 bg-obsidian-900 px-3 py-2 text-white">
                                 <option value="win">Win</option>
@@ -87,6 +90,17 @@ function fmtDate(iso) {
                                 <option value="medium">Medium</option>
                                 <option value="heavy">Heavy</option>
                             </select>
+                        </div>
+                        <div v-if="form.type === 'investment'">
+                            <label class="mb-2 block text-xs uppercase tracking-widest text-white/40">Сума</label>
+                            <input
+                                v-model.number="form.amount"
+                                type="number"
+                                min="0"
+                                class="w-full rounded-lg border border-white/10 bg-obsidian-900 px-3 py-2 text-white placeholder:text-white/30"
+                                placeholder="0"
+                            />
+                            <p v-if="form.errors.amount" class="mt-1 text-xs text-ember-500">{{ form.errors.amount }}</p>
                         </div>
                     </div>
                     <div class="mt-5">
@@ -120,6 +134,7 @@ function fmtDate(iso) {
                             <span class="font-medium text-white">{{ typeLabels[report.type] }}</span>
                             <span v-if="report.outcome" class="text-xs uppercase text-white/40">{{ report.outcome }}</span>
                             <span v-if="report.weight" class="text-xs uppercase text-white/40">{{ report.weight }}</span>
+                            <span v-if="report.amount" class="text-xs uppercase text-white/40">{{ report.amount.toLocaleString('uk-UA') }}</span>
                         </div>
                         <p class="mt-1 text-xs text-white/30">{{ fmtDate(report.created_at) }}</p>
                     </div>

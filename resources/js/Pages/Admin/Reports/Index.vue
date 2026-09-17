@@ -34,7 +34,7 @@ function switchStatus(s) {
     router.get(route('admin.reports.index'), { status: s }, { preserveState: true, preserveScroll: true });
 }
 
-const typeLabels = { kapt: 'KAPT', contract: 'Контракт', other: 'Інше' };
+const typeLabels = { kapt: 'KAPT', contract: 'Контракт', bizwar: 'Бізвар', investment: 'Інвестиції', other: 'Інше' };
 function fmtDate(iso) {
     return new Date(iso).toLocaleString('uk-UA', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
@@ -83,6 +83,7 @@ function fmtDate(iso) {
                             <span>{{ typeLabels[report.type] }}</span>
                             <span v-if="report.outcome" class="text-xs uppercase text-white/40">{{ report.outcome }}</span>
                             <span v-if="report.weight" class="text-xs uppercase text-white/40">{{ report.weight }}</span>
+                            <span v-if="report.amount" class="text-xs uppercase text-white/40">{{ report.amount.toLocaleString('uk-UA') }}</span>
                         </div>
                         <p v-if="report.description" class="mt-1 text-sm text-white/50">{{ report.description }}</p>
                         <p class="mt-1 text-xs text-white/30">

@@ -45,11 +45,15 @@ class Screens
             $text .= "\n".'Оберіть розділ:';
 
             $rows = [
-                [$this->btn('👤  Мій акаунт', 'account')],
+                [$this->btn('👤  Мій акаунт', 'account'), $this->btn('📊  Статистика', 'stats')],
                 [$this->btn('🏛  Про родину', 'about'), $this->btn('💼  Посади', 'positions')],
                 [$this->btn('⚔️  Напрямки', 'directions'), $this->btn('📈  Як рости', 'growth')],
                 [$this->btn('👥  Структура', 'structure')],
             ];
+
+            if ($site = $this->siteUrl()) {
+                $rows[] = [['text' => '📝  Подати звіт', 'url' => rtrim($site, '/').'/reports']];
+            }
         } else {
             $text = $this->head('MONSORY FAMILY')
                 ."<i>Закрите коло, де кожного знають в обличчя.</i>\n\n"
@@ -247,6 +251,88 @@ class Screens
         $rows[] = [$this->backHome()];
 
         return $this->screen($text, $rows);
+    }
+
+    /**
+     * "Що вже нарахувало" — прогресія (якщо встановлено Progression) і
+     * живий (не збережений) розрахунок премії поточного тижня (якщо
+     * встановлено Bonuses). Обидва блоки опційні: чого з двох модулів
+     * немає — той блок просто не показується, без помилки.
+     *
+     * @param  array{
+     *     progression?: array{level:int,xp:int,streak:int,achievements:int},
+     *     bonus?: array{bizwar_amount:int,winrate:?float,contract_amount:int,contracts_count:int,streak_bonus_amount:int,contracts_count_bonus_amount:int,total_amount:int},
+     *     investment?: array{cumulative:int,next_tier_label:?string,next_tier_left:?int},
+     * }|null  $data  null — чат ще не привʼязано до акаунту
+     */
+    public function stats(?array $data): array
+    {
+        if ($data === null) {
+            $text = $this->head('📊  СТАТИСТИКА')
+                ."Статистика доступна лише для привʼязаного акаунту.\n\n"
+                .self::RULE;
+
+            $rows = [];
+            if ($site = $this->siteUrl()) {
+                $rows[] = [['text' => '🌐  Відкрити профіль на сайті', 'url' => rtrim($site, '/').'/profile']];
+            }
+            $rows[] = [$this->backHome()];
+
+            return $this->screen($text, $rows);
+        }
+
+        $text = $this->head('📊  СТАТИСТИКА');
+
+        if ($progression = $data['progression'] ?? null) {
+            $text .= "<b>Прогресія</b>\n"
+                ."Рівень: {$progression['level']} ({$progression['xp']} XP)\n"
+                ."Серія перемог: {$progression['streak']}\n"
+                ."Ачівки: {$progression['achievements']}\n\n";
+        }
+
+        if ($bonus = $data['bonus'] ?? null) {
+            $text .= "<b>Премія цього тижня</b>  <i>(поточний розрахунок)</i>\n";
+            if ($bonus['bizwar_amount'] > 0) {
+                $text .= "Бізвар: {$this->money($bonus['bizwar_amount'])}";
+                $text .= $bonus['winrate'] !== null ? " ({$bonus['winrate']}% winrate)\n" : "\n";
+            }
+            if ($bonus['contract_amount'] > 0) {
+                $text .= "Контракти: {$this->money($bonus['contract_amount'])} (×{$bonus['contracts_count']})\n";
+            }
+            $extraBonuses = $bonus['streak_bonus_amount'] + $bonus['contracts_count_bonus_amount'];
+            if ($extraBonuses > 0) {
+                $text .= "Додаткові бонуси: {$this->money($extraBonuses)}\n";
+            }
+            $text .= "<b>Разом: {$this->money($bonus['total_amount'])}</b>\n\n";
+        }
+
+        if ($investment = $data['investment'] ?? null) {
+            $text .= "<b>Інвестиції</b>\n"
+                ."Вкладено: {$this->money($investment['cumulative'])}\n";
+            if ($investment['next_tier_label'] !== null) {
+                $text .= 'До тіру «'.e($investment['next_tier_label'])."»: ще {$this->money($investment['next_tier_left'])}\n";
+            }
+            $text .= "\n";
+        }
+
+        if (! ($data['progression'] ?? null) && ! ($data['bonus'] ?? null) && ! ($data['investment'] ?? null)) {
+            $text .= "Даних поки немає.\n\n";
+        }
+
+        $text .= self::RULE;
+
+        $rows = [];
+        if ($site = $this->siteUrl()) {
+            $rows[] = [['text' => '📝  Подати звіт', 'url' => rtrim($site, '/').'/reports']];
+        }
+        $rows[] = [$this->backHome()];
+
+        return $this->screen($text, $rows);
+    }
+
+    private function money(int $amount): string
+    {
+        return number_format($amount, 0, ',', ' ').'₴';
     }
 
     /* ==================== ЗАЯВКА ==================== */

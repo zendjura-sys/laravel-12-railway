@@ -2,6 +2,9 @@
 
 namespace Addons\TelegramBot\Bot;
 
+use Addons\Bonuses\Services\BonusCalculator;
+use Addons\Progression\Models\ProgressionProfile;
+use Addons\Progression\Models\UserAchievement;
 use Addons\TelegramBot\Models\TelegramApplication;
 use Addons\TelegramBot\Models\TelegramChat;
 use Addons\TelegramBot\Models\TelegramLink;
@@ -189,6 +192,7 @@ class BotHandler
             'pos' => $this->screens->position((int) $arg),
             'growth' => $this->screens->growth(),
             'account' => $this->accountScreen($chat),
+            'stats' => $this->statsScreen($chat),
             'unlink' => $this->unlink($chat),
             'apply' => $this->apply($chat, $arg),
             'rev' => $this->reviewFromChat($chat, $arg),
@@ -443,6 +447,51 @@ class BotHandler
         $user = $this->linkedUser($chat);
 
         return $this->screens->account($user?->name, $user?->email, $user?->position_title);
+    }
+
+    /**
+     * Progression і Bonuses читаються через class_exists() — та сама
+     * "опційна залежність", що й у решті модулів: бот показує лише те, що
+     * реально встановлено, без помилки для решти.
+     */
+    private function statsScreen(TelegramChat $chat): array
+    {
+        $user = $this->linkedUser($chat);
+        if (! $user) {
+            return $this->screens->stats(null);
+        }
+
+        $data = [];
+
+        if (class_exists(ProgressionProfile::class)) {
+            $profile = ProgressionProfile::query()->where('user_id', $user->id)->first();
+            if ($profile) {
+                $data['progression'] = [
+                    'level' => $profile->level(),
+                    'xp' => $profile->xp,
+                    'streak' => $profile->current_streak,
+                    'achievements' => UserAchievement::query()->where('user_id', $user->id)->count(),
+                ];
+            }
+        }
+
+        if (class_exists(BonusCalculator::class)) {
+            $calculator = app(BonusCalculator::class);
+            $data['bonus'] = $calculator->previewCurrentWeek($user);
+
+            $investment = $calculator->investmentProgress($user);
+            if ($investment['cumulative'] > 0 || $investment['next_tier']) {
+                $data['investment'] = [
+                    'cumulative' => $investment['cumulative'],
+                    'next_tier_label' => $investment['next_tier']?->label,
+                    'next_tier_left' => $investment['next_tier']
+                        ? max(0, $investment['next_tier']->threshold_amount - $investment['cumulative'])
+                        : null,
+                ];
+            }
+        }
+
+        return $this->screens->stats($data);
     }
 
     private function unlink(TelegramChat $chat): array

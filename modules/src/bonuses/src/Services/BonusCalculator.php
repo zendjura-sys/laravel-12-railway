@@ -92,6 +92,66 @@ class BonusCalculator
     }
 
     /**
+     * Живий розрахунок поточного тижня "як воно виглядає зараз" — для
+     * запитів на кшталт кнопки в Telegram-боті. Навмисно БЕЗ жодного
+     * побічного ефекту: не пише bonus_payouts, не видає інвестиційні тіри
+     * й не шле сповіщення — саме тому інвестиційний бонус сюди
+     * не входить (calculateInvestmentBonus() створює записи в БД як
+     * частину своєї нормальної роботи, а превью має лишатись чисто
+     * читанням). Безпечно викликати будь-коли, скільки завгодно разів.
+     *
+     * @return array{bizwar_amount:int,winrate:?float,contract_amount:int,contracts_count:int,streak_bonus_amount:int,contracts_count_bonus_amount:int,total_amount:int}
+     */
+    public function previewCurrentWeek(User $user): array
+    {
+        $weekStart = $this->currentWeekStart();
+        $weekEnd = $weekStart->copy()->addWeek();
+        $settings = BonusSettings::current();
+
+        $bizwar = $this->calculateBizwar($user->id, $weekStart, $weekEnd, $settings);
+        $contracts = $this->calculateContracts($user->id, $weekStart, $weekEnd, $settings);
+        $streakBonus = $this->calculateStreakBonus($user->id, $settings);
+        $contractsCountBonus = ($settings->contracts_count_threshold !== null
+            && $contracts['count'] >= $settings->contracts_count_threshold)
+            ? (int) $settings->contracts_count_bonus_amount
+            : 0;
+
+        return [
+            'bizwar_amount' => $bizwar['amount'],
+            'winrate' => $bizwar['winrate'],
+            'contract_amount' => $contracts['amount'],
+            'contracts_count' => $contracts['count'],
+            'streak_bonus_amount' => $streakBonus,
+            'contracts_count_bonus_amount' => $contractsCountBonus,
+            'total_amount' => $bizwar['amount'] + $contracts['amount'] + $streakBonus + $contractsCountBonus,
+        ];
+    }
+
+    /**
+     * Скільки вже інвестовано (кумулятивно, підтверджено) і скільки
+     * лишилось до найближчого ще не отриманого тіру — теж чисте читання,
+     * жодних записів чи нарахувань.
+     *
+     * @return array{cumulative:int,next_tier:?InvestmentAchievementTier}
+     */
+    public function investmentProgress(User $user): array
+    {
+        $cumulative = (int) Report::query()
+            ->where('user_id', $user->id)->where('status', 'approved')->where('type', 'investment')
+            ->sum('amount');
+
+        $earnedTierIds = UserInvestmentAchievement::query()->where('user_id', $user->id)->pluck('tier_id');
+
+        $nextTier = InvestmentAchievementTier::query()
+            ->where('threshold_amount', '>', $cumulative)
+            ->whereNotIn('id', $earnedTierIds)
+            ->orderBy('threshold_amount')
+            ->first();
+
+        return ['cumulative' => $cumulative, 'next_tier' => $nextTier];
+    }
+
+    /**
      * Субота 23:00 Europe/Kyiv — останній такий момент, що вже настав.
      * Той самий приём, що й у Progression::runWeeklyBonuses() для неділі.
      */

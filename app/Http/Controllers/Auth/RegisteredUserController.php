@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Support\FamilyContent;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -44,9 +45,12 @@ class RegisteredUserController extends Controller
             'last_name' => $request->last_name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
-            // "Починають усі однаково — зі Стажера" (config/family.php,
-            // позиция 0) — та же формулировка, что на сайте и в боте.
-            'position_index' => 0,
+            // "Починають усі однаково — зі Стажера" — та же формулировка,
+            // что на сайте и в боте. Берём ПЕРВЫЙ ключ из живого списка
+            // (не хардкодим 'trainee'): если админ когда-нибудь переставит
+            // должности так, что первой станет другая, регистрация должна
+            // следовать за этим, а не молча указывать в старую позицию.
+            'position_key' => FamilyContent::positionKeys()[0] ?? null,
         ]);
 
         event(new Registered($user));

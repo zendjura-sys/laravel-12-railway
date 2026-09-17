@@ -27,9 +27,10 @@ class User extends Authenticatable implements MustVerifyEmail
         'email',
         'password',
         // Только контролируемые пути пишут его явным литералом
-        // (регистрация — 0, адмінка — через провалідований UserController).
-        // Ни один путь не берёт значение прямо из $request-массива.
-        'position_index',
+        // (регистрация — 'trainee', адмінка — через провалідований
+        // UserController). Ни один путь не берёт значение прямо из
+        // $request-массива.
+        'position_key',
     ];
 
     /**
@@ -103,11 +104,16 @@ class User extends Authenticatable implements MustVerifyEmail
      * до чого) і від XP у модулі Progression (той окремий ігровий бал, а
      * не офіційна посада). Єдине джерело правди — config/family.php через
      * FamilyContent, те саме, що читають сайт і бот.
+     *
+     * Зберігається СТАБІЛЬНИМ КЛЮЧЕМ (position_key), а не індексом:
+     * посади в Дизайн → Розділи можна переставляти й видаляти, і при
+     * зберіганні індексом перестановка мовчки переприсвоювала б людям
+     * чужі посади.
      */
     protected function positionTitle(): Attribute
     {
         return Attribute::make(
-            get: fn () => FamilyContent::positionAt($this->position_index)['title'] ?? null,
+            get: fn () => FamilyContent::positionByKey($this->position_key)['title'] ?? null,
         );
     }
 }

@@ -57,7 +57,7 @@ class ProgressController
 
     public function leaderboard(): Response
     {
-        $top = ProgressionProfile::with('user:id,name,first_name,last_name,position_index')
+        $top = ProgressionProfile::with('user:id,name,first_name,last_name,position_key')
             ->orderByDesc('xp')
             ->limit(50)
             ->get()

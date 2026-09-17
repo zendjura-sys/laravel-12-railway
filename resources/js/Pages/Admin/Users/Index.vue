@@ -15,6 +15,29 @@ function search() {
     router.get(route('admin.users.index'), { q: q.value }, { preserveState: true, replace: true });
 }
 
+/**
+ * Раньше провал этих запросов показывал один и тот же безликий текст,
+ * какой бы ни была реальная причина — 419 (сесія застаріла), 403 (немає
+ * прав), 422 (валідація) чи 500 вело до однакового "Не вдалося оновити".
+ * Тепер спершу шукаємо повідомлення від сервера, а якщо його немає —
+ * показуємо код статусу замість тиші: цього досить, щоб наступного разу
+ * зрозуміти причину з одного скріншота, а не гадати.
+ */
+function describeFailure(e, fieldErrorsKey, fallback) {
+    const fieldError = e.response?.data?.errors?.[fieldErrorsKey]?.[0];
+    if (fieldError) return fieldError;
+
+    const serverMessage = e.response?.data?.message;
+    if (serverMessage) return serverMessage;
+
+    if (!e.response) return `${fallback} (немає відповіді сервера — перевірте з'єднання)`;
+
+    if (e.response.status === 419) return `${fallback} (сесія застаріла — оновіть сторінку)`;
+    if (e.response.status === 403) return `${fallback} (немає прав)`;
+
+    return `${fallback} (код ${e.response.status})`;
+}
+
 const savingUser = ref(null);
 async function toggleRole(user, role) {
     const has = user.roles.includes(role);
@@ -25,7 +48,7 @@ async function toggleRole(user, role) {
     try {
         await window.axios.put(route('admin.users.roles', user.id), { roles: next });
     } catch (e) {
-        alert(e.response?.data?.errors?.roles?.[0] || 'Не вдалося оновити ролі');
+        alert(describeFailure(e, 'roles', 'Не вдалося оновити ролі'));
         user.roles = has ? [...next, role] : next.filter((r) => r !== role);
     } finally {
         savingUser.value = null;
@@ -33,19 +56,21 @@ async function toggleRole(user, role) {
 }
 
 // Посада — окремо від ролей доступу: одна ставить доступ до адмінки,
-// друга показує статус у родині на сайті й у боті.
+// друга показує статус у родині на сайті й у боті. Зберігається ключем
+// (не індексом) — ключ переживає перестановку й видалення посад у
+// Дизайн → Розділи, індекс ні.
 async function changePosition(user, event) {
     const raw = event.target.value;
-    const prev = user.position_index;
-    const next = raw === '' ? null : Number(raw);
-    user.position_index = next;
+    const prev = user.position_key;
+    const next = raw === '' ? null : raw;
+    user.position_key = next;
 
     savingUser.value = user.id;
     try {
-        await window.axios.put(route('admin.users.position', user.id), { position_index: next });
+        await window.axios.put(route('admin.users.position', user.id), { position_key: next });
     } catch (e) {
-        alert(e.response?.data?.errors?.position_index?.[0] || 'Не вдалося оновити посаду');
-        user.position_index = prev;
+        alert(describeFailure(e, 'position_key', 'Не вдалося оновити посаду'));
+        user.position_key = prev;
     } finally {
         savingUser.value = null;
     }
@@ -81,13 +106,13 @@ async function changePosition(user, event) {
                     <div class="flex flex-col gap-1">
                         <span class="text-[10px] uppercase tracking-widest text-white/30">Посада</span>
                         <select
-                            :value="user.position_index ?? ''"
+                            :value="user.position_key ?? ''"
                             class="rounded-lg border border-white/10 bg-obsidian-900/60 px-2 py-1.5 text-xs text-white focus:border-gold-400/50 focus:outline-none focus:ring-1 focus:ring-gold-400/40"
                             @change="changePosition(user, $event)"
                         >
                             <option value="">— не призначено —</option>
-                            <option v-for="(title, idx) in positions" :key="idx" :value="idx">
-                                {{ String(idx + 1).padStart(2, '0') }}. {{ title }}
+                            <option v-for="(pos, idx) in positions" :key="pos.key" :value="pos.key">
+                                {{ String(idx + 1).padStart(2, '0') }}. {{ pos.title }}
                             </option>
                         </select>
                     </div>

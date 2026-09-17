@@ -2,8 +2,8 @@
     "type": "module",
     "slug": "progression-statistics",
     "name": "Progression & Statistics",
-    "version": "1.0.0",
-    "description": "XP, рівні, ранги, досягнення, тижневі бонуси та leaderboard. Слухає report.reviewed від модуля Reports (Reports має бути активний і встановлений раніше — інакше XP просто не нараховується, помилки не буде).",
+    "version": "1.1.0",
+    "description": "XP, рівні, ранги, досягнення, тижневі бонуси та leaderboard. Слухає report.reviewed від модуля Reports (Reports має бути активний і встановлений раніше — інакше XP просто не нараховується, помилки не буде). Посада учасника в leaderboard тепер читається за стабільним ключем (position_key) — потребує ядра з відповідною міграцією.",
     "min_core_version": "1.0.0",
     "entrypoints": {
         "web": "routes/web.php",

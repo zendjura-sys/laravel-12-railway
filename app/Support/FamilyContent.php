@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Models\Setting;
+use Illuminate\Support\Str;
 
 /**
  * Содержание родины: должности, направления, критерии роста и структура
@@ -21,7 +22,10 @@ class FamilyContent
 
     /** Ключи, которые админка может перезаписать, и их форма. */
     private const SHAPES = [
-        'positions' => ['title', 'text', 'image'],
+        // 'key' первым нарочно: это единственное поле здесь, которое
+        // форма редактирования НЕ показывает и не даёт трогать — оно
+        // просто едет транзитом при каждом сохранении (см. save()).
+        'positions' => ['key', 'title', 'text', 'image'],
         'directions' => ['title', 'tag', 'text', 'image'],
         'leadership' => ['title', 'text', 'nickname'],
     ];
@@ -33,20 +37,38 @@ class FamilyContent
     }
 
     /**
-     * Одна должность по индексу — им хранится назначение участника
-     * (users.position_index), а не заголовком: если админ переименует или
-     * переставит должности в Дизайн → Розділи, привязка участника
-     * останется верной.
+     * Одна должность по стабильному ключу — им хранится назначение
+     * участника (users.position_key), а НЕ индексом в списке и не
+     * заголовком.
+     *
+     * Индекс сюда не годится: в Дизайн → Розділи должности можно
+     * переставлять стрелками ↑/↓ и удалять — при хранении индексом это
+     * молча переприсваивало бы реальным людям чужие должности при первой
+     * же перестановке, без единого предупреждения. Заголовок не годится
+     * по той же причине при переименовании. Ключ переживает и то, и
+     * другое: он вообще не завязан на порядок или текст.
      *
      * @return array<string,string>|null
      */
-    public static function positionAt(?int $index): ?array
+    public static function positionByKey(?string $key): ?array
     {
-        if ($index === null) {
+        if ($key === null || $key === '') {
             return null;
         }
 
-        return self::positions()[$index] ?? null;
+        foreach (self::positions() as $position) {
+            if (($position['key'] ?? null) === $key) {
+                return $position;
+            }
+        }
+
+        return null;
+    }
+
+    /** @return array<int,string> Ключи всех должностей в текущем порядке. */
+    public static function positionKeys(): array
+    {
+        return array_column(self::positions(), 'key');
     }
 
     /** @return array<int,array<string,string>> */
@@ -104,7 +126,9 @@ class FamilyContent
      */
     public static function save(string $key, array $value): void
     {
-        if (isset(self::SHAPES[$key])) {
+        if ($key === 'positions') {
+            $value = self::preparePositions($value);
+        } elseif (isset(self::SHAPES[$key])) {
             $fields = self::SHAPES[$key];
             $value = array_values(array_map(
                 static fn (array $row) => array_map(
@@ -123,6 +147,62 @@ class FamilyContent
         Setting::set($key, json_encode($value, JSON_UNESCAPED_UNICODE), self::GROUP);
     }
 
+    /**
+     * Должности — с сохранением стабильного ключа за каждой строкой.
+     * Форма редактирования (Дизайн → Розділи) поле key не показывает и не
+     * трогает: оно просто едет транзитом вместе с остальными полями
+     * строки. Ключ генерируется заново только для строк, у которых его
+     * ещё нет вовсе — то есть для новых должностей, добавленных кнопкой
+     * «+ Додати посаду».
+     *
+     * @param  array<int,array<string,mixed>>  $rows
+     * @return array<int,array<string,string>>
+     */
+    private static function preparePositions(array $rows): array
+    {
+        $used = [];
+        $prepared = [];
+
+        foreach ($rows as $row) {
+            if (! is_array($row)) {
+                continue;
+            }
+
+            $title = trim((string) ($row['title'] ?? ''));
+            if ($title === '') {
+                continue;
+            }
+
+            $key = trim((string) ($row['key'] ?? ''));
+            if ($key === '' || isset($used[$key])) {
+                $key = self::uniqueSlug($title, $used);
+            }
+            $used[$key] = true;
+
+            $prepared[] = [
+                'key' => $key,
+                'title' => $title,
+                'text' => trim((string) ($row['text'] ?? '')),
+                'image' => trim((string) ($row['image'] ?? '')),
+            ];
+        }
+
+        return $prepared;
+    }
+
+    /** @param array<string,bool> $used */
+    private static function uniqueSlug(string $title, array $used): string
+    {
+        $base = Str::slug($title) ?: 'position';
+        $slug = $base;
+
+        for ($i = 2; isset($used[$slug]); $i++) {
+            $slug = "{$base}-{$i}";
+        }
+
+        return $slug;
+    }
+
     /** Вернуть ключ к значению из config/family.php. */
     public static function reset(string $key): void
     {
@@ -136,6 +216,19 @@ class FamilyContent
 
         if ($stored === null) {
             return (array) config("family.{$key}", []);
+        }
+
+        // Посади читаються через той самий preparePositions(), що й при
+        // збереженні: якщо в БД лежать рядки, збережені ДО того, як
+        // з'явилось поле key (наприклад, адмін зберіг "Дизайн → Розділи"
+        // ще на попередній версії сайту), ключ довелось би генерувати —
+        // а без цього кроку тут кожен рядок мовчки отримав би key: '',
+        // і призначення посад (users.position_key) перестали б
+        // резолвитись. Генерація детермінована (Str::slug(title) +
+        // порядок рядків), тому повторні виклики між збереженнями дають
+        // той самий ключ.
+        if ($key === 'positions') {
+            return self::preparePositions($stored);
         }
 
         $fields = self::SHAPES[$key];

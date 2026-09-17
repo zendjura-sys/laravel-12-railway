@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Setting;
+use App\Models\User;
 use App\Support\DesignSettings;
 use App\Support\FamilyContent;
 use Illuminate\Http\RedirectResponse;
@@ -101,6 +102,11 @@ class DesignController extends Controller
             'leadership.*.nickname' => ['nullable', 'string', 'max:40'],
 
             'positions' => ['present', 'array', 'max:24'],
+            // key форма не показує — воно просто їде транзитом разом із
+            // рештою полів рядка (FamilyContent::preparePositions сама
+            // генерує ключ, якщо його немає). Без правила тут
+            // $request->validate() мовчки вирізав би поле з даних.
+            'positions.*.key' => ['nullable', 'string', 'max:80'],
             'positions.*.title' => ['required', 'string', 'max:80'],
             'positions.*.text' => ['nullable', 'string', 'max:400'],
             'positions.*.image' => ['nullable', 'string', 'max:200'],
@@ -118,13 +124,56 @@ class DesignController extends Controller
             'about.*' => ['nullable', 'string', 'max:600'],
         ]);
 
+        // Ключі посад, які зникнуть після збереження (видалені рядки або
+        // перейменування без явного key — таке трапляється, якщо форму
+        // подають напряму, минаючи Vue). Рахуємо ДО save(): FamilyContent
+        // сама генерує нові ключі для безключових рядків, і після
+        // збереження різницю вже не побачити.
+        $before = FamilyContent::positionKeys();
+
         FamilyContent::save('leadership', $data['leadership']);
         FamilyContent::save('positions', $data['positions']);
         FamilyContent::save('directions', $data['directions']);
         FamilyContent::save('promotion_criteria', $data['promotionCriteria']);
         FamilyContent::save('about', $data['about']);
 
+        $after = FamilyContent::positionKeys();
+        $removed = array_diff($before, $after);
+
+        if ($removed !== []) {
+            $affected = User::whereIn('position_key', $removed)->count();
+
+            if ($affected > 0) {
+                // Це не помилка збереження — воно вже відбулось. Лише
+                // чесне попередження: посаду прибрали з переліку, і людей,
+                // яким вона стояла, тепер треба перепризначити вручну
+                // (Учасники), інакше в них "не призначено".
+                return back()->with(
+                    'status',
+                    "Зміст збережено. Але посаду прибрано зі списку, і {$affected} ".
+                    self::pluralizeMembers($affected).' лишились без призначеної посади — '.
+                    'перепризначте їх в «Учасники».',
+                );
+            }
+        }
+
         return back()->with('status', 'Зміст збережено. Сайт і бот оновилися одночасно.');
+    }
+
+    private static function pluralizeMembers(int $count): string
+    {
+        $mod10 = $count % 10;
+        $mod100 = $count % 100;
+
+        if ($mod10 === 1 && $mod100 !== 11) {
+            return 'учасник';
+        }
+
+        if (in_array($mod10, [2, 3, 4], true) && ! in_array($mod100, [12, 13, 14], true)) {
+            return 'учасники';
+        }
+
+        return 'учасників';
     }
 
     /** Вернуть один блок к значениям из config/family.php. */

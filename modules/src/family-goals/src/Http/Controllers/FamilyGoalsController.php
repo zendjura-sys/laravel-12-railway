@@ -23,6 +23,7 @@ class FamilyGoalsController
                 'target_value' => $goal->target_value,
                 'current_value' => $goal->current_value,
                 'unit' => $goal->unit,
+                'metric' => $goal->metric,
                 'deadline' => $goal->deadline,
                 'status' => $goal->status,
                 'progress_percent' => $goal->progressPercent(),
@@ -37,6 +38,7 @@ class FamilyGoalsController
         return Inertia::render('FamilyGoals/Index', [
             'goals' => $goals,
             'activity' => $activity,
+            'metrics' => FamilyGoal::METRICS,
         ]);
     }
 }

@@ -9,6 +9,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -27,6 +28,7 @@ class FamilyGoalsAdminController
                 'target_value' => $goal->target_value,
                 'current_value' => $goal->current_value,
                 'unit' => $goal->unit,
+                'metric' => $goal->metric,
                 'deadline' => $goal->deadline,
                 'status' => $goal->status,
                 'progress_percent' => $goal->progressPercent(),
@@ -35,6 +37,7 @@ class FamilyGoalsAdminController
 
         return Inertia::render('Admin/FamilyGoals/Index', [
             'goals' => $goals,
+            'metrics' => FamilyGoal::METRICS,
         ]);
     }
 
@@ -45,6 +48,7 @@ class FamilyGoalsAdminController
             'description' => ['nullable', 'string', 'max:2000'],
             'target_value' => ['nullable', 'integer', 'min:1'],
             'unit' => ['nullable', 'string', 'max:50'],
+            'metric' => ['nullable', 'string', Rule::in(array_keys(FamilyGoal::METRICS))],
             'deadline' => ['nullable', 'date'],
         ]);
 

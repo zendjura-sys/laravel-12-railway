@@ -1,6 +1,7 @@
 <?php
 
 use Addons\FamilyGoals\Listeners\LogReportActivity;
+use Addons\FamilyGoals\Listeners\UpdateAutoGoalsOnReportReviewed;
 use Addons\Reports\Events\ReportCreated;
 use Addons\Reports\Events\ReportReviewed;
 use Illuminate\Support\Facades\Event;
@@ -11,3 +12,4 @@ use Illuminate\Support\Facades\Event;
 // диспатчиться, і ці listener'и ніколи не викличуться — без помилок.
 Event::listen(ReportCreated::class, [LogReportActivity::class, 'handleCreated']);
 Event::listen(ReportReviewed::class, [LogReportActivity::class, 'handleReviewed']);
+Event::listen(ReportReviewed::class, UpdateAutoGoalsOnReportReviewed::class);

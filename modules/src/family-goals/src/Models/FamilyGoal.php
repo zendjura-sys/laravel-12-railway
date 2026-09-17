@@ -10,9 +10,17 @@ class FamilyGoal extends Model
 {
     protected $table = 'family_goals';
 
+    /** null — прогрес вручну (як і раніше); інакше рахується сам зі звітів. */
+    public const METRICS = [
+        'bizwar_wins' => 'Перемоги в бізварі',
+        'contracts_count' => 'Виконані контракти',
+        'investment_total' => 'Сума інвестицій (₴)',
+        'reports_count' => 'Кількість звітів (будь-яких)',
+    ];
+
     protected $fillable = [
         'title', 'description', 'target_value', 'current_value',
-        'unit', 'deadline', 'status', 'created_by',
+        'unit', 'metric', 'deadline', 'status', 'created_by',
     ];
 
     protected $attributes = [
@@ -37,5 +45,29 @@ class FamilyGoal extends Model
         }
 
         return (int) min(100, round($this->current_value / $this->target_value * 100));
+    }
+
+    /**
+     * Автоматичне нарахування (на відміну від updateProgress() в
+     * адмінці, який ВСТАНОВЛЮЄ абсолютне значення вручну) — тут завжди
+     * ДОДАЄМО суму цього конкретного звіту. Повертає true, якщо саме
+     * цим приростом ціль щойно досягнута (адже разом з нею треба
+     * залогувати подію й розіслати сповіщення, а не мовчки закрити).
+     */
+    public function applyIncrement(int $amount): bool
+    {
+        $this->current_value += $amount;
+
+        $justCompleted = $this->status === 'active'
+            && $this->target_value
+            && $this->current_value >= $this->target_value;
+
+        if ($justCompleted) {
+            $this->status = 'completed';
+        }
+
+        $this->save();
+
+        return $justCompleted;
     }
 }

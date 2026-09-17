@@ -5,6 +5,7 @@ import { ref } from 'vue';
 
 const props = defineProps({
     goals: { type: Array, required: true },
+    metrics: { type: Object, default: () => ({}) },
 });
 
 const statusMeta = {
@@ -19,6 +20,7 @@ const createForm = useForm({
     description: '',
     target_value: '',
     unit: '',
+    metric: '',
     deadline: '',
 });
 
@@ -122,6 +124,16 @@ async function closeGoal(goal) {
                         <input v-model="createForm.unit" type="text" class="w-full rounded-lg border border-white/10 bg-obsidian-900 px-3 py-2 text-white" />
                     </div>
                     <div class="sm:col-span-2">
+                        <label class="mb-2 block text-xs uppercase tracking-widest text-white/40">Автоматичний прогрес (необов'язково)</label>
+                        <select v-model="createForm.metric" class="w-full rounded-lg border border-white/10 bg-obsidian-900 px-3 py-2 text-white">
+                            <option value="">Вручну (як зараз)</option>
+                            <option v-for="(label, key) in metrics" :key="key" :value="key">{{ label }}</option>
+                        </select>
+                        <p class="mt-1 text-[11px] text-white/30">
+                            Якщо обрано — прогрес рухатиметься сам із затверджених звітів, без "Оновити прогрес".
+                        </p>
+                    </div>
+                    <div class="sm:col-span-2">
                         <label class="mb-2 block text-xs uppercase tracking-widest text-white/40">Дедлайн (необов'язково)</label>
                         <input v-model="createForm.deadline" type="date" class="w-full rounded-lg border border-white/10 bg-obsidian-900 px-3 py-2 text-white" />
                     </div>
@@ -145,7 +157,10 @@ async function closeGoal(goal) {
                 <div class="flex flex-wrap items-start justify-between gap-3">
                     <div>
                         <h3 class="font-display text-xl text-white">{{ goal.title }}</h3>
-                        <p class="text-xs text-white/40">створив {{ goal.creator?.name }}</p>
+                        <p class="text-xs text-white/40">
+                            створив {{ goal.creator?.name }}
+                            <span v-if="goal.metric" class="text-gold-300/70">· автоматично: {{ metrics[goal.metric] || goal.metric }}</span>
+                        </p>
                     </div>
                     <span class="shrink-0 rounded-full border px-3 py-1 text-[11px] font-medium uppercase tracking-wide" :class="statusMeta[goal.status]?.class">
                         {{ statusMeta[goal.status]?.label }}
@@ -168,7 +183,7 @@ async function closeGoal(goal) {
                         v-model="progressInput[goal.id]"
                         type="number"
                         min="0"
-                        placeholder="Новий прогрес…"
+                        :placeholder="goal.metric ? 'Ручна корекція…' : 'Новий прогрес…'"
                         class="w-40 rounded-lg border border-white/10 bg-obsidian-900 px-3 py-2 text-sm text-white"
                         @keyup.enter="updateProgress(goal)"
                     />
@@ -177,7 +192,7 @@ async function closeGoal(goal) {
                         class="rounded-full border border-gold-400/30 bg-gold-400/10 px-4 py-1.5 text-xs font-medium text-gold-300 hover:bg-gold-400/20 disabled:opacity-40"
                         @click="updateProgress(goal)"
                     >
-                        Оновити
+                        {{ goal.metric ? 'Скоригувати' : 'Оновити' }}
                     </button>
                     <button
                         :disabled="busyGoal === goal.id"

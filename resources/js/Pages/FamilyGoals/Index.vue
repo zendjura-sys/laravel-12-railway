@@ -4,6 +4,7 @@ import { Head, Link } from '@inertiajs/vue3';
 defineProps({
     goals: { type: Array, default: () => [] },
     activity: { type: Array, default: () => [] },
+    metrics: { type: Object, default: () => ({}) },
 });
 
 const statusMeta = {
@@ -50,6 +51,9 @@ function fmtDateTime(iso) {
                             {{ statusMeta[goal.status]?.label }}
                         </span>
                     </div>
+                    <p v-if="goal.metric" class="mt-1 text-[11px] uppercase tracking-widest text-gold-300/60">
+                        Прогрес рухається сам: {{ metrics[goal.metric] || goal.metric }}
+                    </p>
                     <p v-if="goal.description" class="mt-2 text-sm leading-relaxed text-white/50">{{ goal.description }}</p>
 
                     <div v-if="goal.target_value" class="mt-5">

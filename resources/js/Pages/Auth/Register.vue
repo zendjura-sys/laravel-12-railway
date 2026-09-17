@@ -68,6 +68,9 @@ function chooseClaim(claim) {
 
         <form @submit.prevent="submit">
             <div>
+                <p class="mb-3 text-xs text-white/40">
+                    Вкажіть ігрові ім'я та прізвище персонажа (те, що в грі) — за ними подаються звіти й ведеться статистика, а не за реальним іменем.
+                </p>
                 <div class="grid gap-4 sm:grid-cols-2">
                     <div>
                         <InputLabel for="first_name" value="Ім'я" />

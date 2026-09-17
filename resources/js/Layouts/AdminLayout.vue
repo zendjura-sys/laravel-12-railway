@@ -3,7 +3,7 @@ import ApplicationLogo from '@/Components/ApplicationLogo.vue';
 import AmbientBackground from '@/Components/AmbientBackground.vue';
 import { Link } from '@inertiajs/vue3';
 import { ref } from 'vue';
-import { Blocks, IdCard, LayoutDashboard, Megaphone, Menu, MessageCircle, Palette, ScrollText, Settings, ShieldCheck, Target, TrendingUp, Users, X } from '@lucide/vue';
+import { Blocks, IdCard, LayoutDashboard, Megaphone, Menu, MessageCircle, Palette, ScrollText, Settings, ShieldCheck, Target, TrendingUp, Users, Wallet, X } from '@lucide/vue';
 
 defineProps({
     title: { type: String, default: '' },
@@ -24,6 +24,7 @@ const navGroups = [
             { name: 'admin.members.index', label: 'Кадровий облік', can: 'manageMembers', icon: IdCard },
             { name: 'admin.family-goals.index', label: 'Цілі родини', can: 'manageGoals', icon: Target },
             { name: 'admin.broadcasts.index', label: 'Розсилки', can: 'manageBroadcasts', icon: Megaphone },
+            { name: 'admin.bonuses.index', label: 'Премії', can: 'manageBonuses', icon: Wallet },
             { name: 'admin.users.index', label: 'Учасники', can: 'manageUsers', icon: Users },
         ],
     },

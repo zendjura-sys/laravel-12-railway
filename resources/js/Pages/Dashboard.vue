@@ -14,6 +14,7 @@ const cards = [
     { name: 'member-center.index', title: 'Кадровий центр', text: 'Ваш статус у родині та заявки на відпустку.' },
     { name: 'family-goals.index', title: 'Цілі родини', text: 'Спільні цілі з прогресом та стрічка активності.' },
     { name: 'notifications.index', title: 'Сповіщення', text: 'Оголошення від адміністрації та особисті сповіщення.' },
+    { name: 'bonuses.index', title: 'Мої премії', text: 'Тижневі нарахування за бізвар, контракти та інвестиції.' },
 ];
 
 function fmtDate(iso) {

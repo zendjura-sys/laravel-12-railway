@@ -52,6 +52,7 @@ class HandleInertiaRequests extends Middleware
                 'manageGoals' => $request->user()?->can('goals.manage') ?? false,
                 'manageBroadcasts' => $request->user()?->can('broadcasts.manage') ?? false,
                 'manageTelegram' => $request->user()?->can('telegram.manage') ?? false,
+                'manageBonuses' => $request->user()?->can('bonuses.manage') ?? false,
             ],
         ];
     }

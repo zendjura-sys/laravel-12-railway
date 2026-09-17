@@ -37,6 +37,10 @@ async function markAllRead() {
 const typeLabels = {
     broadcast: 'Оголошення',
     report_reviewed: 'Звіт',
+    achievement_unlocked: 'Ачівка',
+    leave_request_reviewed: 'Відпустка',
+    family_goal_completed: 'Ціль родини',
+    investment_tier_unlocked: 'Інвестиції',
 };
 
 function fmtDateTime(iso) {

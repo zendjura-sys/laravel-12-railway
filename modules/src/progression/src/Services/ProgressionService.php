@@ -92,24 +92,16 @@ class ProgressionService
 
             if ($isWin) {
                 $profile->increment('kapt_wins');
-                $profile->increment('current_streak');
-                if ($profile->current_streak > $profile->longest_streak) {
-                    $profile->update(['longest_streak' => $profile->current_streak]);
-                }
             } else {
                 $profile->increment('kapt_losses');
-                $profile->update(['current_streak' => 0]);
             }
+
+            $this->applyStreak($user, $profile, $isWin ? 1 : 0, $isWin ? 0 : 1);
 
             $this->awardXp($user, $amount, "KAPT {$report->outcome}", 'report', $report->id);
 
             if ($wasFirstWin) {
                 $this->unlock($user, 'first_blood');
-            }
-            foreach ([5, 15, 30] as $threshold) {
-                if ($profile->fresh()->current_streak === $threshold) {
-                    $this->unlock($user, "streak_{$threshold}");
-                }
             }
         } elseif ($report->type === 'contract') {
             $contractsBefore = $profile->contracts_count;
@@ -153,18 +145,58 @@ class ProgressionService
                 $this->unlock($user, 'sharpshooter');
             }
         } elseif ($report->type === 'bizwar') {
-            // Пакетний звіт (кілька перемог/поразок за дату відразу), тому
-            // без стріків і особистих лічильників — на відміну від kapt,
-            // тут немає послідовності окремих подій, яку можна порахувати.
+            // Пакетний звіт (кілька перемог/поразок за дату відразу) —
+            // достеменний порядок подій усередині нього невідомий, тому
+            // стрік рахуємо консервативно: applyStreak() нижче.
             $wins = $report->wins_count ?? 0;
             $losses = $report->losses_count ?? 0;
             $amount = $wins * self::XP_BIZWAR_WIN + $losses * self::XP_BIZWAR_LOSS;
+
+            $this->applyStreak($user, $profile, $wins, $losses);
 
             $this->awardXp($user, $amount, "Бізвар (W:{$wins} L:{$losses})", 'report', $report->id);
         } elseif ($report->type === 'investment') {
             $this->awardXp($user, self::XP_INVESTMENT, "Інвестиція ({$report->amount})", 'report', $report->id);
         }
         // type=other: без начисления XP, только сам факт репорта остаётся в reports.
+    }
+
+    /**
+     * Спільна логіка стріку для kapt (завжди $wins=1 XOR $losses=1) і
+     * бізвару (пакетні лічильники, можуть прийти обидва одразу).
+     *
+     * Будь-яка поразка в пакеті рве стрік до нуля — навіть якщо в тому ж
+     * пакеті були й перемоги: порядок подій усередині одного пакетного
+     * звіту невідомий, тож "поразка десь була" чесніше рахувати як розрив,
+     * а не додавати перемоги поверх старого стріку.
+     *
+     * Пороги досягнень перевіряються переходом ДО/ПІСЛЯ (а не точним
+     * значенням) — пакетний приріст може одразу перестрибнути поріг
+     * (наприклад з 3 на 7 за одну відправку).
+     */
+    private function applyStreak(User $user, ProgressionProfile $profile, int $wins, int $losses): void
+    {
+        $before = $profile->current_streak;
+
+        if ($losses > 0) {
+            $profile->update(['current_streak' => 0]);
+
+            return;
+        }
+
+        if ($wins > 0) {
+            $profile->increment('current_streak', $wins);
+            if ($profile->current_streak > $profile->longest_streak) {
+                $profile->update(['longest_streak' => $profile->current_streak]);
+            }
+        }
+
+        $after = $profile->fresh()->current_streak;
+        foreach ([5, 15, 30] as $threshold) {
+            if ($before < $threshold && $after >= $threshold) {
+                $this->unlock($user, "streak_{$threshold}");
+            }
+        }
     }
 
     private function unlock(User $user, string $achievementCode): void

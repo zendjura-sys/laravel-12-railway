@@ -1,9 +1,22 @@
 <script setup>
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link, router } from '@inertiajs/vue3';
 
-defineProps({
+const props = defineProps({
     leaderboard: { type: Array, default: () => [] },
+    category: { type: String, default: 'xp' },
+    categories: { type: Object, default: () => ({}) },
 });
+
+function switchCategory(key) {
+    if (key === props.category) return;
+    router.get(route('progression.leaderboard'), { category: key }, { preserveState: true, preserveScroll: true });
+}
+
+function winrate(entry) {
+    const total = (entry.kapt_wins ?? 0) + (entry.kapt_losses ?? 0);
+    if (total === 0) return null;
+    return Math.round((entry.kapt_wins / total) * 100);
+}
 </script>
 
 <template>
@@ -28,6 +41,20 @@ defineProps({
         </header>
 
         <div class="mx-auto max-w-3xl px-6 py-10">
+            <div class="mb-6 flex flex-wrap gap-2">
+                <button
+                    v-for="(label, key) in categories"
+                    :key="key"
+                    class="rounded-full border px-4 py-1.5 text-xs font-medium uppercase tracking-widest transition-colors"
+                    :class="key === category
+                        ? 'border-gold-400/50 bg-gold-400/10 text-gold-200'
+                        : 'border-white/10 text-white/40 hover:border-white/25 hover:text-white'"
+                    @click="switchCategory(key)"
+                >
+                    {{ label }}
+                </button>
+            </div>
+
             <div class="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02]">
                 <div
                     v-for="(entry, i) in leaderboard"
@@ -44,10 +71,29 @@ defineProps({
                         </span>
                         <div>
                             <div class="font-medium text-white">{{ entry.name }}</div>
-                            <div class="text-xs text-white/40">{{ entry.position || 'без посади' }} · рівень активності {{ entry.level }}</div>
+                            <div class="text-xs text-white/40">
+                                {{ entry.position || 'без посади' }}
+                                <template v-if="category === 'xp'"> · рівень активності {{ entry.level }}</template>
+                            </div>
                         </div>
                     </div>
-                    <span class="font-display text-xl text-gold-300">{{ entry.xp }} XP</span>
+
+                    <span v-if="category === 'xp'" class="font-display text-xl text-gold-300">{{ entry.xp }} XP</span>
+                    <span v-else-if="category === 'bizwar'" class="text-right font-display text-xl text-gold-300">
+                        {{ entry.kapt_wins }}–{{ entry.kapt_losses }}
+                        <span v-if="winrate(entry) !== null" class="block text-xs font-normal text-white/40">{{ winrate(entry) }}% winrate</span>
+                    </span>
+                    <span v-else-if="category === 'contracts'" class="text-right font-display text-xl text-gold-300">
+                        {{ entry.contracts_count }}
+                        <span v-if="entry.heavy_contracts_count" class="block text-xs font-normal text-white/40">{{ entry.heavy_contracts_count }} важких</span>
+                    </span>
+                    <span v-else-if="category === 'streak'" class="text-right font-display text-xl text-gold-300">
+                        {{ entry.current_streak }}
+                        <span class="block text-xs font-normal text-white/40">найдовша: {{ entry.longest_streak }}</span>
+                    </span>
+                    <span v-else-if="category === 'bonuses'" class="font-display text-xl text-gold-300">
+                        {{ entry.total_amount.toLocaleString('uk-UA') }} ₴
+                    </span>
                 </div>
                 <div v-if="leaderboard.length === 0" class="px-6 py-12 text-center text-white/30">
                     Поки що порожньо

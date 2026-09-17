@@ -10,7 +10,7 @@ defineProps({
 const cards = [
     { name: 'reports.index', title: 'Мої звіти', text: 'Подайте звіт за KAPT чи контрактом та слідкуйте за статусом розгляду.' },
     { name: 'progression.index', title: 'Мій прогрес', text: 'XP, ранг, досягнення та історія нарахувань.' },
-    { name: 'progression.leaderboard', title: 'Рейтинг родини', text: 'Хто зараз попереду за очками прогресу.' },
+    { name: 'progression.leaderboard', title: 'Рейтинг родини', text: 'Хто попереду — за активністю, бізваром, контрактами, серією перемог чи преміями.' },
     { name: 'member-center.index', title: 'Кадровий центр', text: 'Ваш статус у родині та заявки на відпустку.' },
     { name: 'family-goals.index', title: 'Цілі родини', text: 'Спільні цілі з прогресом та стрічка активності.' },
     { name: 'notifications.index', title: 'Сповіщення', text: 'Оголошення від адміністрації та особисті сповіщення.' },

@@ -33,6 +33,7 @@ class User extends Authenticatable implements MustVerifyEmail
         // $request-массива.
         'position_key',
         'is_shadow',
+        'birth_date',
     ];
 
     /**
@@ -67,6 +68,7 @@ class User extends Authenticatable implements MustVerifyEmail
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'is_shadow' => 'boolean',
+            'birth_date' => 'date',
         ];
     }
 

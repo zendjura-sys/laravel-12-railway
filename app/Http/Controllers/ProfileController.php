@@ -97,6 +97,23 @@ class ProfileController extends Controller
     }
 
     /**
+     * Дата народження — суто за бажанням: якщо не заповнено, ніхто про це
+     * ніде не дізнається. Якщо заповнено, TelegramBot (за наявності) щодня
+     * перевіряє місяць+день і сам вітає в сімейному чаті — окремого запиту
+     * від адміна на це не потрібно.
+     */
+    public function updateBirthday(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'birth_date' => ['nullable', 'date', 'before:today'],
+        ]);
+
+        $request->user()->update(['birth_date' => $data['birth_date'] ?? null]);
+
+        return Redirect::route('profile.edit');
+    }
+
+    /**
      * Delete the user's account.
      */
     public function destroy(Request $request): RedirectResponse

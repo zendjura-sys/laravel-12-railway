@@ -48,6 +48,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::patch('/profile/position', [ProfileController::class, 'updatePosition'])->name('profile.position');
+    Route::patch('/profile/birthday', [ProfileController::class, 'updateBirthday'])->name('profile.birthday');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
     // Доступна одразу після реєстрації, ще до підтвердження email — саме
@@ -58,7 +59,7 @@ Route::middleware('auth')->group(function () {
 
 require __DIR__.'/auth.php';
 
-Route::middleware(['auth', 'verified', 'permission:addons.manage|reports.manage|progression.manage|settings.manage|roles.manage|users.manage|members.manage|goals.manage|broadcasts.manage|telegram.manage|bonuses.manage'])
+Route::middleware(['auth', 'verified', 'permission:addons.manage|reports.manage|progression.manage|settings.manage|roles.manage|users.manage|members.manage|goals.manage|broadcasts.manage|telegram.manage|bonuses.manage|events.manage'])
     ->get('/admin', [DashboardController::class, 'index'])
     ->name('admin.dashboard');
 

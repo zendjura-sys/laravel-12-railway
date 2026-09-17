@@ -26,6 +26,7 @@ declare -A ZIP_NAME=(
     [progression]='Progression'
     [member-center]='MemberCenter'
     [family-goals]='FamilyGoals'
+    [family-events]='FamilyEvents'
     [notifications]='Notifications'
     [bonuses]='Bonuses'
     [telegram]='TelegramBot'

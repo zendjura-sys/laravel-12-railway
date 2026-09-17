@@ -13,6 +13,7 @@ const cards = [
     { name: 'progression.leaderboard', title: 'Рейтинг родини', text: 'Хто попереду — за активністю, бізваром, контрактами, серією перемог чи преміями.' },
     { name: 'member-center.index', title: 'Кадровий центр', text: 'Ваш статус у родині та заявки на відпустку.' },
     { name: 'family-goals.index', title: 'Цілі родини', text: 'Спільні цілі з прогресом та стрічка активності.' },
+    { name: 'family-events.index', title: 'Події родини', text: 'Найближчі зустрічі, вечірки та івенти.' },
     { name: 'notifications.index', title: 'Сповіщення', text: 'Оголошення від адміністрації та особисті сповіщення.' },
     { name: 'bonuses.index', title: 'Мої премії', text: 'Тижневі нарахування за бізвар, контракти та інвестиції.' },
 ];
@@ -102,7 +103,7 @@ function fmtDate(iso) {
                     v-if="route().has('admin.dashboard') && (
                         $page.props.can?.manageAddons || $page.props.can?.manageReports ||
                         $page.props.can?.manageProgression || $page.props.can?.manageSettings ||
-                        $page.props.can?.manageRoles || $page.props.can?.manageUsers || $page.props.can?.manageMembers || $page.props.can?.manageGoals || $page.props.can?.manageBroadcasts || $page.props.can?.manageTelegram
+                        $page.props.can?.manageRoles || $page.props.can?.manageUsers || $page.props.can?.manageMembers || $page.props.can?.manageGoals || $page.props.can?.manageBroadcasts || $page.props.can?.manageTelegram || $page.props.can?.manageEvents
                     )"
                     :href="route('admin.dashboard')"
                     v-reveal:240="'scale'"

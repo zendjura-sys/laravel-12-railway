@@ -686,6 +686,7 @@ class Screens
             'reports.schedule' => '🗓  Розклад капта',
             'progression.leaderboard' => '🏆  Рейтинг родини',
             'family-goals.index' => '🎯  Цілі родини',
+            'family-events.index' => '🎉  Події родини',
             'bonuses.index' => '💰  Мої премії',
             'notifications.index' => '🔔  Сповіщення',
         ];

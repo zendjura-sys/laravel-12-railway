@@ -55,6 +55,7 @@ class HandleInertiaRequests extends Middleware
                 'manageBroadcasts' => $request->user()?->can('broadcasts.manage') ?? false,
                 'manageTelegram' => $request->user()?->can('telegram.manage') ?? false,
                 'manageBonuses' => $request->user()?->can('bonuses.manage') ?? false,
+                'manageEvents' => $request->user()?->can('events.manage') ?? false,
             ],
             // Бейдж у навігації видно з будь-якої сторінки, тому лічильник
             // рахується тут, а не в NotificationController — той бачить

@@ -45,7 +45,7 @@ function onPhotosPicked(e) {
     e.target.value = '';
 
     for (const file of files) {
-        if (form.photos.length >= 10) break;
+        if (form.photos.length >= 30) break;
         form.photos.push(file);
         photoPreviews.value.push({ file, url: URL.createObjectURL(file) });
     }
@@ -331,7 +331,7 @@ function fmtDateOnly(iso) {
 
                     <div class="mt-5">
                         <label class="mb-2 block text-xs uppercase tracking-widest text-white/40">
-                            Фото-доказ (до 10 шт.)
+                            Фото-доказ (до 30 шт.)
                         </label>
                         <div class="flex flex-wrap gap-3">
                             <div v-for="(p, i) in photoPreviews" :key="p.url" class="group relative h-20 w-20 shrink-0 overflow-hidden rounded-lg border border-white/10">
@@ -346,7 +346,7 @@ function fmtDateOnly(iso) {
                                 </button>
                             </div>
                             <label
-                                v-if="photoPreviews.length < 10"
+                                v-if="photoPreviews.length < 30"
                                 class="flex h-20 w-20 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-dashed border-white/15 text-2xl text-white/30 transition-colors hover:border-gold-400/40 hover:text-gold-300"
                             >
                                 +

@@ -230,7 +230,7 @@ class ReportController
             'subject_last_name' => ['nullable', 'string', 'max:120'],
             // Оригінал зберігається без стиснення — max:20480 (20 МБ) під
             // фото з телефону в повній якості, а не стиснутий скрін.
-            'photos' => ['nullable', 'array', 'max:10'],
+            'photos' => ['nullable', 'array', 'max:30'],
             'photos.*' => ['file', 'mimes:jpeg,jpg,png,webp', 'max:20480'],
         ], [], ['subject_first_name' => "ім'я друга"]);
 

@@ -4,6 +4,7 @@ namespace Addons\Reports\Http\Controllers;
 
 use Addons\Reports\Events\ReportCreated;
 use Addons\Reports\Models\Report;
+use Addons\Reports\Models\ReportAttachment;
 use App\Models\User;
 use Illuminate\Support\Carbon;
 use Illuminate\Validation\Rule;
@@ -26,7 +27,7 @@ class ReportController
         // submitted_by, а суб'єкт — хтось інший) — інакше подання "за
         // друга" одразу зникало б з очей того, хто його реально відправив.
         $reports = Report::query()
-            ->with(['user:id,name', 'submitter:id,name'])
+            ->with(['user:id,name', 'submitter:id,name', 'attachments'])
             ->where(fn ($q) => $q
                 ->where('user_id', $request->user()->id)
                 ->orWhere('submitted_by', $request->user()->id))
@@ -227,6 +228,10 @@ class ReportController
             'subject_user_id' => ['nullable', 'integer', 'exists:users,id'],
             'subject_first_name' => ['required_if:subject_type,friend', 'nullable', 'string', 'max:120'],
             'subject_last_name' => ['nullable', 'string', 'max:120'],
+            // Оригінал зберігається без стиснення — max:20480 (20 МБ) під
+            // фото з телефону в повній якості, а не стиснутий скрін.
+            'photos' => ['nullable', 'array', 'max:10'],
+            'photos.*' => ['file', 'mimes:jpeg,jpg,png,webp', 'max:20480'],
         ], [], ['subject_first_name' => "ім'я друга"]);
 
         if ($data['type'] === 'bizwar') {
@@ -266,7 +271,8 @@ class ReportController
 
         $subject = $this->resolveSubject($request, $data);
 
-        unset($data['subject_type'], $data['subject_user_id'], $data['subject_first_name'], $data['subject_last_name']);
+        $photos = $data['photos'] ?? [];
+        unset($data['subject_type'], $data['subject_user_id'], $data['subject_first_name'], $data['subject_last_name'], $data['photos']);
 
         $report = Report::create([
             ...$data,
@@ -275,9 +281,34 @@ class ReportController
             'status' => 'pending',
         ]);
 
+        $this->storeAttachments($report, $photos);
+
         ReportCreated::dispatch($report);
 
         return back()->with('success', 'Звіт подано, очікує на модерацію.');
+    }
+
+    /**
+     * Оригінали кладемо на диск як є — без ресайзу чи перестиснення: це
+     * найчастіше скріншот гри чи чат, де кожен піксель має значення для
+     * розгляду. Порядок фіксується позицією — так альбом на перегляді
+     * завжди йде в тому ж порядку, у якому людина їх додала.
+     *
+     * @param  array<int,\Illuminate\Http\UploadedFile>  $photos
+     */
+    private function storeAttachments(Report $report, array $photos): void
+    {
+        foreach (array_values($photos) as $i => $photo) {
+            $path = $photo->store('reports/attachments', 'public');
+
+            ReportAttachment::create([
+                'report_id' => $report->id,
+                'disk_path' => $path,
+                'original_name' => $photo->getClientOriginalName(),
+                'size' => $photo->getSize(),
+                'position' => $i,
+            ]);
+        }
     }
 
     /**

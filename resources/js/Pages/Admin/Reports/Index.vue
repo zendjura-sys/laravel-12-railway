@@ -2,6 +2,7 @@
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { Head, router } from '@inertiajs/vue3';
 import { ref } from 'vue';
+import PhotoGallery from '@/Components/PhotoGallery.vue';
 
 const props = defineProps({
     reports: { type: Object, required: true },
@@ -126,6 +127,7 @@ function fmtDate(iso) {
                             <span v-if="report.grade" class="ml-1 font-medium text-gold-300/80">· оцінка {{ report.grade }} ({{ GRADE_LABELS[report.grade] }})</span>
                         </p>
                         <p v-if="report.grade_reason" class="mt-1 text-xs text-ember-500/70">Причина: {{ report.grade_reason }}</p>
+                        <PhotoGallery v-if="report.attachments?.length" :photos="report.attachments" :visible="6" class="mt-3" />
 
                         <div v-if="gradingReportId === report.id" class="mt-3 rounded-lg border border-white/10 bg-obsidian-900/60 p-3">
                             <div class="flex flex-wrap gap-1.5">

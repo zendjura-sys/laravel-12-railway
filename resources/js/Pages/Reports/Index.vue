@@ -1,6 +1,7 @@
 <script setup>
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import { ref, watch } from 'vue';
+import PhotoGallery from '@/Components/PhotoGallery.vue';
 
 const props = defineProps({
     reports: { type: Object, required: true },
@@ -28,9 +29,39 @@ const form = useForm({
     subject_user_id: null,
     subject_first_name: '',
     subject_last_name: '',
+    photos: [],
 });
 
 const showForm = ref(false);
+
+/* ================= Фото-доказ ================= */
+
+// Прев'ю тримаємо як object URL поруч із самим File — при видаленні чи
+// успішній відправці обов'язково revokeObjectURL, інакше течуть блоби.
+const photoPreviews = ref([]);
+
+function onPhotosPicked(e) {
+    const files = Array.from(e.target.files || []);
+    e.target.value = '';
+
+    for (const file of files) {
+        if (form.photos.length >= 10) break;
+        form.photos.push(file);
+        photoPreviews.value.push({ file, url: URL.createObjectURL(file) });
+    }
+}
+
+function removePhoto(i) {
+    URL.revokeObjectURL(photoPreviews.value[i].url);
+    photoPreviews.value.splice(i, 1);
+    form.photos.splice(i, 1);
+}
+
+function clearPhotos() {
+    photoPreviews.value.forEach((p) => URL.revokeObjectURL(p.url));
+    photoPreviews.value = [];
+    form.photos = [];
+}
 
 /* ================= За себе / за друга ================= */
 
@@ -91,6 +122,7 @@ function submit() {
                 'description', 'wins_count', 'losses_count', 'kapt_times', 'light_count', 'medium_count', 'heavy_count', 'amount',
                 'subject_type', 'subject_user_id', 'subject_first_name', 'subject_last_name',
             );
+            clearPhotos();
             friendQuery.value = '';
             friendSelected.value = null;
             friendMatches.value = [];
@@ -296,6 +328,36 @@ function fmtDateOnly(iso) {
                         ></textarea>
                         <p v-if="form.errors.description" class="mt-1 text-xs text-ember-500">{{ form.errors.description }}</p>
                     </div>
+
+                    <div class="mt-5">
+                        <label class="mb-2 block text-xs uppercase tracking-widest text-white/40">
+                            Фото-доказ (до 10 шт.)
+                        </label>
+                        <div class="flex flex-wrap gap-3">
+                            <div v-for="(p, i) in photoPreviews" :key="p.url" class="group relative h-20 w-20 shrink-0 overflow-hidden rounded-lg border border-white/10">
+                                <img :src="p.url" class="h-full w-full object-cover" />
+                                <button
+                                    type="button"
+                                    class="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-obsidian-950/80 text-xs text-white/70 opacity-0 transition-opacity hover:text-ember-500 group-hover:opacity-100"
+                                    aria-label="Видалити фото"
+                                    @click="removePhoto(i)"
+                                >
+                                    ✕
+                                </button>
+                            </div>
+                            <label
+                                v-if="photoPreviews.length < 10"
+                                class="flex h-20 w-20 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-dashed border-white/15 text-2xl text-white/30 transition-colors hover:border-gold-400/40 hover:text-gold-300"
+                            >
+                                +
+                                <input type="file" accept="image/jpeg,image/png,image/webp" multiple class="hidden" @change="onPhotosPicked" />
+                            </label>
+                        </div>
+                        <p class="mt-1 text-xs text-white/30">JPG, PNG чи WebP, до 20 МБ кожне. Оригінали зберігаються без стиснення.</p>
+                        <p v-if="form.errors.photos" class="mt-1 text-xs text-ember-500">{{ form.errors.photos }}</p>
+                        <p v-if="form.errors['photos.0']" class="mt-1 text-xs text-ember-500">{{ form.errors['photos.0'] }}</p>
+                    </div>
+
                     <button
                         type="submit"
                         :disabled="form.processing"
@@ -310,7 +372,7 @@ function fmtDateOnly(iso) {
                 <div
                     v-for="report in reports.data"
                     :key="report.id"
-                    class="flex items-center justify-between gap-4 border-b border-white/5 px-6 py-4 last:border-0"
+                    class="flex flex-wrap items-center justify-between gap-4 border-b border-white/5 px-6 py-4 last:border-0"
                 >
                     <div>
                         <div class="flex flex-wrap items-center gap-2">
@@ -332,6 +394,7 @@ function fmtDateOnly(iso) {
                             {{ report.report_date ? fmtDateOnly(report.report_date) + ' · подано ' : '' }}{{ fmtDate(report.created_at) }}
                             <span v-if="report.submitter?.id !== myId && report.submitter?.id !== report.user?.id">· подав {{ report.submitter?.name }}</span>
                         </p>
+                        <PhotoGallery v-if="report.attachments?.length" :photos="report.attachments" class="mt-3" />
                     </div>
                     <span class="shrink-0 rounded-full border px-3 py-1 text-[11px] font-medium uppercase tracking-wide" :class="statusMeta[report.status]?.class">
                         {{ statusMeta[report.status]?.label }}

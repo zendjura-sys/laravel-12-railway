@@ -5,6 +5,7 @@ namespace Addons\TelegramBot\Bot;
 use Addons\Bonuses\Services\BonusCalculator;
 use Addons\Progression\Models\ProgressionProfile;
 use Addons\Progression\Models\UserAchievement;
+use Addons\TelegramBot\Events\AccountLinked;
 use Addons\TelegramBot\Models\TelegramApplication;
 use Addons\TelegramBot\Models\TelegramChat;
 use Addons\TelegramBot\Models\TelegramLink;
@@ -525,6 +526,8 @@ class BotHandler
             'linked_at' => now(),
             'link_code' => null,
         ]);
+
+        AccountLinked::dispatch($link->user_id);
     }
 
     /* ==================== ОТРИСОВКА ==================== */

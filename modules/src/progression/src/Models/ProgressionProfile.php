@@ -12,7 +12,8 @@ class ProgressionProfile extends Model
 
     protected $fillable = [
         'user_id', 'xp', 'current_streak', 'longest_streak',
-        'kapt_wins', 'kapt_losses', 'contracts_count', 'heavy_contracts_count', 'last_activity_at',
+        'kapt_wins', 'kapt_losses', 'contracts_count', 'heavy_contracts_count',
+        'reports_total', 'investment_total', 'last_activity_at',
     ];
 
     // Явные PHP-дефолты обязательны: firstOrCreate(['user_id' => ...]) без
@@ -28,6 +29,8 @@ class ProgressionProfile extends Model
         'kapt_losses' => 0,
         'contracts_count' => 0,
         'heavy_contracts_count' => 0,
+        'reports_total' => 0,
+        'investment_total' => 0,
     ];
 
     protected function casts(): array

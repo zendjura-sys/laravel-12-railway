@@ -41,6 +41,12 @@ class ProgressionService
     // чтобы можно было поменять одной строкой без переписывания логики.
     private const SHARPSHOOTER_HEAVY_CONTRACTS = 10;
 
+    // Нові рубежі: загальна кількість затверджених звітів (будь-якого типу)
+    // і сукупна сума інвестицій — обидва без прив'язки до брифа, підібрані
+    // за аналогією з контрактами/стріком.
+    private const REPORTS_MILESTONES = [10, 50, 100];
+    private const INVESTMENT_MILESTONES = [10000, 50000, 100000];
+
     public function profileFor(User $user): ProgressionProfile
     {
         return ProgressionProfile::firstOrCreate(['user_id' => $user->id]);
@@ -83,6 +89,18 @@ class ProgressionService
     {
         $user = $report->user;
         $profile = $this->profileFor($user);
+
+        // Рубіж "N звітів" — про БУДЬ-ЯКИЙ тип, включно з "інше", яке саме
+        // по собі XP не приносить: рахуємо сам факт затвердженого звіту, а
+        // не конкретний внесок.
+        $reportsBefore = $profile->reports_total;
+        $profile->increment('reports_total');
+        $reportsAfter = $profile->fresh()->reports_total;
+        foreach (self::REPORTS_MILESTONES as $threshold) {
+            if ($reportsBefore < $threshold && $reportsAfter >= $threshold) {
+                $this->unlock($user, "reports_{$threshold}");
+            }
+        }
 
         if ($report->type === 'kapt') {
             $isWin = $report->outcome === 'win';
@@ -156,7 +174,17 @@ class ProgressionService
 
             $this->awardXp($user, $amount, "Бізвар (W:{$wins} L:{$losses})", 'report', $report->id);
         } elseif ($report->type === 'investment') {
+            $investmentBefore = $profile->investment_total;
+            $profile->increment('investment_total', $report->amount ?? 0);
+            $investmentAfter = $profile->fresh()->investment_total;
+
             $this->awardXp($user, self::XP_INVESTMENT, "Інвестиція ({$report->amount})", 'report', $report->id);
+
+            foreach (self::INVESTMENT_MILESTONES as $threshold) {
+                if ($investmentBefore < $threshold && $investmentAfter >= $threshold) {
+                    $this->unlock($user, "investments_{$threshold}");
+                }
+            }
         }
         // type=other: без начисления XP, только сам факт репорта остаётся в reports.
     }
@@ -197,6 +225,16 @@ class ProgressionService
                 $this->unlock($user, "streak_{$threshold}");
             }
         }
+    }
+
+    /**
+     * Викликається слухачем AccountLinked від Telegram-бота (опційна
+     * залежність через string-літерал у events.php — той самий принцип,
+     * що й у решти міжмодульних подій).
+     */
+    public function handleAccountLinked(User $user): void
+    {
+        $this->unlock($user, 'telegram_linked');
     }
 
     private function unlock(User $user, string $achievementCode): void

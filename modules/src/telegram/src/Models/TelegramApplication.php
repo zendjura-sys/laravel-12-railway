@@ -18,11 +18,12 @@ class TelegramApplication extends Model
         'chat_id', 'telegram_username', 'user_id', 'nickname', 'age_range',
         'playtime', 'experience', 'direction', 'about', 'status',
         'reviewed_by', 'reviewed_at', 'review_note', 'invite_link', 'joined_at',
+        'notified_messages',
     ];
 
     protected function casts(): array
     {
-        return ['reviewed_at' => 'datetime', 'joined_at' => 'datetime'];
+        return ['reviewed_at' => 'datetime', 'joined_at' => 'datetime', 'notified_messages' => 'array'];
     }
 
     public function reviewer(): BelongsTo

@@ -46,9 +46,13 @@ class ApplicationReview
             'reviewed_at' => now(),
         ]);
 
-        [$text, $keyboard, $inviteNote] = $this->messageFor($application->fresh(), $approve, $note);
+        $application = $application->fresh();
+
+        [$text, $keyboard, $inviteNote] = $this->messageFor($application, $approve, $note);
 
         $delivered = $this->telegram->sendMessage($application->chat_id, $text, $keyboard) !== null;
+
+        $this->clearReviewerNotifications($application, $reviewer, $approve);
 
         return [
             'ok' => true,
@@ -59,11 +63,67 @@ class ApplicationReview
     }
 
     /**
+     * Прибирає кнопки ✅/✖️ з УСІХ надісланих копій сповіщення "НОВА
+     * ЗАЯВКА", а не лише з тієї, по якій хтось натиснув. Без цього
+     * рішення, прийняте одним адміном (чи то з панелі сайту, чи з чату),
+     * лишало кнопки живими в чатах усіх інших — повторне натискання ні
+     * до чого не приводило б (isPending вище це ловить), але виглядало б
+     * як заявка, яку ще ніхто не розглянув.
+     */
+    private function clearReviewerNotifications(TelegramApplication $application, User $reviewer, bool $approve): void
+    {
+        $notified = $application->notified_messages ?? [];
+        if ($notified === []) {
+            return;
+        }
+
+        $status = $approve ? '✅  схвалено' : '✖️  відхилено';
+        $text = $this->summaryText($application)
+            ."\n<b>{$status}</b>\n<i>".e($reviewer->name).'</i>';
+
+        foreach ($notified as $entry) {
+            $chatId = $entry['chat_id'] ?? null;
+            $messageId = $entry['message_id'] ?? null;
+            if ($chatId === null || $messageId === null) {
+                continue;
+            }
+
+            $this->telegram->editMessage((string) $chatId, (int) $messageId, $text, ['inline_keyboard' => []]);
+        }
+    }
+
+    /**
      * Сообщить администраторам о новой заявке прямо в чат, с кнопками
      * решения. Без этого заявка лежит незамеченной, пока кто-нибудь не
      * зайдёт в панель — а человек в это время ждёт.
      */
     public function notifyReviewers(TelegramApplication $application): int
+    {
+        $text = $this->summaryText($application);
+
+        $keyboard = ['inline_keyboard' => [[
+            ['text' => '✅  Схвалити', 'callback_data' => 'rev:a:'.$application->id],
+            ['text' => '✖️  Відхилити', 'callback_data' => 'rev:r:'.$application->id],
+        ]]];
+
+        $notified = [];
+        foreach ($this->reviewerChats($application->chat_id) as $chatId) {
+            $messageId = $this->telegram->sendMessage($chatId, $text, $keyboard);
+            if ($messageId !== null) {
+                $notified[] = ['chat_id' => $chatId, 'message_id' => $messageId];
+            }
+        }
+
+        // Запам'ятовуємо, кому саме пішло сповіщення — без цього після
+        // рішення нема чим редагувати чужі копії, тільки ту, по якій
+        // хтось особисто натиснув (див. clearReviewerNotifications).
+        $application->update(['notified_messages' => $notified]);
+
+        return count($notified);
+    }
+
+    /** Той самий блок деталей — і в первинному сповіщенні, і в рішенні по ньому. */
+    private function summaryText(TelegramApplication $application): string
     {
         $text = "◆  <b>НОВА ЗАЯВКА</b>\n━━━━━━━━━━━━━━━\n\n"
             .'<b>Нік:</b> '.e($application->nickname)."\n"
@@ -81,19 +141,7 @@ class ApplicationReview
             $text .= "\n<i>".e($about)."</i>\n";
         }
 
-        $keyboard = ['inline_keyboard' => [[
-            ['text' => '✅  Схвалити', 'callback_data' => 'rev:a:'.$application->id],
-            ['text' => '✖️  Відхилити', 'callback_data' => 'rev:r:'.$application->id],
-        ]]];
-
-        $sent = 0;
-        foreach ($this->reviewerChats($application->chat_id) as $chatId) {
-            if ($this->telegram->sendMessage($chatId, $text, $keyboard) !== null) {
-                $sent++;
-            }
-        }
-
-        return $sent;
+        return $text;
     }
 
     /**

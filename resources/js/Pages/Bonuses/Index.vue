@@ -31,7 +31,7 @@ function fmtDate(d) {
 
         <div class="mx-auto max-w-3xl px-6 py-10">
             <!-- ================= ІНВЕСТИЦІЙНІ ТІРИ ================= -->
-            <section v-if="tiers.length" class="mb-8 rounded-2xl border border-white/10 bg-white/[0.02] p-6">
+            <section v-if="tiers.length" v-reveal v-glow class="glass-panel mb-8 p-6">
                 <h2 class="mb-1 font-display text-lg text-white">Інвестиційні досягнення</h2>
                 <p class="mb-4 text-sm text-white/40">Кумулятивно вкладено: {{ fmt(cumulativeInvestment) }}</p>
                 <div class="space-y-2">
@@ -55,7 +55,7 @@ function fmtDate(d) {
             </section>
 
             <!-- ================= ІСТОРІЯ НАРАХУВАНЬ ================= -->
-            <section class="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02]">
+            <section v-reveal:100 v-glow class="glass-panel overflow-hidden">
                 <h2 class="p-6 pb-4 font-display text-lg text-white">Історія нарахувань</h2>
                 <div
                     v-for="p in payouts.data"

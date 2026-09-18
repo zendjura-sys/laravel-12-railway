@@ -16,7 +16,7 @@ const statusMeta = {
 </script>
 
 <template>
-    <div class="mb-3 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02]">
+    <div v-reveal v-glow class="glass-panel mb-3 overflow-hidden">
         <div class="flex flex-wrap items-center justify-between gap-4 border-b border-white/5 px-6 py-4">
             <div>
                 <p class="text-xs uppercase tracking-widest text-white/40">Час капта</p>

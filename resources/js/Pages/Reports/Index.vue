@@ -383,7 +383,7 @@ function fmtDateOnly(iso) {
                 </form>
             </Transition>
 
-            <div class="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02]">
+            <div v-reveal v-glow class="glass-panel overflow-hidden">
                 <div
                     v-for="report in reports.data"
                     :key="report.id"

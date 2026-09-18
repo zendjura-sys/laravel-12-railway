@@ -75,7 +75,7 @@ function fmtDateTime(iso) {
         </header>
 
         <div class="mx-auto max-w-3xl px-6 py-10">
-            <div class="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02]">
+            <div v-reveal v-glow class="glass-panel overflow-hidden">
                 <button
                     v-for="n in notifications.data"
                     :key="n.id"

@@ -55,7 +55,7 @@ function winrate(entry) {
                 </button>
             </div>
 
-            <div class="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02]">
+            <div v-reveal v-glow class="glass-panel overflow-hidden">
                 <div
                     v-for="(entry, i) in leaderboard"
                     :key="i"

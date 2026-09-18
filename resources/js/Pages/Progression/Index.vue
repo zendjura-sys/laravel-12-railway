@@ -40,7 +40,7 @@ const sourceLabels = { report: 'звіт', weekly_bonus: 'тижневий бо�
 
         <div class="mx-auto max-w-5xl px-6 py-10">
             <!-- Основная карточка: досвід / рівень / ранг -->
-            <div class="mb-10 rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.05] to-transparent p-8 text-center">
+            <div v-reveal v-glow class="glass-panel-gold glass-panel mb-10 p-8 text-center">
                 <p class="text-xs uppercase tracking-[0.4em] text-gold-300/80">
                     {{ profile.position || 'Посаду ще не призначено' }}
                 </p>
@@ -69,7 +69,7 @@ const sourceLabels = { report: 'звіт', weekly_bonus: 'тижневий бо�
 
             <!-- Досягнення -->
             <h2 class="font-display mb-4 text-xl text-white">Досягнення</h2>
-            <div class="mb-10 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div v-reveal:80 class="mb-10 grid grid-cols-2 gap-3 sm:grid-cols-4">
                 <div
                     v-for="a in achievements"
                     :key="a.code"
@@ -83,7 +83,7 @@ const sourceLabels = { report: 'звіт', weekly_bonus: 'тижневий бо�
 
             <!-- Історія нарахувань -->
             <h2 class="font-display mb-4 text-xl text-white">Історія нарахувань</h2>
-            <div class="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02]">
+            <div v-reveal:160 v-glow class="glass-panel overflow-hidden">
                 <div
                     v-for="entry in battleLog"
                     :key="entry.id"

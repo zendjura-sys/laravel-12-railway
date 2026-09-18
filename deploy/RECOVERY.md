@@ -9,7 +9,8 @@
 Всё это лежит в git и восстанавливается одним `git clone`:
 
 - код приложения (Laravel + Vue), вся вёрстка и дизайн;
-- `deploy/setup-vps.sh` — разворачивает nginx + PHP-FPM + MariaDB + очередь;
+- `deploy/setup-vps.sh` — разворачивает nginx + PHP-FPM + MariaDB + очередь,
+  а также ставит ежедневный бэкап (`deploy/backup.sh`, см. раздел ниже);
 - `deploy/systemd/` — юниты для кнопки «Задеплоїти» в админке;
 - `modules/src/` — исходники всех шести аддонов;
 - `modules/dist/` — готовые ZIP-пакеты для загрузки через админку
@@ -23,11 +24,13 @@
 |---|---|---|
 | `.env` | `/var/www/laravel/.env` | скрипт создаёт заново; секреты вписать руками (см. ниже) |
 | База MariaDB | сервер | пользователи, роли, настройки, данные модулей — только из бэкапа |
+| Файлы (`storage/app/public`) | сервер | аватарки, галерея семьи, скрины к отчётам, лого — только из бэкапа |
 | SSL-сертификат | `/etc/letsencrypt` | certbot выпускает новый |
 | Регистрация webhook в Telegram | у Telegram | кнопка «Встановити webhook» в админке |
 
-**База данных не восстанавливается ниоткуда, если не было бэкапа.** Учётки
-участников, роли, настройки и данные модулей придётся завести заново. Поэтому
+**База данных и файлы не восстанавливаются ниоткуда, если не было бэкапа.**
+Учётки участников, роли, настройки, данные модулей и все загруженные фото
+придётся завести заново. Поэтому
 сразу после подъёма сайта настройте бэкап (последний раздел).
 
 ## Порядок подъёма на чистом сервере
@@ -203,28 +206,38 @@ CSRF принимает base64 PFX-сертификат, пароль к нем�
 
 Однократная настройка systemd-юнитов — см. `deploy/systemd/README.md`.
 
-## Бэкап базы
+## Бэкап базы и файлов
 
-Без этого следующая потеря сервера снова унесёт всех участников и настройки.
-Ежедневный дамп с хранением за две недели:
+`deploy/setup-vps.sh` **сам** ставит `/etc/cron.daily/laravel-backup`
+(копия `deploy/backup.sh`) — ничего вручную настраивать не нужно. Ежедневно
+бэкапится и база (`mysqldump`), и `storage/app/public` (аватарки участников,
+галерея семьи, скрины к отчётам, лого) — раньше бэкапилась только база, а
+сами файлы при потере сервера пропадали бы снова. Хранение — 14 дней,
+дампы лежат в `/root/backups`.
 
-```bash
-mkdir -p /root/backups
-cat > /etc/cron.daily/laravel-db-backup <<'SH'
-#!/bin/sh
-set -e
-DB=$(grep -m1 '^DB_DATABASE=' /var/www/laravel/.env | cut -d= -f2-)
-OUT="/root/backups/${DB}-$(date +%F).sql.gz"
-mysqldump --single-transaction --quick "$DB" | gzip > "$OUT"
-find /root/backups -name '*.sql.gz' -mtime +14 -delete
-SH
-chmod +x /etc/cron.daily/laravel-db-backup
-/etc/cron.daily/laravel-db-backup && ls -lh /root/backups
-```
-
-Дампы лежат на том же сервере, поэтому при его потере исчезнут вместе с ним —
-копию стоит регулярно забирать наружу:
+Проверить, что бэкап реально работает:
 
 ```bash
-scp root@monsory.net:/root/backups/*.sql.gz ~/monsory-backups/
+/etc/cron.daily/laravel-backup && ls -lh /root/backups
 ```
+
+**Дампы лежат на том же сервере** — при его потере исчезнут вместе с ним,
+именно так уже случилось один раз (см. начало этого файла). Копию нужно
+регулярно забирать наружу. Вручную:
+
+```bash
+scp root@monsory.net:/root/backups/*.sql.gz root@monsory.net:/root/backups/*.tar.gz ~/monsory-backups/
+```
+
+Или автоматически при каждом бэкапе — через [rclone](https://rclone.org/)
+(Google Drive, S3, Backblaze и т.д., без своего сервера под это):
+
+```bash
+apt-get install -y rclone
+rclone config                       # один раз: настроить remote (напр. "gdrive")
+echo "gdrive:monsory-backups" > /etc/laravel-backup-remote
+```
+
+`deploy/backup.sh` сам подхватит этот файл при следующем запуске и станет
+копировать дампы туда же — если файла `/etc/laravel-backup-remote` нет,
+шаг просто пропускается, локальный бэкап всё равно делается.

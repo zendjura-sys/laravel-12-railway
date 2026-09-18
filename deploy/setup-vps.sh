@@ -388,6 +388,19 @@ EXISTING_CRON="$( { crontab -u www-data -l 2>/dev/null || true; } | grep -vF 'sc
 printf '%s\n%s\n' "$EXISTING_CRON" "$CRON_LINE" | sed '/^[[:space:]]*$/d' | crontab -u www-data - \
     || warn "Не удалось прописать cron планировщика — проверь: crontab -u www-data -l"
 
+# ------------------------------------------------------------------- бэкап
+# Дамп базы И storage/app/public (аватарки, галерея, скрины к отчётам) —
+# ежедневно, хранение 14 дней. Раньше это был ручной шаг "не забудь
+# настроить бэкап после подъёма сервера" из deploy/RECOVERY.md — теперь
+# ставится сюда автоматически, вместе с остальным деплоем. Дампы всё
+# равно лежат на этом же сервере: копию наружу (rclone) описано в
+# deploy/RECOVERY.md, автоматически здесь не настраивается — требует
+# учётных данных стороннего хранилища, которых у скрипта нет.
+log "Настраиваю ежедневный бэкап базы и файлов"
+cp "${APP_DIR}/deploy/backup.sh" /etc/cron.daily/laravel-backup
+chmod +x /etc/cron.daily/laravel-backup
+mkdir -p /root/backups
+
 # --------------------------------------------------------------- queue worker
 log "Настраиваю systemd-сервис очереди"
 cat > /etc/systemd/system/laravel-worker.service <<UNIT

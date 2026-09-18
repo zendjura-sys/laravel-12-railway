@@ -9,5 +9,6 @@ Route::middleware(['web', 'auth', 'verified', 'permission:events.manage'])
     ->group(function () {
         Route::get('/', [FamilyEventsAdminController::class, 'index'])->name('index');
         Route::post('/', [FamilyEventsAdminController::class, 'store'])->name('store');
+        Route::post('/ai-draft', [FamilyEventsAdminController::class, 'aiDraft'])->name('ai-draft');
         Route::delete('/{familyEvent}', [FamilyEventsAdminController::class, 'destroy'])->name('destroy');
     });

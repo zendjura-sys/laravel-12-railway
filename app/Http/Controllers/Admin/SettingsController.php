@@ -24,6 +24,7 @@ class SettingsController extends Controller
             'ai_grade_advice_enabled',
             'ai_applications_review_enabled',
             'ai_broadcast_assist_enabled',
+            'ai_event_draft_enabled',
         ],
         'ai_prompts' => [
             'ai_reports_analysis_instructions',
@@ -31,6 +32,7 @@ class SettingsController extends Controller
             'ai_grade_advice_instructions',
             'ai_applications_review_instructions',
             'ai_broadcast_assist_instructions',
+            'ai_event_draft_instructions',
         ],
     ];
 
@@ -43,7 +45,7 @@ class SettingsController extends Controller
      */
     private const LONG_TEXT_FIELDS = [
         'ai_reports_analysis_instructions', 'ai_rejection_advice_instructions', 'ai_grade_advice_instructions',
-        'ai_applications_review_instructions', 'ai_broadcast_assist_instructions',
+        'ai_applications_review_instructions', 'ai_broadcast_assist_instructions', 'ai_event_draft_instructions',
     ];
 
     /**
@@ -55,7 +57,7 @@ class SettingsController extends Controller
      */
     private const BOOLEAN_FIELDS = [
         'ai_reports_analysis_enabled', 'ai_rejection_advice_enabled', 'ai_grade_advice_enabled',
-        'ai_applications_review_enabled', 'ai_broadcast_assist_enabled',
+        'ai_applications_review_enabled', 'ai_broadcast_assist_enabled', 'ai_event_draft_enabled',
     ];
 
     /**

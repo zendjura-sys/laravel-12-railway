@@ -56,6 +56,7 @@ const TABS = {
             { key: 'ai_grade_advice_enabled', label: 'Кнопка "Порекомендувати оцінку" при затвердженні звіту', type: 'checkbox' },
             { key: 'ai_applications_review_enabled', label: 'Оцінка якості анкети при новій заявці на вступ', type: 'checkbox' },
             { key: 'ai_broadcast_assist_enabled', label: 'Кнопка "Покращити текст" у формі розсилки', type: 'checkbox' },
+            { key: 'ai_event_draft_enabled', label: 'Кнопка "Згенерувати" у формі нової події родини', type: 'checkbox' },
         ],
     },
     ai_prompts: {
@@ -90,6 +91,12 @@ const TABS = {
                 label: 'Покращення тексту розсилки',
                 type: 'textarea',
                 hint: 'Стиль, тон чи вимоги до тексту розсилок (наприклад, завжди звертатись на "ви").',
+            },
+            {
+                key: 'ai_event_draft_instructions',
+                label: 'Генерація назви й опису події родини',
+                type: 'textarea',
+                hint: 'Стиль і тон для назви/опису подій (наприклад, завжди згадувати дрес-код чи стандартну фразу про обов\'язковість присутності).',
             },
         ],
     },

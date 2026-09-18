@@ -2,8 +2,11 @@
 
 namespace Addons\FamilyEvents\Http\Controllers\Admin;
 
+use Addons\AiAssistant\Services\EventDraftAssistant;
 use Addons\FamilyEvents\Events\FamilyEventCreated;
 use Addons\FamilyEvents\Models\FamilyEvent;
+use App\Models\Setting;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Event;
@@ -21,7 +24,37 @@ class FamilyEventsAdminController
 
         return Inertia::render('Admin/Events/Index', [
             'events' => $events,
+            'aiEventDraftEnabled' => class_exists(EventDraftAssistant::class) && Setting::get('ai_event_draft_enabled') === '1',
         ]);
+    }
+
+    /**
+     * Чернетка назви й опису за короткою підказкою — адмін бачить готові
+     * поля й редагує чи прибирає перед сабмітом, нічого не створює сам.
+     */
+    public function aiDraft(Request $request): JsonResponse
+    {
+        if (! class_exists(EventDraftAssistant::class)) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Модуль AI Assistant не встановлено.',
+                'data' => null,
+                'errors' => null,
+                'redirect' => null,
+            ], 422);
+        }
+
+        $data = $request->validate(['hint' => ['required', 'string', 'max:500']]);
+
+        $draft = app(EventDraftAssistant::class)->draft($data['hint']);
+
+        return response()->json([
+            'ok' => $draft !== null,
+            'message' => $draft !== null ? null : 'Не вдалося згенерувати — перевірте налаштування AI.',
+            'data' => $draft,
+            'errors' => null,
+            'redirect' => null,
+        ], $draft !== null ? 200 : 422);
     }
 
     public function store(Request $request): RedirectResponse

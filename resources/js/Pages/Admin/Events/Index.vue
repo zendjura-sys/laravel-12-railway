@@ -5,6 +5,7 @@ import { computed, ref } from 'vue';
 
 const props = defineProps({
     events: { type: Array, required: true },
+    aiEventDraftEnabled: { type: Boolean, default: false },
 });
 
 const showForm = ref(false);
@@ -21,8 +22,33 @@ function toggleForm() {
     // включно з датою/часом, які легко неправильно прочитати як "порожні".
     if (! showForm.value) {
         createForm.reset();
+        eventHint.value = '';
     }
     showForm.value = ! showForm.value;
+}
+
+/* ---------- AI-чернетка назви й опису за короткою підказкою ---------- */
+const eventHint = ref('');
+const aiDrafting = ref(false);
+const aiDraftError = ref(null);
+
+async function draftEvent() {
+    if (! eventHint.value.trim()) return;
+    aiDrafting.value = true;
+    aiDraftError.value = null;
+    try {
+        const { data } = await window.axios.post(route('admin.family-events.ai-draft'), { hint: eventHint.value });
+        if (data.ok) {
+            createForm.title = data.data.title;
+            createForm.description = data.data.description;
+        } else {
+            aiDraftError.value = data.message;
+        }
+    } catch (e) {
+        aiDraftError.value = e.response?.data?.message || 'Помилка';
+    } finally {
+        aiDrafting.value = false;
+    }
 }
 
 /**
@@ -77,6 +103,29 @@ function isPast(iso) {
 
         <Transition name="fade-slide">
             <form v-if="showForm" class="mb-10 rounded-2xl border border-white/10 bg-white/[0.03] p-6" @submit.prevent="createEvent">
+                <div v-if="aiEventDraftEnabled" class="mb-5 rounded-lg border border-gold-400/20 bg-gold-400/5 p-4">
+                    <label class="mb-2 block text-xs uppercase tracking-widest text-gold-300/70">✨ AI-допомога: опишіть подію одним реченням</label>
+                    <div class="flex flex-wrap gap-2">
+                        <input
+                            v-model="eventHint"
+                            type="text"
+                            placeholder="наприклад: збір особового складу, обов'язково всім бути"
+                            class="min-w-[200px] flex-1 rounded-lg border border-white/10 bg-obsidian-900 px-3 py-2 text-sm text-white"
+                            @keydown.enter.prevent="draftEvent"
+                        />
+                        <button
+                            type="button"
+                            :disabled="aiDrafting || ! eventHint.trim()"
+                            class="rounded-full border border-gold-400/40 px-4 py-2 text-xs font-medium tracking-widest text-gold-200 transition-all hover:border-gold-300 disabled:opacity-40"
+                            @click="draftEvent"
+                        >
+                            {{ aiDrafting ? 'Генерую…' : 'Згенерувати назву й опис' }}
+                        </button>
+                    </div>
+                    <p v-if="aiDraftError" class="mt-2 text-xs text-ember-500">{{ aiDraftError }}</p>
+                    <p class="mt-2 text-[11px] text-white/30">Дату, час і локацію все одно вкажете самі нижче — AI їх не заповнює.</p>
+                </div>
+
                 <div class="grid gap-5 sm:grid-cols-2">
                     <div class="sm:col-span-2">
                         <label class="mb-2 block text-xs uppercase tracking-widest text-white/40">Назва</label>

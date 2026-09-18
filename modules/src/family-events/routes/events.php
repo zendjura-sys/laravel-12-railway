@@ -1,6 +1,7 @@
 <?php
 
 use Addons\FamilyEvents\Events\FamilyEventReminder;
+use Addons\FamilyEvents\Events\FamilyEventStartingSoon;
 use Addons\FamilyEvents\Models\FamilyEvent;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Support\Facades\Event;
@@ -25,4 +26,26 @@ app(Schedule::class)
     ->name('family-events-reminders')
     ->dailyAt('10:00')
     ->timezone('Europe/Kyiv')
+    ->withoutOverlapping();
+
+// Друге, окреме нагадування — "за 15 хвилин до початку". Ганяється
+// щохвилини (мінімальна гранулярність крону), тому вікно [now, now+15хв]
+// ловить кожну подію рівно раз завдяки soon_reminder_sent_at — навіть
+// якщо прогін випаде трохи раніше чи пізніше самої точки "15 хв до".
+app(Schedule::class)
+    ->call(function () {
+        $now = FamilyEvent::nowAsStored();
+        $soon = $now->copy()->addMinutes(15);
+
+        FamilyEvent::query()
+            ->whereNull('soon_reminder_sent_at')
+            ->where('starts_at', '>=', $now)
+            ->where('starts_at', '<=', $soon)
+            ->each(function (FamilyEvent $event) {
+                Event::dispatch(new FamilyEventStartingSoon($event));
+                $event->update(['soon_reminder_sent_at' => now()]);
+            });
+    })
+    ->name('family-events-starting-soon')
+    ->everyMinute()
     ->withoutOverlapping();

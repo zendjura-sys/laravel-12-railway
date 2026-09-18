@@ -11,13 +11,14 @@ class FamilyEvent extends Model
 {
     protected $table = 'family_events';
 
-    protected $fillable = ['title', 'description', 'location', 'starts_at', 'created_by', 'reminder_sent_at'];
+    protected $fillable = ['title', 'description', 'location', 'starts_at', 'created_by', 'reminder_sent_at', 'soon_reminder_sent_at'];
 
     protected function casts(): array
     {
         return [
             'starts_at' => 'datetime',
             'reminder_sent_at' => 'datetime',
+            'soon_reminder_sent_at' => 'datetime',
         ];
     }
 

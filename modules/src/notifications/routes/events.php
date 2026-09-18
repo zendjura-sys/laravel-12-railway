@@ -2,11 +2,13 @@
 
 use Addons\FamilyEvents\Events\FamilyEventCreated;
 use Addons\FamilyEvents\Events\FamilyEventReminder;
+use Addons\FamilyEvents\Events\FamilyEventStartingSoon;
 use Addons\FamilyGoals\Events\FamilyGoalCompleted;
 use Addons\MemberCenter\Events\LeaveRequestReviewed;
 use Addons\Notifications\Listeners\NotifyOnAchievementUnlocked;
 use Addons\Notifications\Listeners\NotifyOnFamilyEventCreated;
 use Addons\Notifications\Listeners\NotifyOnFamilyEventReminder;
+use Addons\Notifications\Listeners\NotifyOnFamilyEventStartingSoon;
 use Addons\Notifications\Listeners\NotifyOnFamilyGoalCompleted;
 use Addons\Notifications\Listeners\NotifyOnLeaveRequestReviewed;
 use Addons\Notifications\Listeners\NotifyOnReportReviewed;
@@ -27,3 +29,4 @@ Event::listen(LeaveRequestReviewed::class, NotifyOnLeaveRequestReviewed::class);
 Event::listen(FamilyGoalCompleted::class, NotifyOnFamilyGoalCompleted::class);
 Event::listen(FamilyEventCreated::class, NotifyOnFamilyEventCreated::class);
 Event::listen(FamilyEventReminder::class, NotifyOnFamilyEventReminder::class);
+Event::listen(FamilyEventStartingSoon::class, NotifyOnFamilyEventStartingSoon::class);

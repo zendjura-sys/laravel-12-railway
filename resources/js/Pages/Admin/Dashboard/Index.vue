@@ -1,10 +1,17 @@
 <script setup>
 import AdminLayout from '@/Layouts/AdminLayout.vue';
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link, usePage } from '@inertiajs/vue3';
+import { computed } from 'vue';
 
 defineProps({
     stats: { type: Object, required: true },
 });
+
+const page = usePage();
+// roles.manage — право, яке видано винятково ролі admin (SystemPermissionsSeeder),
+// тому це найближчий надійний проксі "адмін" тут — глобальні auth-пропси
+// самого списку ролей не несуть, лише набір can.*.
+const showTwoFactorNudge = computed(() => page.props.can?.manageRoles && !page.props.auth.user.two_factor_enabled);
 
 const sections = [
     { name: 'admin.addons.index', can: 'manageAddons', title: 'Аддони', text: 'Core, модулі, плагіни та теми — завантаження та керування ZIP-пакетами.' },
@@ -31,6 +38,16 @@ const sections = [
             </h1>
             <p class="mt-2 text-white/40">Власна CMS родини Monsory — все в одному місці.</p>
         </div>
+
+        <Link
+            v-if="showTwoFactorNudge"
+            :href="route('profile.edit')"
+            v-reveal
+            class="mb-8 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gold-400/30 bg-gold-400/5 px-5 py-4 text-sm text-gold-200 transition-colors hover:border-gold-400/50"
+        >
+            <span>🔐 У вас адмінський доступ, а двофакторна автентифікація ще вимкнена — увімкніть її в профілі.</span>
+            <span class="shrink-0 text-xs uppercase tracking-widest">Перейти →</span>
+        </Link>
 
         <div class="mb-10 grid gap-6 sm:grid-cols-3">
             <div v-reveal="'scale'" v-glow class="glass-panel-gold glass-panel p-6">

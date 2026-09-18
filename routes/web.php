@@ -9,6 +9,7 @@ use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\GuideController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\TwoFactorAuthenticationController;
 use App\Models\GalleryPhoto;
 use App\Models\User;
 use App\Support\DesignSettings;
@@ -78,6 +79,15 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile/gender', [ProfileController::class, 'updateGender'])->name('profile.gender');
     Route::post('/profile/avatar', [ProfileController::class, 'updateAvatar'])->name('profile.avatar');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
+    Route::prefix('user/two-factor-authentication')->name('two-factor.')->group(function () {
+        Route::post('/', [TwoFactorAuthenticationController::class, 'store'])->name('enable');
+        Route::get('/qr-code', [TwoFactorAuthenticationController::class, 'qrCode'])->name('qr-code');
+        Route::post('/confirm', [TwoFactorAuthenticationController::class, 'confirm'])->name('confirm');
+        Route::delete('/cancel', [TwoFactorAuthenticationController::class, 'cancel'])->name('cancel');
+        Route::post('/recovery-codes', [TwoFactorAuthenticationController::class, 'regenerateRecoveryCodes'])->name('recovery-codes');
+        Route::delete('/', [TwoFactorAuthenticationController::class, 'destroy'])->name('disable');
+    });
 
     // Доступна одразу після реєстрації, ще до підтвердження email — саме
     // тоді в людини найбільше питань «що тут де», а лист підтвердження

@@ -8,6 +8,7 @@ use App\Http\Controllers\Auth\NewPasswordController;
 use App\Http\Controllers\Auth\PasswordController;
 use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\RegisteredUserController;
+use App\Http\Controllers\Auth\TwoFactorChallengeController;
 use App\Http\Controllers\Auth\VerifyEmailController;
 use Illuminate\Support\Facades\Route;
 
@@ -36,6 +37,16 @@ Route::middleware('guest')->group(function () {
     Route::post('reset-password', [NewPasswordController::class, 'store'])
         ->middleware('throttle:6,1')
         ->name('password.store');
+
+    // Другий крок входу для акаунтів з підтвердженою 2FA — сюди
+    // потрапляють ПІСЛЯ вірного пароля (AuthenticatedSessionController
+    // одразу розлогінює й лишає лише id у сесії), тому маршрут все ще під
+    // 'guest': на момент запиту людина ще не автентифікована.
+    Route::get('two-factor-challenge', [TwoFactorChallengeController::class, 'create'])
+        ->name('two-factor.login');
+    Route::post('two-factor-challenge', [TwoFactorChallengeController::class, 'store'])
+        ->middleware('throttle:5,1')
+        ->name('two-factor.login.store');
 });
 
 Route::middleware('auth')->group(function () {

@@ -47,6 +47,8 @@ class User extends Authenticatable implements MustVerifyEmail
     protected $hidden = [
         'password',
         'remember_token',
+        'two_factor_secret',
+        'two_factor_recovery_codes',
     ];
 
     /**
@@ -59,6 +61,7 @@ class User extends Authenticatable implements MustVerifyEmail
     protected $appends = [
         'position_title',
         'avatar_url',
+        'two_factor_enabled',
     ];
 
     /**
@@ -74,6 +77,11 @@ class User extends Authenticatable implements MustVerifyEmail
             'is_shadow' => 'boolean',
             'avatar_approved' => 'boolean',
             'birth_date' => 'date',
+            // encrypted, не hashed: TOTP звіряється проти живого секрету,
+            // а не його відбитка — розшифрувати назад мусимо мати змогу.
+            'two_factor_secret' => 'encrypted',
+            'two_factor_recovery_codes' => 'encrypted:array',
+            'two_factor_confirmed_at' => 'datetime',
         ];
     }
 
@@ -168,5 +176,21 @@ class User extends Authenticatable implements MustVerifyEmail
                 ? Storage::disk('public')->url($this->avatar_path)
                 : null,
         );
+    }
+
+    /**
+     * Тільки булеве значення йде у фронтенд (через $appends) — сам секрет
+     * і recovery-коди лишаються в $hidden і туди не потрапляють ніколи.
+     */
+    protected function twoFactorEnabled(): Attribute
+    {
+        return Attribute::make(
+            get: fn () => $this->two_factor_confirmed_at !== null,
+        );
+    }
+
+    public function hasConfirmedTwoFactor(): bool
+    {
+        return $this->two_factor_confirmed_at !== null;
     }
 }

@@ -8,6 +8,7 @@ import UpdateGenderForm from './Partials/UpdateGenderForm.vue';
 import UpdateAvatarForm from './Partials/UpdateAvatarForm.vue';
 import UpdatePositionForm from './Partials/UpdatePositionForm.vue';
 import UpdateProfileInformationForm from './Partials/UpdateProfileInformationForm.vue';
+import TwoFactorAuthenticationForm from './Partials/TwoFactorAuthenticationForm.vue';
 import { Head } from '@inertiajs/vue3';
 import { onMounted } from 'vue';
 
@@ -95,6 +96,10 @@ onMounted(() => {
 
             <div v-reveal:250 v-glow class="glass-panel p-6 sm:p-8">
                 <UpdatePasswordForm class="max-w-xl" />
+            </div>
+
+            <div v-reveal:275 v-glow class="glass-panel p-6 sm:p-8">
+                <TwoFactorAuthenticationForm class="max-w-xl" />
             </div>
 
             <div v-reveal:300 v-glow class="glass-panel p-6 sm:p-8">

@@ -26,10 +26,29 @@ class AuthenticatedSessionController extends Controller
 
     /**
      * Handle an incoming authentication request.
+     *
+     * Пароль перевіряється звичайним Auth::attempt() всередині authenticate()
+     * — це вже ПОВНІСТЮ логінить сесію. Якщо в акаунта підтверджена 2FA,
+     * одразу відкочуємо цей логін (Auth::logout) і лишаємо тільки id у сесії:
+     * людина ще НЕ автентифікована, доки не введе код на другому кроці.
      */
     public function store(LoginRequest $request): RedirectResponse
     {
         $request->authenticate();
+
+        $user = $request->user();
+
+        if ($user->hasConfirmedTwoFactor()) {
+            $remember = $request->boolean('remember');
+            Auth::guard('web')->logout();
+
+            $request->session()->put([
+                'login.id' => $user->getKey(),
+                'login.remember' => $remember,
+            ]);
+
+            return redirect()->route('two-factor.login');
+        }
 
         $request->session()->regenerate();
 

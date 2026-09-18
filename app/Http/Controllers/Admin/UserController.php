@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Models\UserAuditLog;
 use App\Support\FamilyContent;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -50,6 +51,22 @@ class UserController extends Controller
                 fn (array $p) => ['key' => $p['key'], 'title' => $p['title']],
                 FamilyContent::positions(),
             ),
+            'recentAudit' => UserAuditLog::query()
+                ->with(['actor:id,name', 'target:id,name'])
+                ->latest()
+                ->limit(30)
+                ->get(),
+        ]);
+    }
+
+    /** Журнал дій — Log::info/error лишається для діагностики помилок, тут — видима адмінам історія. */
+    private function audit(Request $request, User $target, string $action, array $meta = []): void
+    {
+        UserAuditLog::create([
+            'actor_id' => $request->user()?->id,
+            'target_user_id' => $target->id,
+            'action' => $action,
+            'meta' => $meta,
         ]);
     }
 
@@ -80,6 +97,8 @@ class UserController extends Controller
             }
 
             $user->syncRoles($data['roles'] ?? []);
+
+            $this->audit($request, $user, 'roles_updated', ['roles' => $data['roles'] ?? []]);
 
             return response()->json(['status' => 'roles-updated']);
         } catch (ValidationException $e) {
@@ -119,6 +138,8 @@ class UserController extends Controller
 
             $user->update(['position_key' => $data['position_key'] ?? null]);
 
+            $this->audit($request, $user, 'position_updated', ['position_key' => $data['position_key'] ?? null]);
+
             return response()->json(['status' => 'position-updated']);
         } catch (ValidationException $e) {
             throw $e;
@@ -154,6 +175,8 @@ class UserController extends Controller
             }
             $user->save();
 
+            $this->audit($request, $user, 'profile_updated', ['email' => $user->email]);
+
             return response()->json(['status' => 'user-updated', 'user' => $user->only(['id', 'name', 'first_name', 'last_name', 'email'])]);
         } catch (ValidationException $e) {
             throw $e;
@@ -184,6 +207,8 @@ class UserController extends Controller
             'target_user_id' => $user->id,
             'actor_id' => $request->user()?->id,
         ]);
+
+        $this->audit($request, $user, 'password_reset');
 
         return response()->json([
             'ok' => true,
@@ -216,6 +241,11 @@ class UserController extends Controller
             'target_email' => $user->email,
             'actor_id' => $request->user()?->id,
         ]);
+
+        // До delete(): після нього target_user_id у щойно створеному
+        // записі й так стане null (nullOnDelete), а ім'я/email лишаться
+        // видимими лише завдяки meta, записаному зараз, поки акаунт ще є.
+        $this->audit($request, $user, 'account_deleted', ['name' => $user->name, 'email' => $user->email]);
 
         $user->delete();
 

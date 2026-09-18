@@ -9,7 +9,20 @@ const props = defineProps({
     roles: { type: Array, required: true },
     positions: { type: Array, required: true },
     search: { type: String, default: '' },
+    recentAudit: { type: Array, default: () => [] },
 });
+
+const AUDIT_LABELS = {
+    roles_updated: 'змінив ролі',
+    position_updated: 'змінив посаду',
+    profile_updated: 'відредагував профіль',
+    password_reset: 'скинув пароль',
+    account_deleted: 'видалив акаунт',
+};
+
+function fmtDate(iso) {
+    return new Date(iso).toLocaleString('uk-UA', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
 
 const q = ref(props.search);
 function search() {
@@ -48,6 +61,7 @@ async function toggleRole(user, role) {
     savingUser.value = user.id;
     try {
         await window.axios.put(route('admin.users.roles', user.id), { roles: next });
+        router.reload({ only: ['recentAudit'] });
     } catch (e) {
         alert(describeFailure(e, 'roles', 'Не вдалося оновити ролі'));
         user.roles = has ? [...next, role] : next.filter((r) => r !== role);
@@ -69,6 +83,7 @@ async function changePosition(user, event) {
     savingUser.value = user.id;
     try {
         await window.axios.put(route('admin.users.position', user.id), { position_key: next });
+        router.reload({ only: ['recentAudit'] });
     } catch (e) {
         alert(describeFailure(e, 'position_key', 'Не вдалося оновити посаду'));
         user.position_key = prev;
@@ -104,6 +119,7 @@ async function saveEdit() {
         const { data } = await window.axios.put(route('admin.users.update', editingUser.value.id), editForm.value);
         const target = props.users.data.find((u) => u.id === editingUser.value.id);
         if (target) Object.assign(target, data.user);
+        router.reload({ only: ['recentAudit'] });
         closeEdit();
     } catch (e) {
         editError.value = describeFailure(e, 'email', 'Не вдалося зберегти зміни');
@@ -118,6 +134,7 @@ async function resetPassword() {
     try {
         const { data } = await window.axios.post(route('admin.users.reset-password', editingUser.value.id));
         resetPasswordResult.value = data.data.password;
+        router.reload({ only: ['recentAudit'] });
     } catch (e) {
         alert(describeFailure(e, 'password', 'Не вдалося скинути пароль'));
     } finally {
@@ -130,7 +147,7 @@ async function deleteAccount() {
     deleteBusy.value = true;
     try {
         await window.axios.delete(route('admin.users.destroy', editingUser.value.id));
-        router.reload({ only: ['users'] });
+        router.reload({ only: ['users', 'recentAudit'] });
         closeEdit();
     } catch (e) {
         alert(e.response?.data?.message || 'Не вдалося видалити акаунт');
@@ -224,6 +241,29 @@ async function deleteAccount() {
                     !link.url && 'pointer-events-none opacity-30',
                 ]"
             />
+        </div>
+
+        <div class="mt-16">
+            <h2 class="font-display mb-4 text-xl text-white">Журнал дій</h2>
+            <div class="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02]">
+                <div
+                    v-for="log in recentAudit"
+                    :key="log.id"
+                    class="flex flex-wrap items-center justify-between gap-2 border-b border-white/5 px-5 py-3 text-sm last:border-0"
+                >
+                    <span class="text-white/60">
+                        <span class="text-gold-300/80">{{ log.actor?.name || 'система' }}</span>
+                        — {{ AUDIT_LABELS[log.action] || log.action }}
+                        <span v-if="log.target || log.meta?.name || log.meta?.email" class="text-white/40">
+                            ({{ log.target?.name || log.meta?.name || log.meta?.email }})
+                        </span>
+                    </span>
+                    <span class="shrink-0 whitespace-nowrap text-xs text-white/30">{{ fmtDate(log.created_at) }}</span>
+                </div>
+                <div v-if="recentAudit.length === 0" class="px-5 py-6 text-center text-sm text-white/30">
+                    Поки що пусто
+                </div>
+            </div>
         </div>
 
         <Modal :show="editingUser !== null" @close="closeEdit">

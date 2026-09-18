@@ -38,8 +38,8 @@ class NotifyOnReportReviewed
             $lines[] = $detail;
         }
 
-        if ($reviewerName = $report->reviewer?->name) {
-            $lines[] = "Перевірив(-ла): {$reviewerName}.";
+        if ($reviewer = $report->reviewer) {
+            $lines[] = $reviewer->verb('Перевірив', 'Перевірила').": {$reviewer->name}.";
         }
 
         if ($approved && $report->grade) {

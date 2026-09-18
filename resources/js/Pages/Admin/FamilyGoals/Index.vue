@@ -2,6 +2,7 @@
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { Head, useForm } from '@inertiajs/vue3';
 import { ref } from 'vue';
+import { verb } from '@/utils/gendered';
 
 const props = defineProps({
     goals: { type: Array, required: true },
@@ -158,7 +159,7 @@ async function closeGoal(goal) {
                     <div>
                         <h3 class="font-display text-xl text-white">{{ goal.title }}</h3>
                         <p class="text-xs text-white/40">
-                            створив {{ goal.creator?.name }}
+                            {{ verb(goal.creator, 'створив', 'створила') }} {{ goal.creator?.name }}
                             <span v-if="goal.metric" class="text-gold-300/70">· автоматично: {{ metrics[goal.metric] || goal.metric }}</span>
                         </p>
                     </div>

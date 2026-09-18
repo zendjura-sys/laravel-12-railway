@@ -19,7 +19,7 @@ class FamilyEventsAdminController
     public function index(): Response
     {
         $events = FamilyEvent::query()
-            ->with(['creator:id,name', 'rsvps.user:id,name'])
+            ->with(['creator:id,name,gender', 'rsvps.user:id,name'])
             ->withCount([
                 'rsvps as going_count' => fn ($q) => $q->where('status', 'going'),
                 'rsvps as not_going_count' => fn ($q) => $q->where('status', 'not_going'),

@@ -49,6 +49,7 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::patch('/profile/position', [ProfileController::class, 'updatePosition'])->name('profile.position');
     Route::patch('/profile/birthday', [ProfileController::class, 'updateBirthday'])->name('profile.birthday');
+    Route::patch('/profile/gender', [ProfileController::class, 'updateGender'])->name('profile.gender');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
     // Доступна одразу після реєстрації, ще до підтвердження email — саме

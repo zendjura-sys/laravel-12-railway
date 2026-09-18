@@ -15,7 +15,8 @@ class LogReportActivity
     public function handleCreated($event): void
     {
         $report = $event->report;
-        ActivityEvent::log('report_created', $report->user_id, "{$report->user?->name} подав звіт ({$report->type})");
+        $verb = $report->user?->verb('подав', 'подала') ?? 'подав';
+        ActivityEvent::log('report_created', $report->user_id, "{$report->user?->name} {$verb} звіт ({$report->type})");
     }
 
     public function handleReviewed($event): void

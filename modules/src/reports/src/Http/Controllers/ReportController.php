@@ -27,7 +27,7 @@ class ReportController
         // submitted_by, а суб'єкт — хтось інший) — інакше подання "за
         // друга" одразу зникало б з очей того, хто його реально відправив.
         $reports = Report::query()
-            ->with(['user:id,name', 'submitter:id,name', 'attachments'])
+            ->with(['user:id,name,gender', 'submitter:id,name,gender', 'attachments'])
             ->where(fn ($q) => $q
                 ->where('user_id', $request->user()->id)
                 ->orWhere('submitted_by', $request->user()->id))

@@ -34,6 +34,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'position_key',
         'is_shadow',
         'birth_date',
+        'gender',
     ];
 
     /**
@@ -70,6 +71,16 @@ class User extends Authenticatable implements MustVerifyEmail
             'is_shadow' => 'boolean',
             'birth_date' => 'date',
         ];
+    }
+
+    /**
+     * Дієслово у правильному роді для системних текстів ("подав"/"подала",
+     * "створив"/"створила" тощо). gender не вказано (null) — лишається
+     * чоловіча форма, той самий текст, що показувався до появи цього поля.
+     */
+    public function verb(string $masculine, string $feminine): string
+    {
+        return $this->gender === 'f' ? $feminine : $masculine;
     }
 
     /**

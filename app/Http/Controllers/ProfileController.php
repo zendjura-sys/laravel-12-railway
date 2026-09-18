@@ -114,6 +114,22 @@ class ProfileController extends Controller
     }
 
     /**
+     * Стать — суто за бажанням, впливає лише на граматику дієслів у
+     * системних текстах ("подав"/"подала" тощо). Якщо не вказано —
+     * лишається чоловіча форма, той самий текст, що й раніше.
+     */
+    public function updateGender(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'gender' => ['nullable', 'in:m,f'],
+        ]);
+
+        $request->user()->update(['gender' => $data['gender'] ?? null]);
+
+        return Redirect::route('profile.edit');
+    }
+
+    /**
      * Delete the user's account.
      */
     public function destroy(Request $request): RedirectResponse

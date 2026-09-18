@@ -21,8 +21,10 @@ class NotifyReviewersOnReportCreated
     {
         $report = $event->report;
 
+        $submitter = $report->submitter ?? $report->user;
+
         $title = 'Новий звіт на розгляді';
-        $body = e($report->submitter?->name ?? $report->user?->name ?? 'Учасник').' подав звіт — потребує розгляду.';
+        $body = e($submitter?->name ?? 'Учасник').' '.($submitter?->verb('подав', 'подала') ?? 'подав').' звіт — потребує розгляду.';
 
         $button = Route::has('admin.reports.index')
             ? ['text' => '📋  Список звітів', 'url' => route('admin.reports.index')]

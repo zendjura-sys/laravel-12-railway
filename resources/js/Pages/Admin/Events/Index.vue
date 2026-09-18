@@ -2,6 +2,7 @@
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { Head, router, useForm } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
+import { verb } from '@/utils/gendered';
 
 const props = defineProps({
     events: { type: Array, required: true },
@@ -204,7 +205,7 @@ function sendDigest() {
                         <p class="text-xs text-white/40">
                             {{ fmtDateTime(event.starts_at) }}
                             <span v-if="event.location">· {{ event.location }}</span>
-                            · створив {{ event.creator?.name }}
+                            · {{ verb(event.creator, 'створив', 'створила') }} {{ event.creator?.name }}
                             <span v-if="event.reminder_sent_at" class="text-gold-300/60">· нагадування надіслано</span>
                         </p>
                     </div>

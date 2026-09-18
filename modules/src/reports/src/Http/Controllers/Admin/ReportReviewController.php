@@ -21,7 +21,7 @@ class ReportReviewController
         $status = $request->query('status', 'pending');
 
         $reports = Report::query()
-            ->with(['user:id,name', 'submitter:id,name', 'reviewer:id,name', 'attachments'])
+            ->with(['user:id,name,gender', 'submitter:id,name,gender', 'reviewer:id,name,gender', 'attachments'])
             ->when(in_array($status, ['pending', 'approved', 'rejected'], true), fn ($q) => $q->where('status', $status))
             ->latest()
             ->paginate(20)

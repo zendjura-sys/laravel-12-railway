@@ -18,7 +18,7 @@ class FamilyGoalsAdminController
     public function index(): Response
     {
         $goals = FamilyGoal::query()
-            ->with('creator:id,name')
+            ->with('creator:id,name,gender')
             ->latest()
             ->get()
             ->map(fn (FamilyGoal $goal) => [

@@ -2,6 +2,7 @@
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import { ref, watch } from 'vue';
 import PhotoGallery from '@/Components/PhotoGallery.vue';
+import { verb } from '@/utils/gendered';
 
 const props = defineProps({
     reports: { type: Object, required: true },
@@ -392,7 +393,7 @@ function fmtDateOnly(iso) {
                         </div>
                         <p class="mt-1 text-xs text-white/30">
                             {{ report.report_date ? fmtDateOnly(report.report_date) + ' · подано ' : '' }}{{ fmtDate(report.created_at) }}
-                            <span v-if="report.submitter?.id !== myId && report.submitter?.id !== report.user?.id">· подав {{ report.submitter?.name }}</span>
+                            <span v-if="report.submitter?.id !== myId && report.submitter?.id !== report.user?.id">· {{ verb(report.submitter, 'подав', 'подала') }} {{ report.submitter?.name }}</span>
                         </p>
                         <PhotoGallery v-if="report.attachments?.length" :photos="report.attachments" class="mt-3" />
                     </div>

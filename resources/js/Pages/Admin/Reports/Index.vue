@@ -3,6 +3,7 @@ import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { Head, router } from '@inertiajs/vue3';
 import { ref } from 'vue';
 import PhotoGallery from '@/Components/PhotoGallery.vue';
+import { verb } from '@/utils/gendered';
 
 const props = defineProps({
     reports: { type: Object, required: true },
@@ -185,7 +186,7 @@ function fmtDate(iso) {
                         <p v-if="report.ai_review?.count_mismatch" class="mt-1 text-xs text-gold-300/80">🤖 {{ report.ai_review.count_mismatch_detail }}</p>
                         <p v-if="report.description" class="mt-1 text-sm text-white/50">{{ report.description }}</p>
                         <p class="mt-1 text-xs text-white/30">
-                            подав {{ report.submitter?.name }}
+                            {{ verb(report.submitter, 'подав', 'подала') }} {{ report.submitter?.name }}
                             <span v-if="report.report_date">· дата {{ new Date(report.report_date).toLocaleDateString('uk-UA') }}</span>
                             · {{ fmtDate(report.created_at) }}
                             <span v-if="report.grade" class="ml-1 font-medium text-gold-300/80">· оцінка {{ report.grade }} ({{ GRADE_LABELS[report.grade] }})</span>

@@ -4,6 +4,7 @@ import DeleteUserForm from './Partials/DeleteUserForm.vue';
 import TelegramLinkForm from './Partials/TelegramLinkForm.vue';
 import UpdatePasswordForm from './Partials/UpdatePasswordForm.vue';
 import UpdateBirthdayForm from './Partials/UpdateBirthdayForm.vue';
+import UpdateGenderForm from './Partials/UpdateGenderForm.vue';
 import UpdatePositionForm from './Partials/UpdatePositionForm.vue';
 import UpdateProfileInformationForm from './Partials/UpdateProfileInformationForm.vue';
 import { Head } from '@inertiajs/vue3';
@@ -81,6 +82,10 @@ onMounted(() => {
 
             <div v-reveal:200 v-glow class="glass-panel p-6 sm:p-8">
                 <UpdateBirthdayForm class="max-w-xl" />
+            </div>
+
+            <div v-reveal:225 v-glow class="glass-panel p-6 sm:p-8">
+                <UpdateGenderForm class="max-w-xl" />
             </div>
 
             <div v-reveal:250 v-glow class="glass-panel p-6 sm:p-8">

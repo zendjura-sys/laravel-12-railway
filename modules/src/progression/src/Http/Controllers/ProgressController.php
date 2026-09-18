@@ -40,6 +40,7 @@ class ProgressController
         return Inertia::render('Progression/Index', [
             'profile' => [
                 'xp' => $profile->xp,
+                'xpTrend' => $this->xpTrend($battleLog, $profile->xp),
                 'level' => $profile->level(),
                 // Посада родини — окрема річ від XP-рівня тут: перша
                 // призначається керівництвом за якісними критеріями,
@@ -54,6 +55,29 @@ class ProgressController
             'achievements' => $achievements,
             'battleLog' => $battleLog,
         ]);
+    }
+
+    /**
+     * Спарклайн на «Мій прогрес»: як змінювався XP за останні (до 30)
+     * нарахувань. battleLog приходить новими-спочатку, а для графіка
+     * потрібен хронологічний порядок — і не самі суми нарахувань, а
+     * НАКОПИЧЕНЕ значення XP в кожній точці. Рахуємо назад від поточного
+     * profile.xp (єдине надійне джерело правди — не довіряємо, що сума
+     * всіх ledger-записів колись рахувалась без розбіжностей).
+     *
+     * @param  \Illuminate\Support\Collection<int, XpLedgerEntry>  $battleLog
+     * @return array<int, array{t: string, xp: int}>
+     */
+    private function xpTrend($battleLog, int $currentXp): array
+    {
+        $asc = $battleLog->sortBy('created_at')->values();
+        $running = $currentXp - $asc->sum('amount');
+
+        return $asc->map(function ($entry) use (&$running) {
+            $running += $entry->amount;
+
+            return ['t' => $entry->created_at->toISOString(), 'xp' => $running];
+        })->values()->all();
     }
 
     /**

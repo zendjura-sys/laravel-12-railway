@@ -2,7 +2,7 @@
     "type": "module",
     "slug": "progression-statistics",
     "name": "Progression & Statistics",
-    "version": "1.7.1",
+    "version": "1.7.2",
     "summary": "Досвід, рівні, ранги, досягнення й рейтинг родини.",
     "highlights": [
         "Досвід нараховується автоматично за затверджені звіти (бізвар, контракти, інвестиції)",

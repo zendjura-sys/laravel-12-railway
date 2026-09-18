@@ -1,5 +1,6 @@
 <script setup>
 import { Head, Link } from '@inertiajs/vue3';
+import Sparkline from '@/Components/Sparkline.vue';
 
 const props = defineProps({
     profile: { type: Object, required: true },
@@ -46,6 +47,11 @@ const sourceLabels = { report: 'звіт', weekly_bonus: 'тижневий бо�
                 </p>
                 <div class="font-display mt-3 text-6xl font-light text-gradient-gold">{{ profile.xp }}</div>
                 <p class="mt-1 text-sm text-white/40">Досвід · Рівень активності {{ profile.level }}</p>
+
+                <div v-if="profile.xpTrend?.length > 1" class="mx-auto mt-6 max-w-lg">
+                    <Sparkline :points="profile.xpTrend" />
+                    <p class="mt-1 text-[10px] uppercase tracking-widest text-white/25">Динаміка за останні нарахування</p>
+                </div>
 
                 <div class="mx-auto mt-8 grid max-w-lg grid-cols-4 gap-4 border-t border-white/10 pt-6 text-center">
                     <div>

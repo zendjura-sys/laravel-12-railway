@@ -91,8 +91,12 @@ class GeminiClient
             // Gemini регулярно повертає тимчасовий 503 ("high demand") навіть
             // на робочому ключі — без ретраю кожен такий випадок виглядав би
             // як "AI не працює", хоча за секунду-дві запит зазвичай проходить.
+            // throw: false — інакше retry() сам кидає виняток після невдачі
+            // (навіть якщо when() відмовив у повторі), і повне тіло помилки
+            // від Google губиться за куцим "HTTP ... status code 403" замість
+            // нижнього детального логування.
             $response = Http::timeout(30)
-                ->retry(2, 2000, fn ($e) => $e instanceof RequestException && $e->response->status() === 503)
+                ->retry(2, 2000, fn ($e) => $e instanceof RequestException && $e->response->status() === 503, throw: false)
                 ->asJson()
                 ->post(self::API_URL.'/models/'.self::MODEL.':generateContent?key='.$this->apiKey, array_filter([
                     'contents' => [$content],
@@ -104,7 +108,7 @@ class GeminiClient
             if (! $response->successful() || ! is_array($json)) {
                 Log::warning('gemini: запит не вдався', [
                     'status' => $response->status(),
-                    'body' => is_array($json) ? ($json['error']['message'] ?? null) : substr((string) $response->body(), 0, 500),
+                    'body' => is_array($json) ? ($json['error']['message'] ?? $json) : substr((string) $response->body(), 0, 800),
                 ]);
 
                 return null;

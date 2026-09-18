@@ -8,6 +8,7 @@ Route::middleware(['web', 'auth', 'verified', 'permission:bonuses.manage'])
     ->name('admin.bonuses.')
     ->group(function () {
         Route::get('/', [BonusAdminController::class, 'index'])->name('index');
+        Route::get('/export', [BonusAdminController::class, 'export'])->name('export');
         Route::put('/settings', [BonusAdminController::class, 'updateSettings'])->name('settings.update');
         Route::post('/tiers', [BonusAdminController::class, 'storeTier'])->name('tiers.store');
         Route::delete('/tiers/{tier}', [BonusAdminController::class, 'destroyTier'])->name('tiers.destroy');

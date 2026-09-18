@@ -201,6 +201,12 @@ function fmtDate(iso) {
                 >
                     Скинути
                 </button>
+                <a
+                    :href="route('admin.reports.export', { status, ...filterForm })"
+                    class="ml-auto rounded-full border border-white/15 px-4 py-2 text-xs text-white/60 hover:border-white/30"
+                >
+                    ⬇ Експорт CSV
+                </a>
             </div>
 
             <div class="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02]">

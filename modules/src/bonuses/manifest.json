@@ -2,7 +2,7 @@
     "type": "module",
     "slug": "bonuses",
     "name": "Bonuses & Premiums",
-    "version": "1.2.2",
+    "version": "1.2.3",
     "summary": "Щотижневий розрахунок грошових премій за бізвар, контракти й інвестиції.",
     "highlights": [
         "Рахує посуточно: winrate дня для бізвару, ставки для контрактів",

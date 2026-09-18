@@ -7,7 +7,17 @@ const props = defineProps({
     settings: { type: Object, required: true },
     tiers: { type: Array, required: true },
     payouts: { type: Object, required: true },
+    filters: { type: Object, default: () => ({ from: '', to: '', paid: '' }) },
 });
+
+const filterForm = ref({ from: props.filters.from, to: props.filters.to, paid: props.filters.paid });
+function applyFilters() {
+    router.get(route('admin.bonuses.index'), filterForm.value, { preserveState: true, preserveScroll: true });
+}
+function resetFilters() {
+    filterForm.value = { from: '', to: '', paid: '' };
+    router.get(route('admin.bonuses.index'), {}, { preserveState: true, preserveScroll: true });
+}
 
 function describeFailure(e, fallback) {
     const serverMessage = e.response?.data?.message;
@@ -195,7 +205,46 @@ async function runNow() {
 
         <!-- ================= ІСТОРІЯ ВИПЛАТ ================= -->
         <section class="rounded-2xl border border-white/10 bg-white/[0.02]">
-            <h2 class="p-6 pb-0 font-display text-lg text-white">Історія нарахувань</h2>
+            <div class="flex flex-wrap items-end justify-between gap-3 p-6 pb-0">
+                <h2 class="font-display text-lg text-white">Історія нарахувань</h2>
+                <a
+                    :href="route('admin.bonuses.export', filterForm)"
+                    class="rounded-full border border-white/15 px-4 py-2 text-xs text-white/60 hover:border-white/30"
+                >
+                    ⬇ Експорт CSV
+                </a>
+            </div>
+
+            <div class="flex flex-wrap items-end gap-3 p-6 pb-0">
+                <div>
+                    <label class="mb-1 block text-[10px] uppercase tracking-widest text-white/40">Тиждень від</label>
+                    <input v-model="filterForm.from" type="date" class="rounded-lg border border-white/10 bg-obsidian-900 px-3 py-2 text-sm text-white" />
+                </div>
+                <div>
+                    <label class="mb-1 block text-[10px] uppercase tracking-widest text-white/40">Тиждень до</label>
+                    <input v-model="filterForm.to" type="date" class="rounded-lg border border-white/10 bg-obsidian-900 px-3 py-2 text-sm text-white" />
+                </div>
+                <div>
+                    <label class="mb-1 block text-[10px] uppercase tracking-widest text-white/40">Виплата</label>
+                    <select v-model="filterForm.paid" class="rounded-lg border border-white/10 bg-obsidian-900 px-3 py-2 text-sm text-white focus:border-gold-400/50 focus:outline-none">
+                        <option value="">Усі</option>
+                        <option value="1">Виплачено</option>
+                        <option value="0">Не виплачено</option>
+                    </select>
+                </div>
+                <button type="button" class="rounded-full border border-gold-400/40 px-4 py-2 text-xs font-medium tracking-widest text-gold-200 hover:border-gold-300" @click="applyFilters">
+                    Застосувати
+                </button>
+                <button
+                    v-if="filters.from || filters.to || filters.paid"
+                    type="button"
+                    class="text-xs text-white/40 hover:text-white"
+                    @click="resetFilters"
+                >
+                    Скинути
+                </button>
+            </div>
+
             <div class="overflow-x-auto">
                 <table class="mt-4 w-full text-left text-sm">
                     <thead>

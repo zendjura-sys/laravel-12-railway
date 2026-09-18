@@ -8,29 +8,45 @@ use Addons\AiAssistant\Services\RejectionAdvisor;
 use Addons\Reports\Events\ReportReviewed;
 use Addons\Reports\Models\Report;
 use App\Models\Setting;
+use App\Support\CsvExport;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ReportReviewController
 {
+    /** @return array{status:string,type:string,from:string,to:string,q:string} */
+    private function filtersFrom(Request $request): array
+    {
+        return [
+            'status' => $request->query('status', 'pending'),
+            'type' => $request->query('type', ''),
+            'from' => $request->query('from', ''),
+            'to' => $request->query('to', ''),
+            'q' => trim((string) $request->query('q', '')),
+        ];
+    }
+
+    private function applyFilters(Builder $query, array $f): Builder
+    {
+        return $query
+            ->when(in_array($f['status'], ['pending', 'approved', 'rejected'], true), fn ($qq) => $qq->where('status', $f['status']))
+            ->when(in_array($f['type'], Report::TYPES, true), fn ($qq) => $qq->where('type', $f['type']))
+            ->when($f['from'] !== '', fn ($qq) => $qq->whereDate('report_date', '>=', $f['from']))
+            ->when($f['to'] !== '', fn ($qq) => $qq->whereDate('report_date', '<=', $f['to']))
+            ->when($f['q'] !== '', fn ($qq) => $qq->whereHas('user', fn ($uq) => $uq->where('name', 'like', "%{$f['q']}%")));
+    }
+
     public function index(Request $request): Response
     {
-        $status = $request->query('status', 'pending');
-        $type = $request->query('type', '');
-        $from = $request->query('from', '');
-        $to = $request->query('to', '');
-        $q = trim((string) $request->query('q', ''));
+        $filters = $this->filtersFrom($request);
 
-        $reports = Report::query()
+        $reports = $this->applyFilters(Report::query(), $filters)
             ->with(['user:id,name,gender', 'submitter:id,name,gender', 'reviewer:id,name,gender', 'attachments'])
-            ->when(in_array($status, ['pending', 'approved', 'rejected'], true), fn ($qq) => $qq->where('status', $status))
-            ->when(in_array($type, Report::TYPES, true), fn ($qq) => $qq->where('type', $type))
-            ->when($from !== '', fn ($qq) => $qq->whereDate('report_date', '>=', $from))
-            ->when($to !== '', fn ($qq) => $qq->whereDate('report_date', '<=', $to))
-            ->when($q !== '', fn ($qq) => $qq->whereHas('user', fn ($uq) => $uq->where('name', 'like', "%{$q}%")))
             ->latest()
             ->paginate(20)
             ->withQueryString();
@@ -39,12 +55,48 @@ class ReportReviewController
 
         return Inertia::render('Admin/Reports/Index', [
             'reports' => $reports,
-            'status' => $status,
-            'filters' => ['type' => $type, 'from' => $from, 'to' => $to, 'q' => $q],
+            'status' => $filters['status'],
+            'filters' => $filters,
             'types' => Report::TYPES,
             'aiRejectionAdviceEnabled' => class_exists(RejectionAdvisor::class) && Setting::get('ai_rejection_advice_enabled') === '1',
             'aiGradeAdviceEnabled' => class_exists(GradeAdvisor::class) && Setting::get('ai_grade_advice_enabled') === '1',
         ]);
+    }
+
+    /** Той самий фільтр, що й на екрані — експортується САМЕ те, що адмін бачить, а не все підряд. */
+    public function export(Request $request): StreamedResponse
+    {
+        $filters = $this->filtersFrom($request);
+
+        $reports = $this->applyFilters(Report::query(), $filters)
+            ->with(['user:id,name', 'submitter:id,name'])
+            ->latest()
+            ->get();
+
+        $typeLabels = ['kapt' => 'Капт', 'contract' => 'Контракт', 'bizwar' => 'Бізвар', 'investment' => 'Інвестиції', 'other' => 'Інше'];
+        $statusLabels = ['pending' => 'На розгляді', 'approved' => 'Затверджено', 'rejected' => 'Відхилено'];
+
+        $rows = $reports->map(fn (Report $r) => [
+            $r->id,
+            $r->user?->name ?? '—',
+            $r->submitter?->name ?? '—',
+            $typeLabels[$r->type] ?? $r->type,
+            $statusLabels[$r->status] ?? $r->status,
+            $r->report_date?->format('d.m.Y') ?? '',
+            $r->wins_count,
+            $r->losses_count,
+            $r->light_count,
+            $r->medium_count,
+            $r->heavy_count,
+            $r->amount,
+            $r->grade,
+            $r->created_at?->format('d.m.Y H:i'),
+        ]);
+
+        return CsvExport::stream('reports.csv', [
+            'ID', 'Учасник', 'Подав', 'Тип', 'Статус', 'Дата звіту',
+            'Перемоги', 'Поразки', 'Легкі', 'Середні', 'Важкі', 'Сума', 'Оцінка', 'Подано',
+        ], $rows);
     }
 
     /**

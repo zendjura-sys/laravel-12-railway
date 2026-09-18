@@ -7,27 +7,84 @@ use Addons\Bonuses\Models\BonusSettings;
 use Addons\Bonuses\Models\InvestmentAchievementTier;
 use Addons\Bonuses\Services\BonusCalculator;
 use Addons\Bonuses\Services\BonusDigest;
+use App\Support\CsvExport;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class BonusAdminController
 {
-    public function index(): Response
+    /** @return array{from:string,to:string,paid:string} */
+    private function filtersFrom(Request $request): array
     {
-        $payouts = BonusPayout::query()
+        return [
+            'from' => $request->query('from', ''),
+            'to' => $request->query('to', ''),
+            'paid' => $request->query('paid', ''),
+        ];
+    }
+
+    private function applyFilters(\Illuminate\Database\Eloquent\Builder $query, array $f): \Illuminate\Database\Eloquent\Builder
+    {
+        return $query
+            ->when($f['from'] !== '', fn ($qq) => $qq->whereDate('week_start', '>=', $f['from']))
+            ->when($f['to'] !== '', fn ($qq) => $qq->whereDate('week_start', '<=', $f['to']))
+            ->when($f['paid'] === '1', fn ($qq) => $qq->where('paid', true))
+            ->when($f['paid'] === '0', fn ($qq) => $qq->where('paid', false));
+    }
+
+    public function index(Request $request): Response
+    {
+        $filters = $this->filtersFrom($request);
+
+        $payouts = $this->applyFilters(BonusPayout::query(), $filters)
             ->with('user:id,name')
             ->orderByDesc('week_start')
             ->orderByDesc('total_amount')
-            ->paginate(30);
+            ->paginate(30)
+            ->withQueryString();
 
         return Inertia::render('Admin/Bonuses/Index', [
             'settings' => BonusSettings::current(),
             'tiers' => InvestmentAchievementTier::query()->orderBy('sort_order')->orderBy('threshold_amount')->get(),
             'payouts' => $payouts,
+            'filters' => $filters,
         ]);
+    }
+
+    /** Той самий фільтр, що й на екрані. */
+    public function export(Request $request): StreamedResponse
+    {
+        $filters = $this->filtersFrom($request);
+
+        $payouts = $this->applyFilters(BonusPayout::query(), $filters)
+            ->with('user:id,name')
+            ->orderByDesc('week_start')
+            ->get();
+
+        $rows = $payouts->map(fn (BonusPayout $p) => [
+            $p->user?->name ?? '—',
+            // week_start — 'date' колонка, але НЕ закастована в моделі
+            // (лишається сирим рядком з БД, як і в даних, що йдуть на
+            // фронт) — ->format() на ній впав би фатальною помилкою.
+            $p->week_start ? \Illuminate\Support\Carbon::parse($p->week_start)->format('d.m.Y') : '',
+            $p->bizwar_amount,
+            $p->contract_amount,
+            $p->streak_bonus_amount,
+            $p->contracts_count_bonus_amount,
+            $p->investment_bonus_amount,
+            $p->total_amount,
+            $p->paid ? 'Так' : 'Ні',
+            $p->paid_at?->format('d.m.Y H:i'),
+        ]);
+
+        return CsvExport::stream('bonuses.csv', [
+            'Учасник', 'Тиждень від', 'Бізвар', 'Контракти', 'Бонус за серію',
+            "Бонус за к-сть", 'Інвестиційний тір', 'Разом', 'Виплачено', 'Дата виплати',
+        ], $rows);
     }
 
     public function updateSettings(Request $request): RedirectResponse

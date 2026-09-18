@@ -92,6 +92,13 @@ const showingNavigationDropdown = ref(false);
                                 Довідка
                             </NavLink>
                             <NavLink
+                                v-if="route().has('changelog')"
+                                :href="route('changelog')"
+                                :active="route().current('changelog')"
+                            >
+                                Що нового
+                            </NavLink>
+                            <NavLink
                                 v-if="route().has('admin.dashboard') && (
                                     $page.props.can?.manageAddons || $page.props.can?.manageReports ||
                                     $page.props.can?.manageProgression || $page.props.can?.manageSettings ||
@@ -267,6 +274,13 @@ const showingNavigationDropdown = ref(false);
                         :active="route().current('guide')"
                     >
                         Довідка
+                    </ResponsiveNavLink>
+                    <ResponsiveNavLink
+                        v-if="route().has('changelog')"
+                        :href="route('changelog')"
+                        :active="route().current('changelog')"
+                    >
+                        Що нового
                     </ResponsiveNavLink>
                     <ResponsiveNavLink
                         v-if="route().has('admin.dashboard') && (

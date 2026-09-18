@@ -17,6 +17,7 @@ const items = computed(() => {
         { group: 'Сайт', label: 'Головна', name: 'home', check: () => true },
         { group: 'Сайт', label: 'Кабінет', name: 'dashboard', check: () => true },
         { group: 'Сайт', label: 'Профіль', name: 'profile.edit', check: () => true },
+        { group: 'Сайт', label: 'Що нового', name: 'changelog', check: () => true },
         { group: 'Спільнота', label: 'Мої звіти', name: 'reports.index', check: () => true },
         { group: 'Спільнота', label: 'Мій прогрес', name: 'progression.index', check: () => true },
         { group: 'Спільнота', label: 'Рейтинг родини', name: 'progression.leaderboard', check: () => true },

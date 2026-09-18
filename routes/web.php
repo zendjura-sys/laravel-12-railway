@@ -1,12 +1,14 @@
 <?php
 
 use App\Http\Controllers\Admin\AddonController;
+use App\Http\Controllers\Admin\ChangelogController as AdminChangelogController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\DeployController;
 use App\Http\Controllers\Admin\DesignController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\ChangelogController;
 use App\Http\Controllers\GuideController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\TwoFactorAuthenticationController;
@@ -93,6 +95,7 @@ Route::middleware('auth')->group(function () {
     // тоді в людини найбільше питань «що тут де», а лист підтвердження
     // може прийти не миттєво.
     Route::get('/guide', [GuideController::class, 'index'])->name('guide');
+    Route::get('/changelog', [ChangelogController::class, 'index'])->name('changelog');
 });
 
 require __DIR__.'/auth.php';
@@ -141,6 +144,16 @@ Route::middleware(['auth', 'verified', 'permission:settings.manage'])
         Route::delete('/gallery/{galleryPhoto}', [DesignController::class, 'destroyGalleryPhoto'])->name('gallery.destroy');
         Route::post('/avatars/{user}/approve', [DesignController::class, 'approveAvatar'])->name('avatars.approve');
         Route::delete('/avatars/{user}', [DesignController::class, 'rejectAvatar'])->name('avatars.reject');
+    });
+
+Route::middleware(['auth', 'verified', 'permission:settings.manage'])
+    ->prefix('admin/changelog')
+    ->name('admin.changelog.')
+    ->group(function () {
+        Route::get('/', [AdminChangelogController::class, 'index'])->name('index');
+        Route::post('/', [AdminChangelogController::class, 'store'])->name('store');
+        Route::put('/{changelogEntry}', [AdminChangelogController::class, 'update'])->name('update');
+        Route::delete('/{changelogEntry}', [AdminChangelogController::class, 'destroy'])->name('destroy');
     });
 
 Route::middleware(['auth', 'verified', 'permission:settings.manage'])

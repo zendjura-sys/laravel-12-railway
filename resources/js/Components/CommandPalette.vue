@@ -20,6 +20,7 @@ const items = computed(() => {
         { group: 'Спільнота', label: 'Мої звіти', name: 'reports.index', check: () => true },
         { group: 'Спільнота', label: 'Мій прогрес', name: 'progression.index', check: () => true },
         { group: 'Спільнота', label: 'Рейтинг родини', name: 'progression.leaderboard', check: () => true },
+        { group: 'Спільнота', label: 'Зал слави', name: 'progression.hall-of-fame', check: () => true },
         { group: 'Спільнота', label: 'Події родини', name: 'family-events.index', check: () => true },
         { group: 'CMS', label: 'Панель CMS', name: 'admin.dashboard', check: () => true },
         { group: 'CMS', label: 'Аддони', name: 'admin.addons.index', check: () => can.manageAddons },

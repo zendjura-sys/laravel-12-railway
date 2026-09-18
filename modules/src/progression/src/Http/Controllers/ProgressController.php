@@ -123,6 +123,63 @@ class ProgressController
         ]);
     }
 
+    /**
+     * Зал слави — на відміну від /leaderboard (поточний стан, для всіх
+     * тим самим числом), тут винятково РЕКОРДИ: найдовша серія за весь
+     * час (longest_streak — окреме поле від "поточної" current_streak, не
+     * скидається, коли серію перервано) і найдавніші учасники родини.
+     * Список для внутрішнього кола (auth), не для гостей — родина не
+     * афішує імена й статистику учасників публічно всьому інтернету.
+     */
+    public function hallOfFame(): Response
+    {
+        $records = [
+            'xp' => ProgressionProfile::with('user:id,name,first_name,last_name,position_key')
+                ->orderByDesc('xp')
+                ->limit(3)
+                ->get()
+                ->map(fn (ProgressionProfile $p) => ['name' => $p->user?->name ?? '—', 'position' => $p->user?->position_title, 'value' => $p->xp])
+                ->values(),
+            'streak' => ProgressionProfile::with('user:id,name,first_name,last_name,position_key')
+                ->where('longest_streak', '>', 0)
+                ->orderByDesc('longest_streak')
+                ->limit(3)
+                ->get()
+                ->map(fn (ProgressionProfile $p) => ['name' => $p->user?->name ?? '—', 'position' => $p->user?->position_title, 'value' => $p->longest_streak])
+                ->values(),
+            'bizwar' => ProgressionProfile::with('user:id,name,first_name,last_name,position_key')
+                ->where('kapt_wins', '>', 0)
+                ->orderByDesc('kapt_wins')
+                ->limit(3)
+                ->get()
+                ->map(fn (ProgressionProfile $p) => ['name' => $p->user?->name ?? '—', 'position' => $p->user?->position_title, 'value' => $p->kapt_wins])
+                ->values(),
+            'veterans' => \App\Models\User::query()
+                ->where('is_shadow', false)
+                ->whereNotNull('email_verified_at')
+                ->orderBy('created_at')
+                ->limit(3)
+                ->get()
+                ->map(fn ($u) => ['name' => $u->name, 'position' => $u->position_title, 'value' => (int) floor($u->created_at?->diffInDays(now()) ?? 0)])
+                ->values(),
+        ];
+
+        if (class_exists(BonusPayout::class)) {
+            $records['bonuses'] = BonusPayout::query()
+                ->select('user_id')
+                ->selectRaw('SUM(total_amount) as total')
+                ->groupBy('user_id')
+                ->orderByDesc('total')
+                ->limit(3)
+                ->with('user:id,name,first_name,last_name,position_key')
+                ->get()
+                ->map(fn ($row) => ['name' => $row->user?->name ?? '—', 'position' => $row->user?->position_title, 'value' => (int) $row->total])
+                ->values();
+        }
+
+        return Inertia::render('Progression/HallOfFame', ['records' => $records]);
+    }
+
     /** @return array<int,array<string,mixed>> */
     private function profileLeaderboard(string $category): array
     {

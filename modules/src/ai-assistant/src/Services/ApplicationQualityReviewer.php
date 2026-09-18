@@ -11,13 +11,13 @@ use Addons\TelegramBot\Models\TelegramApplication;
  */
 class ApplicationQualityReviewer
 {
-    public function __construct(private readonly GeminiClient $gemini)
+    public function __construct(private readonly MistralClient $mistral)
     {
     }
 
     public function review(TelegramApplication $application): ?string
     {
-        if (! $this->gemini->isConfigured()) {
+        if (! $this->mistral->isConfigured()) {
             return null;
         }
 
@@ -37,6 +37,6 @@ class ApplicationQualityReviewer
             Відповідай лише цим реченням, без лапок і пояснень.
             PROMPT;
 
-        return $this->gemini->generateText($prompt);
+        return $this->mistral->generateText($prompt);
     }
 }

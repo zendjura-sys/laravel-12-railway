@@ -5,13 +5,13 @@ namespace Addons\AiAssistant\Services;
 /** Стилістичне причепурення чернетки розсилки — сенс і факти не змінює. */
 class BroadcastTextAssistant
 {
-    public function __construct(private readonly GeminiClient $gemini)
+    public function __construct(private readonly MistralClient $mistral)
     {
     }
 
     public function polish(string $text): ?string
     {
-        if (! $this->gemini->isConfigured() || trim($text) === '') {
+        if (! $this->mistral->isConfigured() || trim($text) === '') {
             return null;
         }
 
@@ -24,6 +24,6 @@ class BroadcastTextAssistant
             Виведи ЛИШЕ відредагований текст, без лапок і пояснень.
             PROMPT;
 
-        return $this->gemini->generateText($prompt);
+        return $this->mistral->generateText($prompt);
     }
 }

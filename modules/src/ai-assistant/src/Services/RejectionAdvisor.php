@@ -13,14 +13,14 @@ use Addons\Reports\Models\Report;
  */
 class RejectionAdvisor
 {
-    public function __construct(private readonly GeminiClient $gemini)
+    public function __construct(private readonly MistralClient $mistral)
     {
     }
 
     /** @return string|null null — якщо AI недоступний або не зміг згенерувати текст */
     public function draft(Report $report, ?string $adminHint = null): ?string
     {
-        if (! $this->gemini->isConfigured()) {
+        if (! $this->mistral->isConfigured()) {
             return null;
         }
 
@@ -47,6 +47,6 @@ class RejectionAdvisor
             Напиши українською, простими словами, без канцеляриту, 2-4 речення: що саме людині зробити, щоб наступний звіт прийняли (наприклад: "подайте звіт, вказавши дату зі скріншотів", "додайте по одному фото на кожну виконану роботу" тощо — залежно від контексту вище). Тон доброзичливий, без образ, по суті. БЕЗ привітань типу "Привіт" і БЕЗ підпису в кінці — тільки сама порада.
             PROMPT;
 
-        return $this->gemini->generateText($prompt);
+        return $this->mistral->generateText($prompt);
     }
 }

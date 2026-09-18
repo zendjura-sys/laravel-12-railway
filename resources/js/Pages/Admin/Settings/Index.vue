@@ -44,12 +44,12 @@ const TABS = {
     ai: {
         label: 'AI',
         fields: [
-            { key: 'gemini_api_key', label: 'Gemini API Key', secret: true },
+            { key: 'mistral_api_key', label: 'Mistral API Key', secret: true },
             {
-                key: 'gemini_proxy_url',
-                label: 'HTTP proxy для Gemini (необов\'язково)',
+                key: 'mistral_proxy_url',
+                label: 'HTTP proxy для Mistral (необов\'язково)',
                 secret: true,
-                hint: 'Заповнюйте лише якщо "Перевірити підключення" видає помилку — деякі хостинги заблоковані Google на мережевому рівні, і напряму достукатись до Gemini неможливо. Формат: http://user:pass@host:port',
+                hint: 'Заповнюйте лише якщо "Перевірити підключення" видає помилку — деякі хостинги можуть бути заблоковані на мережевому рівні. Формат: http://user:pass@host:port',
             },
             { key: 'ai_reports_analysis_enabled', label: 'Аналіз фото-доказів звіту (дата на скріні, кількість)', type: 'checkbox' },
             { key: 'ai_rejection_advice_enabled', label: 'Кнопка "Згенерувати рекомендацію" при відхиленні звіту', type: 'checkbox' },
@@ -80,7 +80,7 @@ function submit(group) {
     forms[group].put(route('admin.settings.update', group), { preserveScroll: true });
 }
 
-/* ---------- перевірка підключення Gemini ---------- */
+/* ---------- перевірка підключення Mistral ---------- */
 const aiTesting = ref(false);
 const aiTestResult = ref(null);
 
@@ -91,8 +91,8 @@ async function testAi() {
         // Шлемо те, що зараз у полі, навіть якщо ще не натиснули "Зберегти" —
         // інакше довелось би спершу зберегти, а вже потім тестувати.
         const { data } = await window.axios.post(route('admin.ai.test'), {
-            api_key: forms.ai.gemini_api_key,
-            proxy_url: forms.ai.gemini_proxy_url,
+            api_key: forms.ai.mistral_api_key,
+            proxy_url: forms.ai.mistral_proxy_url,
         });
         aiTestResult.value = { ok: data.ok, message: data.message };
     } catch (e) {

@@ -2,7 +2,7 @@
 
 namespace Addons\AiAssistant\Http\Controllers\Admin;
 
-use Addons\AiAssistant\Services\GeminiClient;
+use Addons\AiAssistant\Services\MistralClient;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -22,13 +22,13 @@ class AiAdminController
         $typedKey = trim((string) $request->input('api_key', ''));
         $typedProxy = trim((string) $request->input('proxy_url', ''));
         $client = ($typedKey !== '' || $typedProxy !== '')
-            ? new GeminiClient($typedKey ?: null, $typedProxy ?: null)
-            : app(GeminiClient::class);
+            ? new MistralClient($typedKey ?: null, $typedProxy ?: null)
+            : app(MistralClient::class);
 
         if (! $client->isConfigured()) {
             return response()->json([
                 'ok' => false,
-                'message' => 'Спершу вкажіть Gemini API Key.',
+                'message' => 'Спершу вкажіть Mistral API Key.',
                 'data' => null,
                 'errors' => null,
                 'redirect' => null,
@@ -41,7 +41,7 @@ class AiAdminController
             'ok' => $reply !== null,
             'message' => $reply !== null
                 ? 'Підключення працює.'
-                : 'Не вдалося отримати відповідь від Gemini — перевірте ключ і логи сервера.',
+                : 'Не вдалося отримати відповідь від Mistral — перевірте ключ і логи сервера.',
             'data' => null,
             'errors' => null,
             'redirect' => null,

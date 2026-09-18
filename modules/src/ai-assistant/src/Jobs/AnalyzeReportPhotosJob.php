@@ -11,7 +11,7 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 
 /**
- * У черзі, а не синхронно в ReportController::store() — виклик Gemini з
+ * У черзі, а не синхронно в ReportController::store() — виклик Mistral з
  * фото займає кілька секунд, і подача звіту не повинна чекати на це.
  */
 class AnalyzeReportPhotosJob implements ShouldQueue

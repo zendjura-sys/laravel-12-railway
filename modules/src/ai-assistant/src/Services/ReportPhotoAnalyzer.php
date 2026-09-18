@@ -14,13 +14,13 @@ use Illuminate\Support\Facades\Storage;
  */
 class ReportPhotoAnalyzer
 {
-    public function __construct(private readonly GeminiClient $gemini)
+    public function __construct(private readonly MistralClient $mistral)
     {
     }
 
     public function analyze(Report $report): void
     {
-        if (! $this->gemini->isConfigured()) {
+        if (! $this->mistral->isConfigured()) {
             return;
         }
 
@@ -47,7 +47,7 @@ class ReportPhotoAnalyzer
             return;
         }
 
-        $result = $this->gemini->generateJson($this->buildPrompt($report, $attachments->count()), $imageParts);
+        $result = $this->mistral->generateJson($this->buildPrompt($report, $attachments->count()), $imageParts);
         if ($result === null) {
             return;
         }

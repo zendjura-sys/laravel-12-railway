@@ -68,17 +68,13 @@ function pushToast(ok, message) {
     }, 5000);
 }
 
-/* ---------- завантаження архіву ---------- */
-const uploading = ref({}); // { [type]: progress 0..100 | null }
+/* ---------- завантаження архіву(ів) ---------- */
+const uploading = ref({}); // { [type]: progress 0..100 | null } — поточний файл пачки
+const batchProgress = ref({}); // { [type]: { current, total } | null }
 const dragOver = ref(null);
 
+/** @return {Promise<boolean>} успіх саме цього файлу — для підрахунку в пачці */
 async function uploadFile(type, file) {
-    if (!file) return;
-    if (!file.name.toLowerCase().endsWith('.zip')) {
-        pushToast(false, 'Очікується ZIP-архів');
-        return;
-    }
-
     const form = new FormData();
     form.append('package', file);
     uploading.value = { ...uploading.value, [type]: 0 };
@@ -92,11 +88,12 @@ async function uploadFile(type, file) {
                 }
             },
         });
-        pushToast(data.ok, data.message);
-        if (data.ok) reloadSilently();
+        pushToast(data.ok, `${file.name}: ${data.message}`);
+        return data.ok;
     } catch (e) {
         const message = e.response?.data?.message || 'Помилка завантаження пакета';
-        pushToast(false, message);
+        pushToast(false, `${file.name}: ${message}`);
+        return false;
     } finally {
         const next = { ...uploading.value };
         delete next[type];
@@ -104,13 +101,36 @@ async function uploadFile(type, file) {
     }
 }
 
+/**
+ * Кілька файлів — одна пачка: по черзі (не паралельно, щоб не бити чергою
+ * запитів в один момент і бачити прогрес по кожному), сторінка
+ * перезавантажується ОДИН раз наприкінці — не після кожного файлу, інакше
+ * reload обірвав би завантаження решти пачки.
+ */
+async function uploadFiles(type, fileList) {
+    const files = Array.from(fileList).filter((f) => f.name.toLowerCase().endsWith('.zip'));
+    if (files.length === 0) {
+        pushToast(false, 'Очікується ZIP-архів (.zip)');
+        return;
+    }
+
+    let successCount = 0;
+    for (let i = 0; i < files.length; i++) {
+        batchProgress.value = { ...batchProgress.value, [type]: { current: i + 1, total: files.length } };
+        if (await uploadFile(type, files[i])) successCount++;
+    }
+    batchProgress.value = { ...batchProgress.value, [type]: null };
+
+    if (successCount > 0) reloadSilently();
+}
+
 function onDrop(type, e) {
     dragOver.value = null;
-    uploadFile(type, e.dataTransfer.files[0]);
+    uploadFiles(type, e.dataTransfer.files);
 }
 
 function onPick(type, e) {
-    uploadFile(type, e.target.files[0]);
+    uploadFiles(type, e.target.files);
     e.target.value = '';
 }
 
@@ -235,7 +255,12 @@ function showInfo(addon) {
                     @drop.prevent="onDrop(activeTab, $event)"
                 >
                     <div v-if="uploading[activeTab] !== undefined" class="mx-auto max-w-sm">
-                        <p class="mb-3 text-sm text-white/60">Завантаження пакета…</p>
+                        <p class="mb-3 text-sm text-white/60">
+                            <template v-if="batchProgress[activeTab] && batchProgress[activeTab].total > 1">
+                                Завантаження {{ batchProgress[activeTab].current }} з {{ batchProgress[activeTab].total }}…
+                            </template>
+                            <template v-else>Завантаження пакета…</template>
+                        </p>
                         <div class="h-2 overflow-hidden rounded-full bg-white/10">
                             <div
                                 class="h-full rounded-full bg-gradient-to-r from-gold-500 via-gold-300 to-gold-500 transition-all duration-200"
@@ -251,13 +276,14 @@ function showInfo(addon) {
                         <p class="mt-2 text-sm text-white/40">
                             {{ TYPE_META[activeTab].desc }} · формат назви: <code class="text-gold-300/80">{{ TYPE_META[activeTab].hint }}</code>
                         </p>
+                        <p class="mt-1 text-xs text-white/30">Можна вибрати або перетягнути одразу кілька ZIP-архівів</p>
                         <label
                             class="mt-6 inline-block cursor-pointer rounded-full bg-gradient-to-r from-gold-500 via-gold-300 to-gold-500 px-8 py-3 text-sm font-semibold uppercase tracking-widest text-obsidian-950 shadow-gold transition-transform hover:scale-[1.03]"
                         >
                             Вибрати ZIP
-                            <input type="file" accept=".zip" class="hidden" @change="onPick(activeTab, $event)" />
+                            <input type="file" accept=".zip" multiple class="hidden" @change="onPick(activeTab, $event)" />
                         </label>
-                        <p class="mt-3 text-xs text-white/30">або перетягніть файл сюди</p>
+                        <p class="mt-3 text-xs text-white/30">або перетягніть один чи кілька файлів сюди</p>
                     </template>
                 </div>
 

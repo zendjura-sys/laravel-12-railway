@@ -186,7 +186,7 @@ final class AddonInstaller
             // маршруты и список активных аддонов в кэше уже неверны.
             if ($existing) {
                 Cache::forget('addons.active');
-                $this->clearRouteCache();
+                $this->resetRuntimeState();
             }
 
             // Контроллеру нужно знать, обновление это было или первая
@@ -232,7 +232,7 @@ final class AddonInstaller
         });
 
         Cache::forget('addons.active');
-        $this->clearRouteCache();
+        $this->resetRuntimeState();
     }
 
     public function deactivate(Addon $addon, ?User $actor): void
@@ -247,7 +247,7 @@ final class AddonInstaller
         ]);
 
         Cache::forget('addons.active');
-        $this->clearRouteCache();
+        $this->resetRuntimeState();
     }
 
     public function uninstall(Addon $addon, ?User $actor): void
@@ -269,7 +269,7 @@ final class AddonInstaller
 
         $addon->delete();
         Cache::forget('addons.active');
-        $this->clearRouteCache();
+        $this->resetRuntimeState();
     }
 
     /**
@@ -282,13 +282,32 @@ final class AddonInstaller
      * аддон после этого через админку бесполезно, его роуты физически не
      * появятся, пока кэш не почистят вручную (см. также setup-vps.sh,
      * где route:cache намеренно заменён на route:clear).
+     *
+     * queue:restart — тим же приводом: воркер (laravel-worker.service) —
+     * довгоживучий процес, PSR-4 мапінг щойно встановленого/оновленого
+     * аддона він у пам'яті не бачить. Без цього чергове завдання цього
+     * аддона (наприклад, AnalyzeReportPhotosJob) валиться з "The script
+     * tried to access a property on an incomplete object" при спробі
+     * unserialize() — клас просто ще не завантажений у процесі воркера.
+     * queue:restart лише виставляє сигнал: живий воркер доробляє поточне
+     * завдання й виходить, systemd (Restart=always) підіймає новий процес
+     * заново — це не миттєво, але без ручного systemctl restart тут не
+     * обійтись, а знати про нього мали б лише розробники деплою, а не
+     * кожен, хто оновлює модуль через адмінку.
      */
-    private function clearRouteCache(): void
+    private function resetRuntimeState(): void
     {
         try {
             Artisan::call('route:clear');
         } catch (Throwable) {
             // Не критично: тем более что кэша в норме и не должно быть вовсе.
+        }
+
+        try {
+            Artisan::call('queue:restart');
+        } catch (Throwable) {
+            // Не критично сама команда — она лишь пишет сигнальный таймстамп
+            // в кэш, воркер подхватит его на следующей итерации сам.
         }
     }
 

@@ -3,9 +3,11 @@
 namespace Addons\MemberCenter\Http\Controllers\Admin;
 
 use Addons\MemberCenter\Events\LeaveRequestReviewed;
+use Addons\MemberCenter\Events\MemberWarningIssued;
 use Addons\MemberCenter\Models\LeaveRequest;
 use Addons\MemberCenter\Models\MemberNote;
 use Addons\MemberCenter\Models\MemberProfile;
+use Addons\MemberCenter\Models\MemberWarning;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -34,6 +36,10 @@ class MemberController
                 MemberNote::query()->selectRaw('count(*)')->whereColumn('user_id', 'users.id'),
                 'notes_count',
             )
+            ->selectSub(
+                MemberWarning::query()->selectRaw('count(*)')->whereColumn('user_id', 'users.id'),
+                'warnings_count',
+            )
             ->when($search, fn ($q) => $q->where(fn ($q2) => $q2
                 ->where('name', 'like', "%{$search}%")
                 ->orWhere('email', 'like', "%{$search}%")))
@@ -46,6 +52,7 @@ class MemberController
                 'email' => $user->email,
                 'hr_status' => $user->hr_status ?? 'active',
                 'notes_count' => (int) $user->notes_count,
+                'warnings_count' => (int) $user->warnings_count,
             ]);
 
         $pendingLeaveRequests = LeaveRequest::query()
@@ -59,6 +66,8 @@ class MemberController
             'search' => $search,
             'pendingLeaveRequests' => $pendingLeaveRequests,
             'statuses' => MemberProfile::STATUSES,
+            'warningSeverities' => MemberWarning::SEVERITIES,
+            'warningSeverityLabels' => MemberWarning::SEVERITY_LABELS,
         ]);
     }
 
@@ -112,6 +121,52 @@ class MemberController
             'ok' => true,
             'message' => 'Нотатку додано.',
             'data' => ['note' => $note->load('author:id,name')],
+            'errors' => null,
+            'redirect' => null,
+        ]);
+    }
+
+    public function warnings(User $user): JsonResponse
+    {
+        $warnings = MemberWarning::query()
+            ->with('author:id,name')
+            ->where('user_id', $user->id)
+            ->latest()
+            ->get();
+
+        return response()->json([
+            'ok' => true,
+            'message' => null,
+            'data' => ['warnings' => $warnings],
+            'errors' => null,
+            'redirect' => null,
+        ]);
+    }
+
+    /**
+     * На відміну від storeNote (приватно, ніхто не дізнається) — тут
+     * дисциплінарна дія: учасника одразу сповіщають (web + Telegram, якщо
+     * встановлено Notifications) через MemberWarningIssued.
+     */
+    public function storeWarning(Request $request, User $user): JsonResponse
+    {
+        $data = $request->validate([
+            'severity' => ['required', Rule::in(MemberWarning::SEVERITIES)],
+            'reason' => ['required', 'string', 'max:2000'],
+        ]);
+
+        $warning = MemberWarning::create([
+            ...$data,
+            'user_id' => $user->id,
+            'author_id' => $request->user()->id,
+        ]);
+
+        Event::dispatch(new MemberWarningIssued($warning));
+
+        return response()->json([
+            'ok' => true,
+            'message' => 'Попередження видано.',
+            'data' => ['warning' => $warning->load('author:id,name')],
             'errors' => null,
             'redirect' => null,
         ]);

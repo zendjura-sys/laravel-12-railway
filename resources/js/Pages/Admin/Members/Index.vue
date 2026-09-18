@@ -8,6 +8,8 @@ const props = defineProps({
     pendingLeaveRequests: { type: Array, default: () => [] },
     statuses: { type: Array, required: true },
     search: { type: String, default: '' },
+    warningSeverities: { type: Array, default: () => [] },
+    warningSeverityLabels: { type: Object, default: () => ({}) },
 });
 
 const statusLabels = {
@@ -80,6 +82,52 @@ async function addNote(member) {
         pushToast(false, e.response?.data?.message || 'Помилка');
     } finally {
         notesBusy.value = false;
+    }
+}
+
+/* ---------- дисциплінарні попередження ---------- */
+const openWarningsFor = ref(null);
+const warningsByUser = ref({});
+const newWarningReason = ref('');
+const newWarningSeverity = ref('notice');
+const warningsBusy = ref(false);
+
+const severityColors = {
+    notice: 'text-amber-300 bg-amber-400/10 border-amber-400/30',
+    warning: 'text-orange-300 bg-orange-400/10 border-orange-400/30',
+    severe: 'text-ember-500 bg-ember-600/10 border-ember-500/30',
+};
+
+async function toggleWarnings(member) {
+    if (openWarningsFor.value === member.id) {
+        openWarningsFor.value = null;
+        return;
+    }
+    openWarningsFor.value = member.id;
+    newWarningReason.value = '';
+    newWarningSeverity.value = 'notice';
+    if (!warningsByUser.value[member.id]) {
+        const { data } = await window.axios.get(route('admin.members.warnings.index', member.id));
+        warningsByUser.value = { ...warningsByUser.value, [member.id]: data.data.warnings };
+    }
+}
+
+async function addWarning(member) {
+    if (!newWarningReason.value.trim()) return;
+    warningsBusy.value = true;
+    try {
+        const { data } = await window.axios.post(route('admin.members.warnings.store', member.id), {
+            severity: newWarningSeverity.value,
+            reason: newWarningReason.value,
+        });
+        warningsByUser.value = { ...warningsByUser.value, [member.id]: [data.data.warning, ...(warningsByUser.value[member.id] || [])] };
+        newWarningReason.value = '';
+        member.warnings_count += 1;
+        pushToast(true, 'Попередження видано, учасника сповіщено.');
+    } catch (e) {
+        pushToast(false, e.response?.data?.message || 'Помилка');
+    } finally {
+        warningsBusy.value = false;
     }
 }
 
@@ -183,6 +231,13 @@ function fmtDateTime(iso) {
                             >
                                 Нотатки ({{ member.notes_count }})
                             </button>
+                            <button
+                                class="rounded-full border px-3 py-1.5 text-xs transition-colors"
+                                :class="member.warnings_count > 0 ? 'border-orange-400/30 text-orange-300 hover:border-orange-400/50' : 'border-white/15 text-white/60 hover:border-white/30'"
+                                @click="toggleWarnings(member)"
+                            >
+                                ⚠ Попередження ({{ member.warnings_count }})
+                            </button>
                             <select
                                 class="rounded-full border border-white/10 bg-obsidian-900 px-3 py-1.5 text-xs text-white focus:border-gold-400/50 focus:outline-none"
                                 :value="member.hr_status"
@@ -216,6 +271,42 @@ function fmtDateTime(iso) {
                                 <p class="mt-1 text-[11px] text-white/30">{{ note.author?.name }} · {{ fmtDateTime(note.created_at) }}</p>
                             </div>
                             <p v-if="(notesByUser[member.id] || []).length === 0" class="text-sm text-white/30">Нотаток ще немає</p>
+                        </div>
+                    </div>
+
+                    <div v-if="openWarningsFor === member.id" class="mt-4 rounded-xl border border-orange-400/15 bg-obsidian-900/60 p-4">
+                        <p class="mb-3 text-xs text-white/40">Учасника одразу сповістять про це (сайт + Telegram) — це не приватна нотатка.</p>
+                        <div class="mb-3 flex flex-wrap gap-2">
+                            <select
+                                v-model="newWarningSeverity"
+                                class="rounded-lg border border-white/10 bg-obsidian-950 px-3 py-2 text-sm text-white focus:border-gold-400/50 focus:outline-none"
+                            >
+                                <option v-for="s in warningSeverities" :key="s" :value="s">{{ warningSeverityLabels[s] }}</option>
+                            </select>
+                            <input
+                                v-model="newWarningReason"
+                                type="text"
+                                placeholder="Причина попередження…"
+                                class="min-w-[200px] flex-1 rounded-lg border border-white/10 bg-obsidian-950 px-3 py-2 text-sm text-white placeholder:text-white/30"
+                                @keyup.enter="addWarning(member)"
+                            />
+                            <button
+                                :disabled="warningsBusy"
+                                class="shrink-0 rounded-lg border border-orange-400/40 px-4 py-2 text-xs font-medium text-orange-200 hover:border-orange-300 disabled:opacity-40"
+                                @click="addWarning(member)"
+                            >
+                                Видати
+                            </button>
+                        </div>
+                        <div class="space-y-2">
+                            <div v-for="w in warningsByUser[member.id] || []" :key="w.id" class="rounded-lg bg-white/[0.03] px-3 py-2 text-sm">
+                                <span class="rounded-full border px-2 py-0.5 text-[11px] font-medium" :class="severityColors[w.severity]">
+                                    {{ warningSeverityLabels[w.severity] }}
+                                </span>
+                                <p class="mt-1.5 text-white/70">{{ w.reason }}</p>
+                                <p class="mt-1 text-[11px] text-white/30">{{ w.author?.name }} · {{ fmtDateTime(w.created_at) }}</p>
+                            </div>
+                            <p v-if="(warningsByUser[member.id] || []).length === 0" class="text-sm text-white/30">Попереджень ще немає</p>
                         </div>
                     </div>
                 </div>

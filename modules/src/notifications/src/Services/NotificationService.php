@@ -26,6 +26,7 @@ class NotificationService
         'leave_request_reviewed' => '🏖',
         'achievement_unlocked' => '🏆',
         'investment_tier_unlocked' => '💎',
+        'member_warning_issued' => '⚠️',
     ];
 
     /**

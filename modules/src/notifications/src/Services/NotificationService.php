@@ -5,6 +5,7 @@ namespace Addons\Notifications\Services;
 use Addons\Notifications\Models\Notification;
 use Addons\TelegramBot\Models\TelegramLink;
 use Addons\TelegramBot\Services\TelegramClient;
+use Addons\TelegramBot\Support\MessageFormat;
 use App\Models\User;
 
 /**
@@ -18,6 +19,15 @@ use App\Models\User;
  */
 class NotificationService
 {
+    /** Емодзі заголовка в Telegram за типом сповіщення — суто візуальне, ні на що інше не впливає. */
+    private const TYPE_EMOJI = [
+        'report_reviewed' => '📋',
+        'report_created' => '📥',
+        'leave_request_reviewed' => '🏖',
+        'achievement_unlocked' => '🏆',
+        'investment_tier_unlocked' => '💎',
+    ];
+
     /**
      * @param  array{text:string,url:string}|null  $telegramButton  Кнопка-посилання
      *         під повідомленням у Telegram (напр. "Список заявок" на
@@ -28,13 +38,13 @@ class NotificationService
     {
         $notification = Notification::notify($user->id, $type, $title, $body);
 
-        $this->deliverToTelegram($user, $title, $body, $telegramButton);
+        $this->deliverToTelegram($user, $type, $title, $body, $telegramButton);
 
         return $notification;
     }
 
     /** @param array{text:string,url:string}|null $telegramButton */
-    private function deliverToTelegram(User $user, string $title, ?string $body, ?array $telegramButton): void
+    private function deliverToTelegram(User $user, string $type, string $title, ?string $body, ?array $telegramButton): void
     {
         if (! class_exists(TelegramLink::class) || ! class_exists(TelegramClient::class)) {
             return;
@@ -50,7 +60,8 @@ class NotificationService
             return;
         }
 
-        $text = '<b>'.e($title).'</b>'.($body ? "\n\n".e($body) : '');
+        $emoji = self::TYPE_EMOJI[$type] ?? '🔔';
+        $text = MessageFormat::card($emoji, $title, $body ? e($body) : null);
         $keyboard = $telegramButton ? ['inline_keyboard' => [[$telegramButton]]] : null;
         $client->sendMessage((string) $link->chat_id, $text, $keyboard);
     }

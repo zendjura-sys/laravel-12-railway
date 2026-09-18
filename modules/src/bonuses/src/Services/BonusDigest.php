@@ -6,6 +6,7 @@ use Addons\Bonuses\Models\BonusPayout;
 use Addons\Bonuses\Models\BonusSettings;
 use Addons\TelegramBot\Services\FamilyGroup;
 use Addons\TelegramBot\Services\TelegramClient;
+use Addons\TelegramBot\Support\MessageFormat;
 use Illuminate\Support\Carbon;
 
 /**
@@ -42,8 +43,6 @@ class BonusDigest
 
         $lines = $payouts->map(fn (BonusPayout $p) => e($p->user->name).' — <b>'.number_format($p->total_amount, 0, ',', ' ').'₴</b>');
 
-        $text = '<b>💰 Премії за тиждень</b>'."\n\n".$lines->implode("\n");
-
-        $client->sendMessage($familyGroup->id(), $text);
+        $client->sendMessage($familyGroup->id(), MessageFormat::card('💰', 'Премії за тиждень', $lines->implode("\n")));
     }
 }

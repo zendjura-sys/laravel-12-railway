@@ -6,6 +6,7 @@ use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class FamilyEvent extends Model
 {
@@ -25,6 +26,20 @@ class FamilyEvent extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function rsvps(): HasMany
+    {
+        return $this->hasMany(FamilyEventRsvp::class);
+    }
+
+    public function rsvpStatusFor(?User $user): ?string
+    {
+        if (! $user) {
+            return null;
+        }
+
+        return $this->rsvps->firstWhere('user_id', $user->id)?->status;
     }
 
     public function isPast(): bool

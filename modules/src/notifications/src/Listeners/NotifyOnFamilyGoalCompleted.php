@@ -4,6 +4,7 @@ namespace Addons\Notifications\Listeners;
 
 use Addons\TelegramBot\Services\FamilyGroup;
 use Addons\TelegramBot\Services\TelegramClient;
+use Addons\TelegramBot\Support\MessageFormat;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 
@@ -18,7 +19,7 @@ class NotifyOnFamilyGoalCompleted
     public function handle($event): void
     {
         $goal = $event->goal;
-        $title = 'Ціль родини досягнута! 🎉';
+        $title = 'Ціль родини досягнута!';
         $body = "«{$goal->title}» — {$goal->current_value}".($goal->unit ? " {$goal->unit}" : '');
 
         $now = now();
@@ -38,7 +39,7 @@ class NotifyOnFamilyGoalCompleted
             $client = new TelegramClient();
             $familyGroup = new FamilyGroup($client);
             if ($familyGroup->isConfigured()) {
-                $client->sendMessage($familyGroup->id(), '<b>'.e($title).'</b>'."\n\n".e($body));
+                $client->sendMessage($familyGroup->id(), MessageFormat::card('🎯', $title, e($body)));
             }
         }
     }

@@ -4,6 +4,7 @@ namespace Addons\Notifications\Listeners;
 
 use Addons\TelegramBot\Services\FamilyGroup;
 use Addons\TelegramBot\Services\TelegramClient;
+use Addons\TelegramBot\Support\MessageFormat;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 
@@ -40,11 +41,11 @@ class NotifyOnFamilyEventCreated
             $client = new TelegramClient();
             $familyGroup = new FamilyGroup($client);
             if ($familyGroup->isConfigured()) {
-                $text = '<b>🗓 '.e($title).'</b>'."\n\n".e($body);
+                $lines = e($body);
                 if ($familyEvent->description) {
-                    $text .= "\n\n".e($familyEvent->description);
+                    $lines .= "\n".e($familyEvent->description);
                 }
-                $client->sendMessage($familyGroup->id(), $text);
+                $client->sendMessage($familyGroup->id(), MessageFormat::card('🗓', $title, $lines));
             }
         }
     }

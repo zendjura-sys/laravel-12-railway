@@ -99,18 +99,41 @@ function kyivNowAsStoredEpoch() {
 function isPast(iso) {
     return new Date(iso).getTime() < kyivNowAsStoredEpoch();
 }
+
+/* ---------- RSVP: список підтверджень по кожній події ---------- */
+const openRsvp = ref(null);
+function toggleRsvp(event) {
+    openRsvp.value = openRsvp.value === event.id ? null : event.id;
+}
+
+const sendingDigest = ref(false);
+function sendDigest() {
+    sendingDigest.value = true;
+    router.post(route('admin.family-events.send-digest'), {}, {
+        preserveScroll: true,
+        onFinish: () => { sendingDigest.value = false; },
+    });
+}
 </script>
 
 <template>
     <Head title="Події родини — Monsory Connect" />
 
     <AdminLayout title="Події родини">
-        <div class="mb-6">
+        <div class="mb-6 flex flex-wrap gap-3">
             <button
                 class="rounded-full bg-gradient-to-r from-gold-500 via-gold-300 to-gold-500 px-6 py-3 text-sm font-semibold uppercase tracking-widest text-obsidian-950 shadow-gold transition-transform hover:scale-[1.03]"
                 @click="toggleForm"
             >
                 {{ showForm ? 'Скасувати' : 'Нова подія' }}
+            </button>
+            <button
+                :disabled="sendingDigest || events.length === 0"
+                class="rounded-full border border-white/15 px-6 py-3 text-sm font-medium uppercase tracking-widest text-white/60 transition-colors hover:border-gold-400/30 hover:text-gold-200 disabled:opacity-40"
+                @click="sendDigest"
+                title="Надіслати всім список усіх майбутніх подій одним повідомленням"
+            >
+                {{ sendingDigest ? 'Надсилаю…' : '📢 Надіслати всі події' }}
             </button>
         </div>
 
@@ -193,6 +216,28 @@ function isPast(iso) {
                     </button>
                 </div>
                 <p v-if="event.description" class="mt-2 text-sm leading-relaxed text-white/50">{{ event.description }}</p>
+
+                <div class="mt-3 border-t border-white/5 pt-3">
+                    <button
+                        type="button"
+                        class="text-xs uppercase tracking-widest text-white/40 hover:text-gold-300"
+                        @click="toggleRsvp(event)"
+                    >
+                        ✓ {{ event.going_count }} прийдуть · ✕ {{ event.not_going_count }} не прийдуть
+                        <span class="text-white/20">{{ openRsvp === event.id ? '▲' : '▼' }}</span>
+                    </button>
+                    <div v-if="openRsvp === event.id" class="mt-2 flex flex-wrap gap-1.5">
+                        <span v-if="event.rsvps.length === 0" class="text-xs text-white/25">Ще ніхто не відповів</span>
+                        <span
+                            v-for="r in event.rsvps"
+                            :key="r.id"
+                            class="rounded-full px-2.5 py-0.5 text-[11px]"
+                            :class="r.status === 'going' ? 'bg-emerald-400/10 text-emerald-300' : 'bg-red-400/10 text-red-300'"
+                        >
+                            {{ r.status === 'going' ? '✓' : '✕' }} {{ r.user?.name }}
+                        </span>
+                    </div>
+                </div>
             </div>
 
             <div v-if="events.length === 0" class="rounded-2xl border border-white/5 bg-white/[0.02] p-12 text-center text-white/30">

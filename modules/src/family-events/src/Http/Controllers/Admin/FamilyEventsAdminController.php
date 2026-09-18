@@ -4,6 +4,7 @@ namespace Addons\FamilyEvents\Http\Controllers\Admin;
 
 use Addons\AiAssistant\Services\EventDraftAssistant;
 use Addons\FamilyEvents\Events\FamilyEventCreated;
+use Addons\FamilyEvents\Events\FamilyEventsDigestRequested;
 use Addons\FamilyEvents\Models\FamilyEvent;
 use App\Models\Setting;
 use Illuminate\Http\JsonResponse;
@@ -18,7 +19,11 @@ class FamilyEventsAdminController
     public function index(): Response
     {
         $events = FamilyEvent::query()
-            ->with('creator:id,name')
+            ->with(['creator:id,name', 'rsvps.user:id,name'])
+            ->withCount([
+                'rsvps as going_count' => fn ($q) => $q->where('status', 'going'),
+                'rsvps as not_going_count' => fn ($q) => $q->where('status', 'not_going'),
+            ])
             ->orderByDesc('starts_at')
             ->get();
 
@@ -26,6 +31,18 @@ class FamilyEventsAdminController
             'events' => $events,
             'aiEventDraftEnabled' => class_exists(EventDraftAssistant::class) && Setting::get('ai_event_draft_enabled') === '1',
         ]);
+    }
+
+    /**
+     * Ручна розсилка дайджесту всіх майбутніх подій — окремо від
+     * автоматичних нагадувань по кожній події, на випадок коли адміну
+     * треба разово нагадати всім про весь список.
+     */
+    public function sendDigest(): RedirectResponse
+    {
+        Event::dispatch(new FamilyEventsDigestRequested());
+
+        return back()->with('success', 'Дайджест подій надіслано.');
     }
 
     /**

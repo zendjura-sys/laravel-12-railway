@@ -1,5 +1,6 @@
 <script setup>
 import AdminLayout from '@/Layouts/AdminLayout.vue';
+import Modal from '@/Components/Modal.vue';
 import { Head } from '@inertiajs/vue3';
 import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue';
 
@@ -166,6 +167,12 @@ function fmtDate(iso) {
 const totalInstalled = computed(() =>
     TYPES.reduce((sum, t) => sum + (props.addons[t]?.length || 0), 0),
 );
+
+/* ---------- вікно "Детальніше" про пакет ---------- */
+const infoAddon = ref(null);
+function showInfo(addon) {
+    infoAddon.value = addon;
+}
 </script>
 
 <template>
@@ -278,13 +285,23 @@ const totalInstalled = computed(() =>
                             </span>
                         </div>
 
-                        <p v-if="addon.manifest?.description" class="mt-3 text-sm leading-relaxed text-white/50">
+                        <p v-if="addon.manifest?.summary" class="mt-3 text-sm leading-relaxed text-white/50">
+                            {{ addon.manifest.summary }}
+                        </p>
+                        <p v-else-if="addon.manifest?.description" class="mt-3 line-clamp-2 text-sm leading-relaxed text-white/50">
                             {{ addon.manifest.description }}
                         </p>
 
                         <p class="mt-4 text-[11px] text-white/30">Завантажено {{ fmtDate(addon.created_at) }}</p>
 
                         <div class="mt-5 flex flex-wrap gap-2">
+                            <button
+                                v-if="addon.manifest?.highlights?.length || addon.manifest?.description"
+                                class="rounded-full border border-white/15 px-4 py-1.5 text-xs font-medium text-white/60 transition-colors hover:bg-white/5"
+                                @click="showInfo(addon)"
+                            >
+                                ℹ️ Детальніше
+                            </button>
                             <button
                                 v-if="!addon.status || addon.status === 'inactive' || addon.status === 'failed'"
                                 :disabled="busyAddon === addon.id"
@@ -391,6 +408,45 @@ const totalInstalled = computed(() =>
                 </div>
             </div>
         </div>
+        <!-- ================= ІНФО ПРО ПАКЕТ ================= -->
+        <Modal :show="infoAddon !== null" max-width="lg" @close="infoAddon = null">
+            <div v-if="infoAddon" class="p-6">
+                <div class="flex items-start justify-between gap-3">
+                    <div>
+                        <h3 class="font-display text-xl text-white">{{ infoAddon.name }}</h3>
+                        <p class="mt-0.5 text-xs text-white/40">{{ infoAddon.slug }} · v{{ infoAddon.version }}</p>
+                    </div>
+                    <button class="text-white/40 hover:text-white" @click="infoAddon = null">✕</button>
+                </div>
+
+                <p v-if="infoAddon.manifest?.summary" class="mt-4 text-sm text-white/60">
+                    {{ infoAddon.manifest.summary }}
+                </p>
+
+                <ul v-if="infoAddon.manifest?.highlights?.length" class="mt-4 space-y-2">
+                    <li
+                        v-for="(point, i) in infoAddon.manifest.highlights"
+                        :key="i"
+                        class="flex gap-2 text-sm leading-relaxed text-white/60"
+                    >
+                        <span class="text-gold-400/70">•</span>
+                        <span>{{ point }}</span>
+                    </li>
+                </ul>
+                <p v-else-if="infoAddon.manifest?.description" class="mt-4 whitespace-pre-line text-sm leading-relaxed text-white/50">
+                    {{ infoAddon.manifest.description }}
+                </p>
+
+                <div class="mt-6 flex justify-end">
+                    <button
+                        class="rounded-full border border-white/15 px-5 py-2 text-xs font-medium text-white/60 transition-colors hover:bg-white/5"
+                        @click="infoAddon = null"
+                    >
+                        Закрити
+                    </button>
+                </div>
+            </div>
+        </Modal>
     </AdminLayout>
 </template>
 

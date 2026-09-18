@@ -1,7 +1,7 @@
 <script setup>
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { Head, router, useForm } from '@inertiajs/vue3';
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 
 const props = defineProps({
     events: { type: Array, required: true },
@@ -13,6 +13,29 @@ const createForm = useForm({
     description: '',
     location: '',
     starts_at: '',
+});
+
+function toggleForm() {
+    // Скидаємо поля щоразу при відкритті — інакше повторне відкриття після
+    // "Скасувати" (без сабміту) тягнуло значення з попередньої спроби,
+    // включно з датою/часом, які легко неправильно прочитати як "порожні".
+    if (! showForm.value) {
+        createForm.reset();
+    }
+    showForm.value = ! showForm.value;
+}
+
+/**
+ * Мобільний datetime-local picker (особливо Android) легко "зʼїдає" частину
+ * введеного — торкнулись не того колеса, і в полі лишається шматок від
+ * поточної дати замість введеної. Без прев'ю це видно лише постфактум,
+ * коли подія вже створена й розіслана всім.
+ */
+const startsAtPreview = computed(() => {
+    if (! createForm.starts_at) return null;
+    const d = new Date(createForm.starts_at);
+    if (Number.isNaN(d.getTime())) return null;
+    return d.toLocaleString('uk-UA', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 });
 
 function createEvent() {
@@ -46,7 +69,7 @@ function isPast(iso) {
         <div class="mb-6">
             <button
                 class="rounded-full bg-gradient-to-r from-gold-500 via-gold-300 to-gold-500 px-6 py-3 text-sm font-semibold uppercase tracking-widest text-obsidian-950 shadow-gold transition-transform hover:scale-[1.03]"
-                @click="showForm = !showForm"
+                @click="toggleForm"
             >
                 {{ showForm ? 'Скасувати' : 'Нова подія' }}
             </button>
@@ -63,6 +86,7 @@ function isPast(iso) {
                     <div>
                         <label class="mb-2 block text-xs uppercase tracking-widest text-white/40">Дата й час</label>
                         <input v-model="createForm.starts_at" type="datetime-local" class="w-full rounded-lg border border-white/10 bg-obsidian-900 px-3 py-2 text-white" />
+                        <p v-if="startsAtPreview" class="mt-1 text-xs text-gold-300/70">Буде збережено: {{ startsAtPreview }}</p>
                         <p v-if="createForm.errors.starts_at" class="mt-1 text-xs text-ember-500">{{ createForm.errors.starts_at }}</p>
                     </div>
                     <div>

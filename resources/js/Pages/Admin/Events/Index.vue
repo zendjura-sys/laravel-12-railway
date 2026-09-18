@@ -79,12 +79,25 @@ function destroyEvent(event) {
     router.delete(route('admin.family-events.destroy', event.id), { preserveScroll: true });
 }
 
+/**
+ * Сервер зберігає starts_at БЕЗ конвертації (app.timezone = UTC, а адмін
+ * вводить час за Києвом) — Laravel віддає ці самі кияівські цифри в JSON,
+ * лише позначені 'Z' (UTC). Без timeZone: 'UTC' тут браузер додав би ще
+ * одну конвертацію у свій локальний час поверх уже правильних цифр —
+ * і час "з'їжджав" би на кілька годин.
+ */
 function fmtDateTime(iso) {
-    return new Date(iso).toLocaleString('uk-UA', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    return new Date(iso).toLocaleString('uk-UA', { timeZone: 'UTC', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
+/** Порівнюємо з "зараз за Києвом", записаним у тому самому "як-UTC" форматі, що й starts_at. */
+function kyivNowAsStoredEpoch() {
+    const kyivDigits = new Date().toLocaleString('sv-SE', { timeZone: 'Europe/Kyiv' }).replace(' ', 'T') + 'Z';
+    return new Date(kyivDigits).getTime();
 }
 
 function isPast(iso) {
-    return new Date(iso).getTime() < Date.now();
+    return new Date(iso).getTime() < kyivNowAsStoredEpoch();
 }
 </script>
 

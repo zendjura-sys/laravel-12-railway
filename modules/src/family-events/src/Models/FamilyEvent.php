@@ -3,6 +3,7 @@
 namespace Addons\FamilyEvents\Models;
 
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -27,6 +28,20 @@ class FamilyEvent extends Model
 
     public function isPast(): bool
     {
-        return $this->starts_at->isPast();
+        return $this->starts_at->lt(self::nowAsStored());
+    }
+
+    /**
+     * "Зараз" у тому самому "наївному" вигляді, що й starts_at: адмін
+     * вводить час за Києвом через picker, а app.timezone цього проєкту —
+     * UTC, тож Laravel зберігає київські цифри без конвертації, просто
+     * позначені як UTC. Звичайний now() — це СПРАВЖНІЙ UTC, і порівняння
+     * з ним заднім числом зсуває результат на офсет Києва (2-3 години,
+     * залежно від літнього/зимового часу) — подія могла здаватись
+     * майбутньою чи минулою не в той момент.
+     */
+    public static function nowAsStored(): Carbon
+    {
+        return Carbon::parse(now('Europe/Kyiv')->format('Y-m-d H:i:s'), 'UTC');
     }
 }

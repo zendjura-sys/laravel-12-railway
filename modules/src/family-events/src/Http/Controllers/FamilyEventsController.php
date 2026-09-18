@@ -11,7 +11,7 @@ class FamilyEventsController
     public function index(): Response
     {
         $events = FamilyEvent::query()
-            ->where('starts_at', '>=', now())
+            ->where('starts_at', '>=', FamilyEvent::nowAsStored())
             ->orderBy('starts_at')
             ->get(['id', 'title', 'description', 'location', 'starts_at']);
 

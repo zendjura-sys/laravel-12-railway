@@ -5,11 +5,17 @@ defineProps({
     events: { type: Array, default: () => [] },
 });
 
+/**
+ * Сервер зберігає starts_at БЕЗ конвертації (app.timezone = UTC, а адмін
+ * вводить час за Києвом) — Laravel віддає ці самі київські цифри в JSON,
+ * лише позначені 'Z' (UTC). Без timeZone: 'UTC' тут браузер додав би ще
+ * одну конвертацію у свій локальний час поверх уже правильних цифр.
+ */
 function fmtDate(iso) {
-    return new Date(iso).toLocaleDateString('uk-UA', { day: '2-digit', month: 'long', year: 'numeric' });
+    return new Date(iso).toLocaleDateString('uk-UA', { timeZone: 'UTC', day: '2-digit', month: 'long', year: 'numeric' });
 }
 function fmtTime(iso) {
-    return new Date(iso).toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' });
+    return new Date(iso).toLocaleTimeString('uk-UA', { timeZone: 'UTC', hour: '2-digit', minute: '2-digit' });
 }
 </script>
 

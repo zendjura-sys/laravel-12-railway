@@ -7,15 +7,19 @@ use Addons\TelegramBot\Models\TelegramLink;
 use Addons\TelegramBot\Services\TelegramClient;
 use Addons\TelegramBot\Support\MessageFormat;
 use App\Models\User;
+use App\Support\WebPushSender;
 
 /**
  * Єдина точка входу для персональних сповіщень: завжди пише web-копію
- * (Notification), і додатково дублює в Telegram, якщо TelegramBot
- * встановлено й активовано, а сам отримувач прив'язав акаунт.
+ * (Notification), додатково дублює в Telegram, якщо TelegramBot
+ * встановлено й активовано, а сам отримувач прив'язав акаунт, і в
+ * браузерний push, якщо в отримувача є активна підписка.
  *
  * Клас TelegramBot-модуля береться через class_exists() — з тими ж
  * самими причинами, що й рядкові літерали в routes/events.php: notifications
  * не повинен падати, якщо TelegramBot не встановлено чи не активовано.
+ * WebPushSender — клас ядра, тому завжди доступний; сам він мовчить,
+ * якщо VAPID-ключі не налаштовані.
  */
 class NotificationService
 {
@@ -40,8 +44,14 @@ class NotificationService
         $notification = Notification::notify($user->id, $type, $title, $body);
 
         $this->deliverToTelegram($user, $type, $title, $body, $telegramButton);
+        $this->deliverToWebPush($user, $title, $body, $telegramButton['url'] ?? null);
 
         return $notification;
+    }
+
+    private function deliverToWebPush(User $user, string $title, ?string $body, ?string $url): void
+    {
+        (new WebPushSender())->sendToUser($user, $title, $body, $url);
     }
 
     /** @param array{text:string,url:string}|null $telegramButton */

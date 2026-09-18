@@ -314,6 +314,21 @@ fi
 
 grep -q '^APP_KEY=base64:' .env || { log "Генерирую APP_KEY"; php artisan key:generate --force; }
 
+# VAPID-ключи для push-уведомлений — генерируются один раз и остаются
+# навсегда: смена ключей отвязывает все существующие подписки браузеров.
+# Как и APP_KEY, трогаем .env только если ключей ещё нет.
+grep -q '^VAPID_PUBLIC_KEY=' .env || {
+    log "Генерирую VAPID-ключи для push-уведомлений"
+    php -r '
+        require "vendor/autoload.php";
+        $keys = Minishlink\WebPush\VAPID::createVapidKeys();
+        $f = ".env"; $s = file_get_contents($f);
+        $s .= "\nVAPID_PUBLIC_KEY=" . $keys["publicKey"];
+        $s .= "\nVAPID_PRIVATE_KEY=" . $keys["privateKey"];
+        file_put_contents($f, $s);
+    '
+}
+
 log "Применяю миграции"
 php artisan migrate --force
 

@@ -11,6 +11,7 @@ use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\ChangelogController;
 use App\Http\Controllers\GuideController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\PushSubscriptionController;
 use App\Http\Controllers\TwoFactorAuthenticationController;
 use App\Models\GalleryPhoto;
 use App\Models\User;
@@ -96,6 +97,9 @@ Route::middleware('auth')->group(function () {
     // може прийти не миттєво.
     Route::get('/guide', [GuideController::class, 'index'])->name('guide');
     Route::get('/changelog', [ChangelogController::class, 'index'])->name('changelog');
+
+    Route::post('/push-subscriptions', [PushSubscriptionController::class, 'store'])->name('push-subscriptions.store');
+    Route::delete('/push-subscriptions', [PushSubscriptionController::class, 'destroy'])->name('push-subscriptions.destroy');
 });
 
 require __DIR__.'/auth.php';

@@ -40,6 +40,10 @@ class HandleInertiaRequests extends Middleware
             // Оформление задаётся в админке (Дизайн), а не собирается в
             // бандл, поэтому уезжает на фронт с каждым ответом.
             'design' => DesignSettings::all(),
+            // Публічний VAPID-ключ потрібен клієнту для pushManager.subscribe();
+            // приватний ключ на фронт ніколи не потрапляє. null, поки не
+            // налаштовано в .env — форма підписки просто себе ховає.
+            'webPushPublicKey' => config('webpush.vapid.public_key'),
             'flash' => [
                 'status' => fn () => $request->session()->get('status'),
             ],

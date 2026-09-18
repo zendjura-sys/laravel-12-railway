@@ -8,6 +8,7 @@ const props = defineProps({
     reports: { type: Object, required: true },
     status: { type: String, default: 'pending' },
     aiRejectionAdviceEnabled: { type: Boolean, default: false },
+    aiGradeAdviceEnabled: { type: Boolean, default: false },
 });
 
 const toasts = ref([]);
@@ -46,11 +47,32 @@ const GRADE_LABELS = { S: '+30%', A: '+20%', B: '+10%', C: '0%', D: '-10%', F: '
 const gradingReportId = ref(null);
 const selectedGrade = ref(null);
 const gradeReason = ref('');
+const gradeAdvising = ref(false);
+const gradeAdvice = ref(null);
 
 function startGrading(report) {
     gradingReportId.value = report.id;
     selectedGrade.value = null;
     gradeReason.value = '';
+    gradeAdvice.value = null;
+}
+
+async function suggestGrade(report) {
+    gradeAdvising.value = true;
+    gradeAdvice.value = null;
+    try {
+        const { data } = await window.axios.post(route('admin.reports.ai-grade-recommendation', report.id));
+        if (data.ok) {
+            selectedGrade.value = data.data.grade;
+            gradeAdvice.value = data.data.reason;
+        } else {
+            pushToast(false, data.message);
+        }
+    } catch (e) {
+        pushToast(false, e.response?.data?.message || 'Помилка');
+    } finally {
+        gradeAdvising.value = false;
+    }
 }
 
 function confirmApprove(report) {
@@ -172,7 +194,7 @@ function fmtDate(iso) {
                         <PhotoGallery v-if="report.attachments?.length" :photos="report.attachments" :visible="6" class="mt-3" />
 
                         <div v-if="gradingReportId === report.id" class="mt-3 rounded-lg border border-white/10 bg-obsidian-900/60 p-3">
-                            <div class="flex flex-wrap gap-1.5">
+                            <div class="flex flex-wrap items-center gap-1.5">
                                 <button
                                     v-for="g in GRADES"
                                     :key="g"
@@ -182,7 +204,16 @@ function fmtDate(iso) {
                                 >
                                     {{ g }} <span class="text-white/30">{{ GRADE_LABELS[g] }}</span>
                                 </button>
+                                <button
+                                    v-if="aiGradeAdviceEnabled"
+                                    :disabled="gradeAdvising"
+                                    class="rounded-full border border-gold-400/30 bg-gold-400/10 px-3 py-1 text-xs font-medium text-gold-300 hover:bg-gold-400/20 disabled:opacity-40"
+                                    @click="suggestGrade(report)"
+                                >
+                                    {{ gradeAdvising ? 'Аналізую…' : '✨ Порекомендувати оцінку' }}
+                                </button>
                             </div>
+                            <p v-if="gradeAdvice" class="mt-2 text-xs text-gold-300/80">🤖 {{ gradeAdvice }}</p>
                             <textarea
                                 v-if="selectedGrade && LOW_GRADES.includes(selectedGrade)"
                                 v-model="gradeReason"

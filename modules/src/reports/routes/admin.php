@@ -11,4 +11,5 @@ Route::middleware(['web', 'auth', 'verified', 'permission:reports.manage'])
         Route::post('/{report}/approve', [ReportReviewController::class, 'approve'])->name('approve');
         Route::post('/{report}/reject', [ReportReviewController::class, 'reject'])->name('reject');
         Route::post('/{report}/ai-recommendation', [ReportReviewController::class, 'aiRecommendation'])->name('ai-recommendation');
+        Route::post('/{report}/ai-grade-recommendation', [ReportReviewController::class, 'aiGradeRecommendation'])->name('ai-grade-recommendation');
     });

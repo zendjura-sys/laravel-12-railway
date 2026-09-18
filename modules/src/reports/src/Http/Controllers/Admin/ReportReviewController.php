@@ -3,6 +3,7 @@
 namespace Addons\Reports\Http\Controllers\Admin;
 
 use Addons\AiAssistant\Models\AiReportReview;
+use Addons\AiAssistant\Services\GradeAdvisor;
 use Addons\AiAssistant\Services\RejectionAdvisor;
 use Addons\Reports\Events\ReportReviewed;
 use Addons\Reports\Models\Report;
@@ -32,6 +33,7 @@ class ReportReviewController
             'reports' => $reports,
             'status' => $status,
             'aiRejectionAdviceEnabled' => class_exists(RejectionAdvisor::class) && Setting::get('ai_rejection_advice_enabled') === '1',
+            'aiGradeAdviceEnabled' => class_exists(GradeAdvisor::class) && Setting::get('ai_grade_advice_enabled') === '1',
         ]);
     }
 
@@ -87,6 +89,35 @@ class ReportReviewController
             'errors' => null,
             'redirect' => null,
         ], $text !== null ? 200 : 422);
+    }
+
+    /**
+     * Стартова оцінка-підказка у вікні вибору оцінки — адмін бачить
+     * рекомендовану літеру й пояснення, але сам клікає потрібну кнопку
+     * (ту саму чи іншу) і сам підтверджує затвердження. Нічого не міняє
+     * в звіті сам по собі.
+     */
+    public function aiGradeRecommendation(Request $request, Report $report): JsonResponse
+    {
+        if (! class_exists(GradeAdvisor::class)) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Модуль AI Assistant не встановлено.',
+                'data' => null,
+                'errors' => null,
+                'redirect' => null,
+            ], 422);
+        }
+
+        $suggestion = app(GradeAdvisor::class)->suggest($report);
+
+        return response()->json([
+            'ok' => $suggestion !== null,
+            'message' => $suggestion !== null ? null : 'Не вдалося отримати рекомендацію — перевірте налаштування AI.',
+            'data' => $suggestion,
+            'errors' => null,
+            'redirect' => null,
+        ], $suggestion !== null ? 200 : 422);
     }
 
     /**

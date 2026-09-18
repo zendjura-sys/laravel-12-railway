@@ -53,6 +53,7 @@ const TABS = {
             },
             { key: 'ai_reports_analysis_enabled', label: 'Аналіз фото-доказів звіту (дата на скріні, кількість)', type: 'checkbox' },
             { key: 'ai_rejection_advice_enabled', label: 'Кнопка "Згенерувати рекомендацію" при відхиленні звіту', type: 'checkbox' },
+            { key: 'ai_grade_advice_enabled', label: 'Кнопка "Порекомендувати оцінку" при затвердженні звіту', type: 'checkbox' },
             { key: 'ai_applications_review_enabled', label: 'Оцінка якості анкети при новій заявці на вступ', type: 'checkbox' },
             { key: 'ai_broadcast_assist_enabled', label: 'Кнопка "Покращити текст" у формі розсилки', type: 'checkbox' },
         ],
@@ -71,6 +72,12 @@ const TABS = {
                 label: 'Рекомендація при відхиленні звіту',
                 type: 'textarea',
                 hint: 'Додаткові правила для тексту-поради учаснику (тон, що обов\'язково згадати тощо).',
+            },
+            {
+                key: 'ai_grade_advice_instructions',
+                label: 'Рекомендація оцінки при затвердженні звіту',
+                type: 'textarea',
+                hint: 'Ваші критерії для оцінок S–G (наприклад, за яким відсотком перемог давати S, скільки контрактів вважати мало тощо). Без цього AI орієнтується лише на загальний здоровий глузд.',
             },
             {
                 key: 'ai_applications_review_instructions',

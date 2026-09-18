@@ -21,12 +21,14 @@ class SettingsController extends Controller
             'mistral_proxy_url',
             'ai_reports_analysis_enabled',
             'ai_rejection_advice_enabled',
+            'ai_grade_advice_enabled',
             'ai_applications_review_enabled',
             'ai_broadcast_assist_enabled',
         ],
         'ai_prompts' => [
             'ai_reports_analysis_instructions',
             'ai_rejection_advice_instructions',
+            'ai_grade_advice_instructions',
             'ai_applications_review_instructions',
             'ai_broadcast_assist_instructions',
         ],
@@ -40,7 +42,7 @@ class SettingsController extends Controller
      * @var array<int, string>
      */
     private const LONG_TEXT_FIELDS = [
-        'ai_reports_analysis_instructions', 'ai_rejection_advice_instructions',
+        'ai_reports_analysis_instructions', 'ai_rejection_advice_instructions', 'ai_grade_advice_instructions',
         'ai_applications_review_instructions', 'ai_broadcast_assist_instructions',
     ];
 
@@ -52,7 +54,7 @@ class SettingsController extends Controller
      * @var array<int, string>
      */
     private const BOOLEAN_FIELDS = [
-        'ai_reports_analysis_enabled', 'ai_rejection_advice_enabled',
+        'ai_reports_analysis_enabled', 'ai_rejection_advice_enabled', 'ai_grade_advice_enabled',
         'ai_applications_review_enabled', 'ai_broadcast_assist_enabled',
     ];
 

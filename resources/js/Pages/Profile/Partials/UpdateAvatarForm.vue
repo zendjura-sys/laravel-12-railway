@@ -48,6 +48,9 @@ function removeAvatar() {
             <p class="mt-1 text-sm text-white/40">
                 За бажанням — якщо додасте, потрапите в карусель «Обличчя родини» на головній (якщо адмін її не вимкнув).
             </p>
+            <p v-if="user.avatar_path && !user.avatar_approved" class="mt-2 text-xs text-gold-300/70">
+                Фото на перевірці в адміна — в каруселі з'явиться після підтвердження.
+            </p>
         </header>
 
         <form @submit.prevent="submit" class="mt-6 space-y-6">

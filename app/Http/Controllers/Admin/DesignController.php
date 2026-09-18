@@ -51,6 +51,14 @@ class DesignController extends Controller
                 'showMembers' => DesignSettings::showMemberCarousel(),
                 'showGallery' => DesignSettings::showGalleryCarousel(),
             ],
+            'pendingAvatars' => User::query()
+                ->whereNotNull('avatar_path')
+                ->where('avatar_approved', false)
+                ->orderBy('name')
+                ->get()
+                ->map(fn (User $u) => ['id' => $u->id, 'name' => $u->name, 'url' => $u->avatar_url])
+                ->filter(fn (array $p) => $p['url'] !== null)
+                ->values(),
             'socialLinks' => DesignSettings::socialLinks(),
             'socialPlatforms' => DesignSettings::SOCIAL_PLATFORMS,
             'gallery' => GalleryPhoto::query()
@@ -72,6 +80,34 @@ class DesignController extends Controller
         DesignSettings::saveSocialLinks($data['links']);
 
         return back()->with('status', 'Соцмережі оновлено.');
+    }
+
+    public function approveAvatar(User $user): RedirectResponse
+    {
+        if ($user->avatar_path === null) {
+            abort(404);
+        }
+
+        // update() тут не годиться: avatar_approved навмисно поза
+        // $fillable (щоб ніхто інший не міг проставити його собі напряму),
+        // тому mass assignment його мовчки ігнорує — пишемо явним літералом.
+        $user->avatar_approved = true;
+        $user->save();
+
+        return back()->with('status', 'Фото підтверджено — з\'явиться в каруселі.');
+    }
+
+    public function rejectAvatar(User $user): RedirectResponse
+    {
+        if ($user->avatar_path && Storage::disk('public')->exists($user->avatar_path)) {
+            Storage::disk('public')->delete($user->avatar_path);
+        }
+
+        $user->avatar_path = null;
+        $user->avatar_approved = false;
+        $user->save();
+
+        return back()->with('status', 'Фото відхилено та видалено.');
     }
 
     public function updateCarousels(Request $request): RedirectResponse
@@ -104,6 +140,31 @@ class DesignController extends Controller
         ]);
 
         return back()->with('status', 'Фото додано в галерею.');
+    }
+
+    public function updateGalleryPhoto(Request $request, GalleryPhoto $galleryPhoto): RedirectResponse
+    {
+        $data = $request->validate([
+            'caption' => ['nullable', 'string', 'max:120'],
+        ]);
+
+        $galleryPhoto->update(['caption' => $data['caption'] ?? null]);
+
+        return back()->with('status', 'Підпис оновлено.');
+    }
+
+    public function reorderGalleryPhotos(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'order' => ['required', 'array'],
+            'order.*' => ['integer', 'distinct', Rule::exists(GalleryPhoto::class, 'id')],
+        ]);
+
+        foreach ($data['order'] as $index => $id) {
+            GalleryPhoto::whereKey($id)->update(['sort_order' => $index]);
+        }
+
+        return back()->with('status', 'Порядок фото оновлено.');
     }
 
     public function destroyGalleryPhoto(GalleryPhoto $galleryPhoto): RedirectResponse

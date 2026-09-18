@@ -131,9 +131,12 @@ class ProfileController extends Controller
     }
 
     /**
-     * Фото профілю — за бажанням. Хто завантажив, потрапляє в карусель
-     * учасників родини на головній (якщо адмін її не вимкнув у Дизайні).
-     * Старий файл видаляємо: інакше storage копичить кожне завантаження.
+     * Фото профілю — за бажанням. Кожне нове фото йде "на перевірку":
+     * у карусель учасників на головній воно потрапляє лише після того,
+     * як адмін підтвердить його в Дизайні (avatar_approved) — інакше
+     * будь-яке фото з'являлось б на публічній головній одразу, без жодної
+     * модерації. Старий файл видаляємо: інакше storage копичить кожне
+     * завантаження.
      */
     public function updateAvatar(Request $request): RedirectResponse
     {
@@ -147,9 +150,13 @@ class ProfileController extends Controller
 
         if ($request->hasFile('avatar')) {
             $path = $request->file('avatar')->store('avatars', 'public');
-            $user->update(['avatar_path' => $path]);
+            $user->avatar_path = $path;
+            $user->avatar_approved = false;
+            $user->save();
         } elseif ($request->boolean('remove')) {
-            $user->update(['avatar_path' => null]);
+            $user->avatar_path = null;
+            $user->avatar_approved = false;
+            $user->save();
         }
 
         if ($old && $old !== $user->avatar_path && Storage::disk('public')->exists($old)) {

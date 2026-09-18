@@ -43,6 +43,7 @@ Route::get('/', function () {
         'memberPhotos' => DesignSettings::showMemberCarousel()
             ? User::query()
                 ->whereNotNull('avatar_path')
+                ->where('avatar_approved', true)
                 ->orderBy('name')
                 ->get()
                 ->map(fn (User $u) => ['name' => $u->name, 'position' => $u->position_title, 'url' => $u->avatar_url])
@@ -125,7 +126,11 @@ Route::middleware(['auth', 'verified', 'permission:settings.manage'])
         Route::put('/carousels', [DesignController::class, 'updateCarousels'])->name('carousels');
         Route::put('/social-links', [DesignController::class, 'updateSocialLinks'])->name('social-links');
         Route::post('/gallery', [DesignController::class, 'storeGalleryPhoto'])->name('gallery.store');
+        Route::put('/gallery/reorder', [DesignController::class, 'reorderGalleryPhotos'])->name('gallery.reorder');
+        Route::put('/gallery/{galleryPhoto}', [DesignController::class, 'updateGalleryPhoto'])->name('gallery.update');
         Route::delete('/gallery/{galleryPhoto}', [DesignController::class, 'destroyGalleryPhoto'])->name('gallery.destroy');
+        Route::post('/avatars/{user}/approve', [DesignController::class, 'approveAvatar'])->name('avatars.approve');
+        Route::delete('/avatars/{user}', [DesignController::class, 'rejectAvatar'])->name('avatars.reject');
     });
 
 Route::middleware(['auth', 'verified', 'permission:settings.manage'])

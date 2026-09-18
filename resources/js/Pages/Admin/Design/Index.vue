@@ -13,19 +13,20 @@ const props = defineProps({
     effectLevels: { type: Array, default: () => [] },
     content: { type: Object, required: true },
     carousels: { type: Object, required: true },
+    pendingAvatars: { type: Array, default: () => [] },
     gallery: { type: Array, default: () => [] },
     socialLinks: { type: Array, default: () => [] },
     socialPlatforms: { type: Array, default: () => [] },
 });
 
-const TABS = [
+const TABS = computed(() => [
     { key: 'brand', label: 'Бренд' },
     { key: 'theme', label: 'Оформлення' },
     { key: 'structure', label: 'Структура' },
     { key: 'sections', label: 'Розділи' },
-    { key: 'carousels', label: 'Каруселі' },
+    { key: 'carousels', label: props.pendingAvatars.length > 0 ? `Каруселі (${props.pendingAvatars.length})` : 'Каруселі' },
     { key: 'social', label: 'Соцмережі' },
-];
+]);
 const activeTab = ref('brand');
 
 const status = computed(() => usePage().props.flash?.status);
@@ -155,6 +156,29 @@ function uploadGalleryPhoto() {
 function removeGalleryPhoto(photo) {
     if (!confirm('Видалити це фото з галереї?')) return;
     router.delete(route('admin.design.gallery.destroy', photo.id), { preserveScroll: true });
+}
+
+function saveGalleryCaption(photo, value) {
+    if (value === (photo.caption || '')) return;
+    router.put(route('admin.design.gallery.update', photo.id), { caption: value }, { preserveScroll: true });
+}
+
+function moveGalleryPhoto(index, delta) {
+    const target = index + delta;
+    if (target < 0 || target >= props.gallery.length) return;
+    const order = props.gallery.map((p) => p.id);
+    [order[index], order[target]] = [order[target], order[index]];
+    router.put(route('admin.design.gallery.reorder'), { order }, { preserveScroll: true });
+}
+
+/* ---------- аватарки учасників на перевірці ---------- */
+function approveAvatar(avatar) {
+    router.post(route('admin.design.avatars.approve', avatar.id), {}, { preserveScroll: true });
+}
+
+function rejectAvatar(avatar) {
+    if (!confirm(`Відхилити й видалити фото — «${avatar.name}»?`)) return;
+    router.delete(route('admin.design.avatars.reject', avatar.id), { preserveScroll: true });
 }
 
 /* ---------- соцмережі у футері ---------- */
@@ -496,6 +520,36 @@ function saveSocialLinks() {
 
         <!-- ================= КАРУСЕЛІ ================= -->
         <div v-if="activeTab === 'carousels'" class="max-w-3xl space-y-8">
+            <div v-if="pendingAvatars.length > 0" v-glow class="glass-panel p-6 sm:p-8">
+                <h2 class="font-display mb-1 text-lg text-white">Аватарки на перевірці</h2>
+                <p class="mb-6 text-sm text-white/40">
+                    Учасники самі завантажують фото профілю — доки ви не підтвердите, у карусель «Обличчя родини» воно не потрапляє.
+                </p>
+
+                <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
+                    <div v-for="avatar in pendingAvatars" :key="avatar.id" class="overflow-hidden rounded-xl border border-white/10">
+                        <img :src="avatar.url" :alt="avatar.name" class="aspect-square w-full object-cover" />
+                        <p class="truncate bg-obsidian-950/80 px-2 py-1 text-[11px] text-white/60">{{ avatar.name }}</p>
+                        <div class="flex gap-1 p-1.5">
+                            <button
+                                type="button"
+                                class="flex-1 rounded-lg border border-emerald-400/30 py-1.5 text-[11px] text-emerald-300 hover:bg-emerald-400/10"
+                                @click="approveAvatar(avatar)"
+                            >
+                                Підтвердити
+                            </button>
+                            <button
+                                type="button"
+                                class="flex-1 rounded-lg border border-ember-500/25 py-1.5 text-[11px] text-ember-500/80 hover:bg-ember-600/10"
+                                @click="rejectAvatar(avatar)"
+                            >
+                                Відхилити
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div v-glow class="glass-panel p-6 sm:p-8">
                 <h2 class="font-display mb-1 text-lg text-white">Каруселі на головній</h2>
                 <p class="mb-6 text-sm text-white/40">
@@ -551,17 +605,43 @@ function saveSocialLinks() {
                 </form>
 
                 <div v-if="gallery.length > 0" class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
-                    <div v-for="photo in gallery" :key="photo.id" class="group relative overflow-hidden rounded-xl border border-white/10">
+                    <div v-for="(photo, i) in gallery" :key="photo.id" class="group relative overflow-hidden rounded-xl border border-white/10">
                         <img :src="photo.url" :alt="photo.caption || ''" class="aspect-[4/3] w-full object-cover" />
-                        <p v-if="photo.caption" class="truncate bg-obsidian-950/80 px-2 py-1 text-[11px] text-white/60">{{ photo.caption }}</p>
-                        <button
-                            type="button"
-                            class="absolute right-1.5 top-1.5 rounded-full bg-obsidian-950/80 p-1.5 text-white/60 opacity-0 transition-opacity hover:text-ember-500 group-hover:opacity-100"
-                            title="Видалити"
-                            @click="removeGalleryPhoto(photo)"
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-3.5 w-3.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
-                        </button>
+                        <input
+                            :value="photo.caption || ''"
+                            type="text"
+                            placeholder="Підпис..."
+                            class="w-full bg-obsidian-950/80 px-2 py-1 text-[11px] text-white/60 placeholder:text-white/25 focus:outline-none"
+                            @change="saveGalleryCaption(photo, $event.target.value)"
+                        />
+                        <div class="absolute right-1.5 top-1.5 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                            <button
+                                type="button"
+                                class="rounded-full bg-obsidian-950/80 p-1.5 text-white/60 hover:text-white disabled:opacity-30"
+                                title="Пересунути ліворуч"
+                                :disabled="i === 0"
+                                @click="moveGalleryPhoto(i, -1)"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-3.5 w-3.5"><path d="M15 18l-6-6 6-6"/></svg>
+                            </button>
+                            <button
+                                type="button"
+                                class="rounded-full bg-obsidian-950/80 p-1.5 text-white/60 hover:text-white disabled:opacity-30"
+                                title="Пересунути праворуч"
+                                :disabled="i === gallery.length - 1"
+                                @click="moveGalleryPhoto(i, 1)"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-3.5 w-3.5"><path d="M9 18l6-6-6-6"/></svg>
+                            </button>
+                            <button
+                                type="button"
+                                class="rounded-full bg-obsidian-950/80 p-1.5 text-white/60 hover:text-ember-500"
+                                title="Видалити"
+                                @click="removeGalleryPhoto(photo)"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-3.5 w-3.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                            </button>
+                        </div>
                     </div>
                 </div>
                 <p v-else class="text-sm text-white/30">Ще немає жодного фото.</p>

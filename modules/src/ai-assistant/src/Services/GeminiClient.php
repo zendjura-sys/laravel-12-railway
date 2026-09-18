@@ -26,9 +26,14 @@ class GeminiClient
 
     private ?string $apiKey;
 
-    public function __construct()
+    /**
+     * $overrideKey — для перевірки підключення в адмінці ще ДО збереження:
+     * без цього "Перевірити підключення" тестував би те, що вже лежить у
+     * налаштуваннях, а не щойно введене в полі значення.
+     */
+    public function __construct(?string $overrideKey = null)
     {
-        $this->apiKey = Setting::get('gemini_api_key') ?: null;
+        $this->apiKey = $overrideKey ?: (Setting::get('gemini_api_key') ?: null);
     }
 
     public function isConfigured(): bool

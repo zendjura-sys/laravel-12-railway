@@ -82,7 +82,9 @@ async function testAi() {
     aiTesting.value = true;
     aiTestResult.value = null;
     try {
-        const { data } = await window.axios.post(route('admin.ai.test'));
+        // Шлемо те, що зараз у полі, навіть якщо ще не натиснули "Зберегти" —
+        // інакше довелось би спершу зберегти, а вже потім тестувати.
+        const { data } = await window.axios.post(route('admin.ai.test'), { api_key: forms.ai.gemini_api_key });
         aiTestResult.value = { ok: data.ok, message: data.message };
     } catch (e) {
         aiTestResult.value = { ok: false, message: e.response?.data?.message || 'Помилка' };

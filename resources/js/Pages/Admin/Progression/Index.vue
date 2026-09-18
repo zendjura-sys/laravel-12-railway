@@ -51,7 +51,7 @@ async function submitAdjust(userId) {
     <Head title="Прогресія — адміністрування" />
 
     <AdminLayout title="Прогресія — адміністрування">
-        <div class="pointer-events-none fixed right-6 top-6 z-[100] flex w-full max-w-sm flex-col gap-3">
+        <div class="pointer-events-none fixed inset-x-4 top-6 z-[100] flex flex-col gap-3 sm:inset-x-auto sm:right-6 sm:w-full sm:max-w-sm">
             <TransitionGroup name="toast">
                 <div
                     v-for="t in toasts"

@@ -8,9 +8,22 @@ import { verb } from '@/utils/gendered';
 const props = defineProps({
     reports: { type: Object, required: true },
     status: { type: String, default: 'pending' },
+    filters: { type: Object, default: () => ({ type: '', from: '', to: '', q: '' }) },
+    types: { type: Array, default: () => [] },
     aiRejectionAdviceEnabled: { type: Boolean, default: false },
     aiGradeAdviceEnabled: { type: Boolean, default: false },
 });
+
+const filterForm = ref({ type: props.filters.type, from: props.filters.from, to: props.filters.to, q: props.filters.q });
+
+function applyFilters() {
+    router.get(route('admin.reports.index'), { status: props.status, ...filterForm.value }, { preserveState: true, preserveScroll: true });
+}
+
+function resetFilters() {
+    filterForm.value = { type: '', from: '', to: '', q: '' };
+    router.get(route('admin.reports.index'), { status: props.status }, { preserveState: true, preserveScroll: true });
+}
 
 const toasts = ref([]);
 let toastId = 0;
@@ -115,7 +128,7 @@ function confirmReject(report) {
 }
 
 function switchStatus(s) {
-    router.get(route('admin.reports.index'), { status: s }, { preserveState: true, preserveScroll: true });
+    router.get(route('admin.reports.index'), { status: s, ...filterForm.value }, { preserveState: true, preserveScroll: true });
 }
 
 const typeLabels = { kapt: 'Капт', contract: 'Контракт', bizwar: 'Бізвар', investment: 'Інвестиції', other: 'Інше' };
@@ -151,6 +164,42 @@ function fmtDate(iso) {
                     @click="switchStatus(s)"
                 >
                     {{ s === 'pending' ? 'На розгляді' : s === 'approved' ? 'Затверджені' : 'Відхилені' }}
+                </button>
+            </div>
+
+            <div class="mb-6 flex flex-wrap items-end gap-3">
+                <div>
+                    <label class="mb-1 block text-[10px] uppercase tracking-widest text-white/40">Тип</label>
+                    <select
+                        v-model="filterForm.type"
+                        class="rounded-lg border border-white/10 bg-obsidian-900 px-3 py-2 text-sm text-white focus:border-gold-400/50 focus:outline-none"
+                    >
+                        <option value="">Усі типи</option>
+                        <option v-for="t in types" :key="t" :value="t">{{ typeLabels[t] || t }}</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="mb-1 block text-[10px] uppercase tracking-widest text-white/40">Дата від</label>
+                    <input v-model="filterForm.from" type="date" class="rounded-lg border border-white/10 bg-obsidian-900 px-3 py-2 text-sm text-white" />
+                </div>
+                <div>
+                    <label class="mb-1 block text-[10px] uppercase tracking-widest text-white/40">Дата до</label>
+                    <input v-model="filterForm.to" type="date" class="rounded-lg border border-white/10 bg-obsidian-900 px-3 py-2 text-sm text-white" />
+                </div>
+                <div class="min-w-[180px] flex-1">
+                    <label class="mb-1 block text-[10px] uppercase tracking-widest text-white/40">Учасник</label>
+                    <input v-model="filterForm.q" type="text" placeholder="Ім'я…" class="w-full rounded-lg border border-white/10 bg-obsidian-900 px-3 py-2 text-sm text-white placeholder:text-white/30" />
+                </div>
+                <button type="button" class="rounded-full border border-gold-400/40 px-4 py-2 text-xs font-medium tracking-widest text-gold-200 hover:border-gold-300" @click="applyFilters">
+                    Застосувати
+                </button>
+                <button
+                    v-if="filters.type || filters.from || filters.to || filters.q"
+                    type="button"
+                    class="text-xs text-white/40 hover:text-white"
+                    @click="resetFilters"
+                >
+                    Скинути
                 </button>
             </div>
 

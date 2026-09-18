@@ -22,12 +22,18 @@ class UserController extends Controller
     public function index(Request $request): Response
     {
         $search = $request->string('q')->toString();
+        $roleFilter = $request->string('role')->toString();
+        $positionFilter = $request->string('position')->toString();
 
         $users = User::query()
             ->with('roles:id,name')
             ->when($search, fn ($q) => $q->where(fn ($q2) => $q2
                 ->where('name', 'like', "%{$search}%")
                 ->orWhere('email', 'like', "%{$search}%")))
+            ->when($roleFilter === '__none__', fn ($q) => $q->whereDoesntHave('roles'))
+            ->when($roleFilter !== '' && $roleFilter !== '__none__', fn ($q) => $q->whereHas('roles', fn ($rq) => $rq->where('name', $roleFilter)))
+            ->when($positionFilter === '__none__', fn ($q) => $q->whereNull('position_key'))
+            ->when($positionFilter !== '' && $positionFilter !== '__none__', fn ($q) => $q->where('position_key', $positionFilter))
             ->orderBy('name')
             ->paginate(20)
             ->withQueryString()
@@ -45,6 +51,8 @@ class UserController extends Controller
             'users' => $users,
             'roles' => Role::query()->orderBy('name')->pluck('name'),
             'search' => $search,
+            'roleFilter' => $roleFilter,
+            'positionFilter' => $positionFilter,
             // key+title одним запросом — тот же порядок и текст, что на
             // сайте и в боте (FamilyContent — общий источник).
             'positions' => array_map(

@@ -19,10 +19,18 @@ class ReportReviewController
     public function index(Request $request): Response
     {
         $status = $request->query('status', 'pending');
+        $type = $request->query('type', '');
+        $from = $request->query('from', '');
+        $to = $request->query('to', '');
+        $q = trim((string) $request->query('q', ''));
 
         $reports = Report::query()
             ->with(['user:id,name,gender', 'submitter:id,name,gender', 'reviewer:id,name,gender', 'attachments'])
-            ->when(in_array($status, ['pending', 'approved', 'rejected'], true), fn ($q) => $q->where('status', $status))
+            ->when(in_array($status, ['pending', 'approved', 'rejected'], true), fn ($qq) => $qq->where('status', $status))
+            ->when(in_array($type, Report::TYPES, true), fn ($qq) => $qq->where('type', $type))
+            ->when($from !== '', fn ($qq) => $qq->whereDate('report_date', '>=', $from))
+            ->when($to !== '', fn ($qq) => $qq->whereDate('report_date', '<=', $to))
+            ->when($q !== '', fn ($qq) => $qq->whereHas('user', fn ($uq) => $uq->where('name', 'like', "%{$q}%")))
             ->latest()
             ->paginate(20)
             ->withQueryString();
@@ -32,6 +40,8 @@ class ReportReviewController
         return Inertia::render('Admin/Reports/Index', [
             'reports' => $reports,
             'status' => $status,
+            'filters' => ['type' => $type, 'from' => $from, 'to' => $to, 'q' => $q],
+            'types' => Report::TYPES,
             'aiRejectionAdviceEnabled' => class_exists(RejectionAdvisor::class) && Setting::get('ai_rejection_advice_enabled') === '1',
             'aiGradeAdviceEnabled' => class_exists(GradeAdvisor::class) && Setting::get('ai_grade_advice_enabled') === '1',
         ]);

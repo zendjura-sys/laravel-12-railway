@@ -9,6 +9,8 @@ const props = defineProps({
     roles: { type: Array, required: true },
     positions: { type: Array, required: true },
     search: { type: String, default: '' },
+    roleFilter: { type: String, default: '' },
+    positionFilter: { type: String, default: '' },
     recentAudit: { type: Array, default: () => [] },
 });
 
@@ -25,8 +27,11 @@ function fmtDate(iso) {
 }
 
 const q = ref(props.search);
+const role = ref(props.roleFilter);
+const position = ref(props.positionFilter);
+
 function search() {
-    router.get(route('admin.users.index'), { q: q.value }, { preserveState: true, replace: true });
+    router.get(route('admin.users.index'), { q: q.value, role: role.value, position: position.value }, { preserveState: true, replace: true });
 }
 
 /**
@@ -161,14 +166,36 @@ async function deleteAccount() {
     <Head title="Учасники — Monsory Connect" />
 
     <AdminLayout title="Учасники">
-        <div class="mb-6 max-w-sm">
-            <input
-                v-model="q"
-                type="search"
-                placeholder="Пошук за іменем або email…"
-                class="w-full rounded-lg border border-white/10 bg-obsidian-900/60 px-3 py-2 text-white placeholder:text-white/30 focus:border-gold-400/50 focus:outline-none focus:ring-1 focus:ring-gold-400/40"
-                @keyup.enter="search"
-            />
+        <div class="mb-6 flex flex-wrap items-end gap-3">
+            <div class="max-w-sm flex-1 basis-64">
+                <label class="mb-1 block text-[10px] uppercase tracking-widest text-white/40">Пошук</label>
+                <input
+                    v-model="q"
+                    type="search"
+                    placeholder="Пошук за іменем або email…"
+                    class="w-full rounded-lg border border-white/10 bg-obsidian-900/60 px-3 py-2 text-white placeholder:text-white/30 focus:border-gold-400/50 focus:outline-none focus:ring-1 focus:ring-gold-400/40"
+                    @keyup.enter="search"
+                />
+            </div>
+            <div>
+                <label class="mb-1 block text-[10px] uppercase tracking-widest text-white/40">Роль</label>
+                <select v-model="role" class="rounded-lg border border-white/10 bg-obsidian-900/60 px-3 py-2 text-sm text-white focus:border-gold-400/50 focus:outline-none" @change="search">
+                    <option value="">Усі ролі</option>
+                    <option value="__none__">Без ролі</option>
+                    <option v-for="r in roles" :key="r" :value="r">{{ r }}</option>
+                </select>
+            </div>
+            <div>
+                <label class="mb-1 block text-[10px] uppercase tracking-widest text-white/40">Посада</label>
+                <select v-model="position" class="rounded-lg border border-white/10 bg-obsidian-900/60 px-3 py-2 text-sm text-white focus:border-gold-400/50 focus:outline-none" @change="search">
+                    <option value="">Усі посади</option>
+                    <option value="__none__">Не призначено</option>
+                    <option v-for="pos in positions" :key="pos.key" :value="pos.key">{{ pos.title }}</option>
+                </select>
+            </div>
+            <button type="button" class="rounded-full border border-gold-400/40 px-4 py-2 text-xs font-medium tracking-widest text-gold-200 hover:border-gold-300" @click="search">
+                Застосувати
+            </button>
         </div>
 
         <div v-reveal class="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02]">

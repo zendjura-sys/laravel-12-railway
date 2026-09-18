@@ -35,10 +35,50 @@ const items = computed(() => {
     return list.filter((i) => route().has(i.name) && i.check());
 });
 
+/* ---------- живий пошук учасників (для адмінів — стрибок у Учасники/Звіти) ---------- */
+const memberResults = ref([]);
+let searchTimer = null;
+
+const canSearchMembers = computed(() => {
+    const can = page.props.can || {};
+    return (can.manageUsers || can.manageReports) && route().has('reports.members.search');
+});
+
+watch(query, (q) => {
+    const trimmed = q.trim();
+    if (!open.value || trimmed.length < 2 || !canSearchMembers.value) {
+        memberResults.value = [];
+        return;
+    }
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(async () => {
+        try {
+            const { data } = await window.axios.get(route('reports.members.search'), { params: { q: trimmed } });
+            memberResults.value = data.data.members;
+        } catch {
+            memberResults.value = [];
+        }
+    }, 250);
+});
+
+const memberItems = computed(() => {
+    const can = page.props.can || {};
+    return memberResults.value.flatMap((m) => {
+        const out = [];
+        if (can.manageUsers && route().has('admin.users.index')) {
+            out.push({ group: 'Учасники', label: `${m.name} — картка`, href: route('admin.users.index', { q: m.name }) });
+        }
+        if (can.manageReports && route().has('admin.reports.index')) {
+            out.push({ group: 'Учасники', label: `${m.name} — звіти`, href: route('admin.reports.index', { q: m.name, status: 'pending' }) });
+        }
+        return out;
+    });
+});
+
 const filtered = computed(() => {
     const q = query.value.trim().toLowerCase();
-    if (!q) return items.value;
-    return items.value.filter((i) => i.label.toLowerCase().includes(q));
+    const base = q ? items.value.filter((i) => i.label.toLowerCase().includes(q)) : items.value;
+    return q.length >= 2 ? [...base, ...memberItems.value] : base;
 });
 
 watch(filtered, () => (activeIndex.value = 0));
@@ -46,7 +86,7 @@ watch(filtered, () => (activeIndex.value = 0));
 function go(item) {
     if (!item) return;
     open.value = false;
-    router.visit(route(item.name));
+    router.visit(item.href || route(item.name));
 }
 
 function onKeydown(e) {
@@ -73,6 +113,7 @@ watch(open, (v) => {
     if (v) {
         query.value = '';
         activeIndex.value = 0;
+        memberResults.value = [];
         nextTick(() => inputEl.value?.focus());
     }
 });
@@ -107,7 +148,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown));
                     </div>
                     <button
                         v-for="(item, i) in filtered"
-                        :key="item.name"
+                        :key="item.href || item.name"
                         class="flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left text-sm transition-colors"
                         :class="i === activeIndex ? 'bg-gold-400/10 text-gold-200' : 'text-white/60 hover:bg-white/5 hover:text-white'"
                         @mouseenter="activeIndex = i"

@@ -31,6 +31,15 @@ class DesignSettings
     /** Знімки для каруселі "Галерея родини" — окремо від brand/avatars. */
     public const GALLERY_DIR = 'gallery';
 
+    /**
+     * Сезонні прикраси поверх сайту — легкий canvas-шар (сніжинки,
+     * конфеті, пелюстки), той самий підхід, що вже й так вимикається на
+     * /admin і при effects=off (див. syncDecorations() в app.js).
+     * Вручну перемикається адміном — без автоматики за датою, щоб не
+     * плутатись у часових поясах і не забувати вимкнути після свята.
+     */
+    public const SEASONAL_THEMES = ['none', 'new_year', 'christmas', 'easter', 'birthday'];
+
     /** @return array<string,mixed> */
     public static function all(): array
     {
@@ -41,7 +50,20 @@ class DesignSettings
             'effects' => self::effects(),
             'logoUrl' => self::assetUrl('design_logo'),
             'faviconUrl' => self::assetUrl('design_favicon'),
+            'seasonalTheme' => self::seasonalTheme(),
         ];
+    }
+
+    public static function seasonalTheme(): string
+    {
+        $value = trim((string) Setting::get('design_seasonal_theme'));
+
+        return in_array($value, self::SEASONAL_THEMES, true) ? $value : 'none';
+    }
+
+    public static function saveSeasonalTheme(string $theme): void
+    {
+        Setting::set('design_seasonal_theme', in_array($theme, self::SEASONAL_THEMES, true) ? $theme : 'none', self::GROUP);
     }
 
     /**

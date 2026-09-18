@@ -14,6 +14,7 @@ import PageTransition from './Components/PageTransition.vue';
 import { startSmoothScroll, stopSmoothScroll, handleAnchorClick, resetScroll } from './lib/smoothScroll';
 import { startCursor, stopCursor } from './lib/cursor';
 import { startAuroraShader, stopAuroraShader } from './lib/auroraShader';
+import { startSeasonalDecoration, stopSeasonalDecoration } from './lib/seasonalDecoration';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
@@ -39,12 +40,20 @@ function syncDecorations() {
         stopSmoothScroll();
         stopCursor();
         stopAuroraShader();
+        stopSeasonalDecoration();
         return;
     }
 
     startSmoothScroll();
     startCursor();
     startAuroraShader();
+
+    const season = document.documentElement.dataset.season || 'none';
+    if (season === 'none') {
+        stopSeasonalDecoration();
+    } else {
+        startSeasonalDecoration(season);
+    }
 }
 
 function startDecorations() {

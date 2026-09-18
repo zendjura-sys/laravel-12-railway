@@ -11,6 +11,7 @@ const props = defineProps({
     brand: { type: Object, required: true },
     theme: { type: Object, required: true },
     effectLevels: { type: Array, default: () => [] },
+    seasonalThemes: { type: Array, default: () => [] },
     content: { type: Object, required: true },
     carousels: { type: Object, required: true },
     pendingAvatars: { type: Array, default: () => [] },
@@ -82,7 +83,15 @@ const EFFECT_LABELS = {
     off: 'Вимкнена — чистий фон',
 };
 
-const themeForm = useForm({ accent: props.theme.accent, effects: props.theme.effects });
+const SEASONAL_LABELS = {
+    none: 'Немає',
+    new_year: 'Новий рік',
+    christmas: 'Різдво',
+    easter: 'Великдень',
+    birthday: 'День народження родини',
+};
+
+const themeForm = useForm({ accent: props.theme.accent, effects: props.theme.effects, seasonalTheme: props.theme.seasonalTheme });
 
 function saveTheme() {
     themeForm.put(route('admin.design.theme'), { preserveScroll: true });
@@ -340,6 +349,25 @@ function saveSocialLinks() {
                         </label>
                     </div>
                     <InputError :message="themeForm.errors.effects" />
+                </div>
+
+                <div>
+                    <InputLabel value="Сезонні прикраси" />
+                    <p class="mb-2 mt-1 text-xs text-white/30">Легкий візуальний шар поверх сайту — знімається вручну, коли свято минуло.</p>
+                    <div class="mt-2 grid gap-2 sm:grid-cols-2">
+                        <label
+                            v-for="th in seasonalThemes"
+                            :key="th"
+                            class="flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 text-sm transition-colors"
+                            :class="themeForm.seasonalTheme === th
+                                ? 'border-gold-400/40 bg-gold-500/10 text-white'
+                                : 'border-white/10 text-white/50 hover:text-white'"
+                        >
+                            <input v-model="themeForm.seasonalTheme" type="radio" :value="th" class="sr-only" />
+                            {{ SEASONAL_LABELS[th] || th }}
+                        </label>
+                    </div>
+                    <InputError :message="themeForm.errors.seasonalTheme" />
                 </div>
             </div>
 

@@ -6,7 +6,7 @@
     $design = App\Support\DesignSettings::all();
     $accentCss = App\Support\DesignSettings::accentCss();
 @endphp
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-effects="{{ $design['effects'] }}">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-effects="{{ $design['effects'] }}" data-season="{{ $design['seasonalTheme'] }}">
     <head>
         <meta charset="utf-8">
         {{-- viewport-fit=cover — иначе на телефонах с вырезом (iPhone X и

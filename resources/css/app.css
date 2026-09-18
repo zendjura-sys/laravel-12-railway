@@ -33,6 +33,15 @@
         to   { opacity: 1; }
     }
 
+    /* ---------- сезонні прикраси (сніжинки/пелюстки/конфеті) ---------- */
+    .seasonal-decoration {
+        position: fixed;
+        inset: 0;
+        z-index: 50;
+        pointer-events: none;
+        animation: aurora-shader-in 1.2s ease-out both;
+    }
+
     /* ---------- кастомный курсор ---------- */
     .cursor-dot,
     .cursor-ring {

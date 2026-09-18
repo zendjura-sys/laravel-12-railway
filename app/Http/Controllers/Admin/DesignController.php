@@ -38,8 +38,10 @@ class DesignController extends Controller
             'theme' => [
                 'accent' => DesignSettings::accent(),
                 'effects' => DesignSettings::effects(),
+                'seasonalTheme' => DesignSettings::seasonalTheme(),
             ],
             'effectLevels' => DesignSettings::EFFECT_LEVELS,
+            'seasonalThemes' => DesignSettings::SEASONAL_THEMES,
             'content' => [
                 'leadership' => FamilyContent::leadership(),
                 'positions' => FamilyContent::positions(),
@@ -216,10 +218,12 @@ class DesignController extends Controller
         $data = $request->validate([
             'accent' => ['required', 'string', 'regex:/^#[0-9a-fA-F]{6}$/'],
             'effects' => ['required', 'in:'.implode(',', DesignSettings::EFFECT_LEVELS)],
+            'seasonalTheme' => ['required', 'in:'.implode(',', DesignSettings::SEASONAL_THEMES)],
         ]);
 
         Setting::set('design_accent', strtoupper($data['accent']), 'design');
         Setting::set('design_effects', $data['effects'], 'design');
+        DesignSettings::saveSeasonalTheme($data['seasonalTheme']);
 
         return back()->with('status', 'Оформлення збережено.');
     }

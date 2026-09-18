@@ -2,12 +2,15 @@
 
 namespace Addons\Notifications\Http\Controllers\Admin;
 
+use Addons\AiAssistant\Services\BroadcastTextAssistant;
 use Addons\Notifications\Jobs\SendBroadcastTelegramMessage;
 use Addons\Notifications\Models\Broadcast;
 use Addons\Notifications\Models\BroadcastDelivery;
 use Addons\TelegramBot\Models\TelegramLink;
+use App\Models\Setting;
 use App\Models\User;
 use App\Support\FamilyContent;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -42,6 +45,7 @@ class BroadcastController
             'broadcasts' => $broadcasts,
             'roles' => Role::query()->pluck('name'),
             'positions' => collect(FamilyContent::positions())->map(fn ($p) => ['key' => $p['key'], 'title' => $p['title']])->values(),
+            'aiBroadcastAssistEnabled' => class_exists(BroadcastTextAssistant::class) && Setting::get('ai_broadcast_assist_enabled') === '1',
         ]);
     }
 
@@ -89,6 +93,35 @@ class BroadcastController
         $this->dispatchTelegramDeliveries($broadcast, $recipients);
 
         return back()->with('success', 'Розсилку опубліковано.');
+    }
+
+    /**
+     * Чернетка — не публікація: адмін бачить покращений варіант і сам
+     * вирішує, вставляти його чи ні. Нічого не зберігається й не шлеться.
+     */
+    public function polish(Request $request): JsonResponse
+    {
+        if (! class_exists(BroadcastTextAssistant::class)) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Модуль AI Assistant не встановлено.',
+                'data' => null,
+                'errors' => null,
+                'redirect' => null,
+            ], 422);
+        }
+
+        $data = $request->validate(['body' => ['required', 'string', 'max:4000']]);
+
+        $text = app(BroadcastTextAssistant::class)->polish($data['body']);
+
+        return response()->json([
+            'ok' => $text !== null,
+            'message' => $text !== null ? null : 'Не вдалося покращити текст — перевірте налаштування AI.',
+            'data' => ['text' => $text],
+            'errors' => null,
+            'redirect' => null,
+        ], $text !== null ? 200 : 422);
     }
 
     /**

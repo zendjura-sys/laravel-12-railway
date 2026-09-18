@@ -9,4 +9,5 @@ Route::middleware(['web', 'auth', 'verified', 'permission:broadcasts.manage'])
     ->group(function () {
         Route::get('/', [BroadcastController::class, 'index'])->name('index');
         Route::post('/', [BroadcastController::class, 'store'])->name('store');
+        Route::post('/polish', [BroadcastController::class, 'polish'])->name('polish');
     });

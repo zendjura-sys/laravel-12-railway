@@ -2,8 +2,10 @@
 
 namespace Addons\TelegramBot\Services;
 
+use Addons\AiAssistant\Services\ApplicationQualityReviewer;
 use Addons\TelegramBot\Models\TelegramApplication;
 use Addons\TelegramBot\Models\TelegramLink;
+use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Support\Facades\Route;
 
@@ -100,7 +102,7 @@ class ApplicationReview
      */
     public function notifyReviewers(TelegramApplication $application): int
     {
-        $text = $this->summaryText($application);
+        $text = $this->summaryText($application).$this->aiQualityLine($application);
 
         $rows = [[
             ['text' => '✅  Схвалити', 'callback_data' => 'rev:a:'.$application->id],
@@ -127,6 +129,25 @@ class ApplicationReview
         $application->update(['notified_messages' => $notified]);
 
         return count($notified);
+    }
+
+    /**
+     * AI-assistant — опційна залежність (class_exists), і навіть коли
+     * встановлено, перевіряється окремий тумблер: адмін міг вимкнути саме
+     * цей напрямок використання, лишивши інші (аналіз фото, розсилки) увімкненими.
+     */
+    private function aiQualityLine(TelegramApplication $application): string
+    {
+        if (
+            ! class_exists(ApplicationQualityReviewer::class)
+            || Setting::get('ai_applications_review_enabled') !== '1'
+        ) {
+            return '';
+        }
+
+        $note = app(ApplicationQualityReviewer::class)->review($application);
+
+        return $note ? "\n<i>🤖 ".e($note)."</i>\n" : '';
     }
 
     /** Той самий блок деталей — і в первинному сповіщенні, і в рішенні по ньому. */

@@ -16,6 +16,25 @@ class SettingsController extends Controller
         'general' => ['site_name', 'site_tagline', 'support_contact'],
         'telegram' => ['telegram_bot_username', 'telegram_bot_token', 'telegram_webhook_url', 'telegram_bot_url', 'telegram_group_id'],
         'discord' => ['discord_client_id', 'discord_client_secret', 'discord_redirect_uri', 'discord_bot_token', 'discord_guild_id'],
+        'ai' => [
+            'gemini_api_key',
+            'ai_reports_analysis_enabled',
+            'ai_rejection_advice_enabled',
+            'ai_applications_review_enabled',
+            'ai_broadcast_assist_enabled',
+        ],
+    ];
+
+    /**
+     * Тумблери зберігаються як '1'/null через ту саму Setting::set(), що й
+     * усе інше, — без окремої таблиці чи типу. На фронті це checkbox
+     * (boolean), тому окремо конвертуємо в update().
+     *
+     * @var array<int, string>
+     */
+    private const BOOLEAN_FIELDS = [
+        'ai_reports_analysis_enabled', 'ai_rejection_advice_enabled',
+        'ai_applications_review_enabled', 'ai_broadcast_assist_enabled',
     ];
 
     /**
@@ -38,7 +57,9 @@ class SettingsController extends Controller
         $values = [];
         foreach (self::FIELDS as $group => $keys) {
             foreach ($keys as $key) {
-                $values[$key] = Setting::get($key);
+                $values[$key] = in_array($key, self::BOOLEAN_FIELDS, true)
+                    ? Setting::get($key) === '1'
+                    : Setting::get($key);
             }
         }
 
@@ -53,9 +74,11 @@ class SettingsController extends Controller
 
         $rules = [];
         foreach (self::FIELDS[$group] as $key) {
-            $rules[$key] = in_array($key, self::URL_FIELDS, true)
-                ? ['nullable', 'string', 'max:2000', 'url:http,https']
-                : ['nullable', 'string', 'max:2000'];
+            $rules[$key] = match (true) {
+                in_array($key, self::BOOLEAN_FIELDS, true) => ['boolean'],
+                in_array($key, self::URL_FIELDS, true) => ['nullable', 'string', 'max:2000', 'url:http,https'],
+                default => ['nullable', 'string', 'max:2000'],
+            };
         }
 
         $data = $request->validate($rules, [], [
@@ -65,7 +88,11 @@ class SettingsController extends Controller
         ]);
 
         foreach (self::FIELDS[$group] as $key) {
-            Setting::set($key, $data[$key] ?? null, $group);
+            $value = in_array($key, self::BOOLEAN_FIELDS, true)
+                ? (($data[$key] ?? false) ? '1' : null)
+                : ($data[$key] ?? null);
+
+            Setting::set($key, $value, $group);
         }
 
         return back()->with('status', 'settings-updated');

@@ -7,7 +7,22 @@ const props = defineProps({
     broadcasts: { type: Object, required: true },
     roles: { type: Array, default: () => [] },
     positions: { type: Array, default: () => [] },
+    aiBroadcastAssistEnabled: { type: Boolean, default: false },
 });
+
+const aiPolishing = ref(false);
+async function polishText() {
+    if (!form.body.trim()) return;
+    aiPolishing.value = true;
+    try {
+        const { data } = await window.axios.post(route('admin.broadcasts.polish'), { body: form.body });
+        if (data.ok) {
+            form.body = data.data.text;
+        }
+    } finally {
+        aiPolishing.value = false;
+    }
+}
 
 const showForm = ref(false);
 const form = useForm({
@@ -63,7 +78,18 @@ function fmtDateTime(iso) {
                     <p v-if="form.errors.title" class="mt-1 text-xs text-ember-500">{{ form.errors.title }}</p>
                 </div>
                 <div class="mt-5">
-                    <label class="mb-2 block text-xs uppercase tracking-widest text-white/40">Текст</label>
+                    <div class="mb-2 flex items-center justify-between">
+                        <label class="block text-xs uppercase tracking-widest text-white/40">Текст</label>
+                        <button
+                            v-if="aiBroadcastAssistEnabled"
+                            type="button"
+                            :disabled="aiPolishing || !form.body.trim()"
+                            class="rounded-full border border-gold-400/30 bg-gold-400/10 px-3 py-1 text-[11px] font-medium text-gold-300 hover:bg-gold-400/20 disabled:opacity-40"
+                            @click="polishText"
+                        >
+                            {{ aiPolishing ? 'Покращую…' : '✨ Покращити текст' }}
+                        </button>
+                    </div>
                     <textarea v-model="form.body" rows="4" class="w-full rounded-lg border border-white/10 bg-obsidian-900 px-3 py-2 text-white"></textarea>
                     <p v-if="form.errors.body" class="mt-1 text-xs text-ember-500">{{ form.errors.body }}</p>
                 </div>

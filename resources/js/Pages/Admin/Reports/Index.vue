@@ -7,6 +7,7 @@ import PhotoGallery from '@/Components/PhotoGallery.vue';
 const props = defineProps({
     reports: { type: Object, required: true },
     status: { type: String, default: 'pending' },
+    aiRejectionAdviceEnabled: { type: Boolean, default: false },
 });
 
 const toasts = ref([]);
@@ -56,6 +57,38 @@ function confirmApprove(report) {
     if (!selectedGrade.value) return;
     if (LOW_GRADES.includes(selectedGrade.value) && !gradeReason.value.trim()) return;
     act(report, 'approve', { grade: selectedGrade.value, grade_reason: gradeReason.value || null });
+}
+
+/* ================= Відхилення + AI-рекомендація ================= */
+
+const rejectingReportId = ref(null);
+const rejectNote = ref('');
+const aiDrafting = ref(false);
+
+function startRejecting(report) {
+    rejectingReportId.value = report.id;
+    rejectNote.value = '';
+}
+
+async function draftAiRecommendation(report) {
+    aiDrafting.value = true;
+    try {
+        const { data } = await window.axios.post(route('admin.reports.ai-recommendation', report.id), { hint: rejectNote.value || null });
+        if (data.ok) {
+            rejectNote.value = data.data.text;
+        } else {
+            pushToast(false, data.message);
+        }
+    } catch (e) {
+        pushToast(false, e.response?.data?.message || 'Помилка');
+    } finally {
+        aiDrafting.value = false;
+    }
+}
+
+function confirmReject(report) {
+    act(report, 'reject', { note: rejectNote.value || null });
+    rejectingReportId.value = null;
 }
 
 function switchStatus(s) {
@@ -118,7 +151,16 @@ function fmtDate(iso) {
                                 л:{{ report.light_count }} с:{{ report.medium_count }} т:{{ report.heavy_count }}
                             </span>
                             <span v-if="report.amount" class="text-xs uppercase text-white/40">{{ report.amount.toLocaleString('uk-UA') }}</span>
+                            <span
+                                v-if="report.ai_review?.flagged"
+                                class="rounded-full border border-gold-400/30 bg-gold-400/10 px-2 py-0.5 text-[10px] uppercase tracking-wide text-gold-300"
+                                :title="[report.ai_review.date_mismatch_detail, report.ai_review.count_mismatch_detail].filter(Boolean).join(' · ')"
+                            >
+                                🤖 AI: розбіжність
+                            </span>
                         </div>
+                        <p v-if="report.ai_review?.date_mismatch" class="mt-1 text-xs text-gold-300/80">🤖 {{ report.ai_review.date_mismatch_detail }}</p>
+                        <p v-if="report.ai_review?.count_mismatch" class="mt-1 text-xs text-gold-300/80">🤖 {{ report.ai_review.count_mismatch_detail }}</p>
                         <p v-if="report.description" class="mt-1 text-sm text-white/50">{{ report.description }}</p>
                         <p class="mt-1 text-xs text-white/30">
                             подав {{ report.submitter?.name }}
@@ -159,8 +201,35 @@ function fmtDate(iso) {
                                 <button class="text-xs text-white/40 hover:text-white" @click="gradingReportId = null">Скасувати</button>
                             </div>
                         </div>
+
+                        <div v-if="rejectingReportId === report.id" class="mt-3 rounded-lg border border-white/10 bg-obsidian-900/60 p-3">
+                            <textarea
+                                v-model="rejectNote"
+                                rows="3"
+                                placeholder="Причина відхилення — учасник побачить цей текст…"
+                                class="w-full rounded-lg border border-white/10 bg-obsidian-900 px-3 py-2 text-sm text-white"
+                            ></textarea>
+                            <div class="mt-2 flex flex-wrap gap-2">
+                                <button
+                                    v-if="aiRejectionAdviceEnabled"
+                                    :disabled="aiDrafting"
+                                    class="rounded-full border border-gold-400/30 bg-gold-400/10 px-4 py-1.5 text-xs font-medium text-gold-300 hover:bg-gold-400/20 disabled:opacity-40"
+                                    @click="draftAiRecommendation(report)"
+                                >
+                                    {{ aiDrafting ? 'Генерую…' : '✨ Згенерувати рекомендацію' }}
+                                </button>
+                                <button
+                                    :disabled="busy === report.id"
+                                    class="rounded-full border border-ember-500/25 bg-ember-600/10 px-4 py-1.5 text-xs font-medium text-ember-500/80 hover:bg-ember-600/20 disabled:opacity-40"
+                                    @click="confirmReject(report)"
+                                >
+                                    Підтвердити відхилення
+                                </button>
+                                <button class="text-xs text-white/40 hover:text-white" @click="rejectingReportId = null">Скасувати</button>
+                            </div>
+                        </div>
                     </div>
-                    <div v-if="report.status === 'pending' && gradingReportId !== report.id" class="flex gap-2">
+                    <div v-if="report.status === 'pending' && gradingReportId !== report.id && rejectingReportId !== report.id" class="flex gap-2">
                         <button
                             :disabled="busy === report.id"
                             class="rounded-full border border-emerald-400/30 bg-emerald-400/10 px-4 py-1.5 text-xs font-medium text-emerald-300 hover:bg-emerald-400/20 disabled:opacity-40"
@@ -171,7 +240,7 @@ function fmtDate(iso) {
                         <button
                             :disabled="busy === report.id"
                             class="rounded-full border border-ember-500/25 px-4 py-1.5 text-xs font-medium text-ember-500/80 hover:bg-ember-600/10 disabled:opacity-40"
-                            @click="act(report, 'reject')"
+                            @click="startRejecting(report)"
                         >
                             Відхилити
                         </button>

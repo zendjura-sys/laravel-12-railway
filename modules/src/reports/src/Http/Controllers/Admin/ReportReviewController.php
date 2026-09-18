@@ -2,8 +2,11 @@
 
 namespace Addons\Reports\Http\Controllers\Admin;
 
+use Addons\AiAssistant\Models\AiReportReview;
+use Addons\AiAssistant\Services\RejectionAdvisor;
 use Addons\Reports\Events\ReportReviewed;
 use Addons\Reports\Models\Report;
+use App\Models\Setting;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -23,10 +26,67 @@ class ReportReviewController
             ->paginate(20)
             ->withQueryString();
 
+        $this->attachAiReviews($reports);
+
         return Inertia::render('Admin/Reports/Index', [
             'reports' => $reports,
             'status' => $status,
+            'aiRejectionAdviceEnabled' => class_exists(RejectionAdvisor::class) && Setting::get('ai_rejection_advice_enabled') === '1',
         ]);
+    }
+
+    /**
+     * AI-assistant — опційна залежність (class_exists, як і скрізь у
+     * проєкті): якщо модуль не встановлено чи звіти ще не проаналізовано
+     * (черга не встигла чи тумблер вимкнено), просто немає ai_review в
+     * даних, і фронт про це вже знає (v-if).
+     */
+    private function attachAiReviews($reports): void
+    {
+        if (! class_exists(AiReportReview::class)) {
+            return;
+        }
+
+        $reviews = AiReportReview::query()
+            ->whereIn('report_id', $reports->pluck('id'))
+            ->get()
+            ->keyBy('report_id');
+
+        $reports->getCollection()->transform(function (Report $report) use ($reviews) {
+            $report->setAttribute('ai_review', $reviews->get($report->id));
+
+            return $report;
+        });
+    }
+
+    /**
+     * Готує чернетку пояснення для учасника — адмін бачить її в полі
+     * причини відхилення й редагує/прибирає перед тим, як реально
+     * натиснути "Відхилити". Сам виклик нічого не міняє в статусі звіту.
+     */
+    public function aiRecommendation(Request $request, Report $report): JsonResponse
+    {
+        if (! class_exists(RejectionAdvisor::class)) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Модуль AI Assistant не встановлено.',
+                'data' => null,
+                'errors' => null,
+                'redirect' => null,
+            ], 422);
+        }
+
+        $data = $request->validate(['hint' => ['nullable', 'string', 'max:1000']]);
+
+        $text = app(RejectionAdvisor::class)->draft($report, $data['hint'] ?? null);
+
+        return response()->json([
+            'ok' => $text !== null,
+            'message' => $text !== null ? null : 'Не вдалося згенерувати рекомендацію — перевірте налаштування AI.',
+            'data' => ['text' => $text],
+            'errors' => null,
+            'redirect' => null,
+        ], $text !== null ? 200 : 422);
     }
 
     /**

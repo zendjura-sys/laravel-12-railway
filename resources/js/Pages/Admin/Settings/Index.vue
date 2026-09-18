@@ -4,6 +4,7 @@ import InputLabel from '@/Components/InputLabel.vue';
 import TextInput from '@/Components/TextInput.vue';
 import InputError from '@/Components/InputError.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
+import Checkbox from '@/Components/Checkbox.vue';
 import { Head, useForm } from '@inertiajs/vue3';
 import { ref } from 'vue';
 
@@ -40,6 +41,16 @@ const TABS = {
             { key: 'discord_guild_id', label: 'ID сервера (guild)' },
         ],
     },
+    ai: {
+        label: 'AI',
+        fields: [
+            { key: 'gemini_api_key', label: 'Gemini API Key', secret: true },
+            { key: 'ai_reports_analysis_enabled', label: 'Аналіз фото-доказів звіту (дата на скріні, кількість)', type: 'checkbox' },
+            { key: 'ai_rejection_advice_enabled', label: 'Кнопка "Згенерувати рекомендацію" при відхиленні звіту', type: 'checkbox' },
+            { key: 'ai_applications_review_enabled', label: 'Оцінка якості анкети при новій заявці на вступ', type: 'checkbox' },
+            { key: 'ai_broadcast_assist_enabled', label: 'Кнопка "Покращити текст" у формі розсилки', type: 'checkbox' },
+        ],
+    },
 };
 
 const activeTab = ref('general');
@@ -47,7 +58,7 @@ const activeTab = ref('general');
 function makeForm(group) {
     const initial = {};
     for (const field of TABS[group].fields) {
-        initial[field.key] = props.values[field.key] || '';
+        initial[field.key] = field.type === 'checkbox' ? !!props.values[field.key] : (props.values[field.key] || '');
     }
     return useForm(initial);
 }
@@ -56,10 +67,28 @@ const forms = {
     general: makeForm('general'),
     telegram: makeForm('telegram'),
     discord: makeForm('discord'),
+    ai: makeForm('ai'),
 };
 
 function submit(group) {
     forms[group].put(route('admin.settings.update', group), { preserveScroll: true });
+}
+
+/* ---------- перевірка підключення Gemini ---------- */
+const aiTesting = ref(false);
+const aiTestResult = ref(null);
+
+async function testAi() {
+    aiTesting.value = true;
+    aiTestResult.value = null;
+    try {
+        const { data } = await window.axios.post(route('admin.ai.test'));
+        aiTestResult.value = { ok: data.ok, message: data.message };
+    } catch (e) {
+        aiTestResult.value = { ok: false, message: e.response?.data?.message || 'Помилка' };
+    } finally {
+        aiTesting.value = false;
+    }
 }
 </script>
 
@@ -84,18 +113,37 @@ function submit(group) {
         <Transition name="fade-tab" mode="out-in">
             <form v-reveal v-glow :key="activeTab" class="glass-panel max-w-xl space-y-5 p-8" @submit.prevent="submit(activeTab)">
                 <div v-for="field in TABS[activeTab].fields" :key="field.key">
-                    <InputLabel :value="field.label" />
-                    <TextInput
-                        v-model="forms[activeTab][field.key]"
-                        :type="field.secret ? 'password' : 'text'"
-                        autocomplete="off"
-                    />
+                    <label v-if="field.type === 'checkbox'" class="flex cursor-pointer items-center gap-3">
+                        <Checkbox v-model:checked="forms[activeTab][field.key]" />
+                        <span class="text-sm text-white/70">{{ field.label }}</span>
+                    </label>
+                    <template v-else>
+                        <InputLabel :value="field.label" />
+                        <TextInput
+                            v-model="forms[activeTab][field.key]"
+                            :type="field.secret ? 'password' : 'text'"
+                            autocomplete="off"
+                        />
+                    </template>
                     <InputError :message="forms[activeTab].errors[field.key]" />
                 </div>
 
-                <div class="flex items-center gap-4 pt-2">
+                <div class="flex flex-wrap items-center gap-4 pt-2">
                     <PrimaryButton :disabled="forms[activeTab].processing">Зберегти</PrimaryButton>
                     <p v-if="forms[activeTab].recentlySuccessful" class="text-sm text-emerald-300">Збережено.</p>
+
+                    <button
+                        v-if="activeTab === 'ai'"
+                        type="button"
+                        :disabled="aiTesting"
+                        class="rounded-full border border-white/15 px-4 py-2 text-xs uppercase tracking-widest text-white/60 transition-colors hover:border-gold-400/40 hover:text-white disabled:opacity-40"
+                        @click="testAi"
+                    >
+                        {{ aiTesting ? 'Перевіряю…' : 'Перевірити підключення' }}
+                    </button>
+                    <p v-if="activeTab === 'ai' && aiTestResult" class="text-sm" :class="aiTestResult.ok ? 'text-emerald-300' : 'text-ember-500'">
+                        {{ aiTestResult.message }}
+                    </p>
                 </div>
             </form>
         </Transition>

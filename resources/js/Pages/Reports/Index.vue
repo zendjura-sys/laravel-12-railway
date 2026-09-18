@@ -2,12 +2,16 @@
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import { ref, watch } from 'vue';
 import PhotoGallery from '@/Components/PhotoGallery.vue';
+import Modal from '@/Components/Modal.vue';
 import { verb } from '@/utils/gendered';
 
 const props = defineProps({
     reports: { type: Object, required: true },
     myId: { type: Number, required: true },
+    reportGuides: { type: Object, default: () => ({}) },
 });
+
+const showGuide = ref(false);
 
 const today = new Date().toISOString().slice(0, 10);
 
@@ -231,7 +235,17 @@ function fmtDateOnly(iso) {
                     </div>
 
                     <div>
-                        <label class="mb-2 block text-xs uppercase tracking-widest text-white/40">Тип</label>
+                        <div class="flex items-center justify-between gap-3">
+                            <label class="mb-2 block text-xs uppercase tracking-widest text-white/40">Тип</label>
+                            <button
+                                type="button"
+                                class="mb-2 flex shrink-0 items-center gap-1.5 rounded-full border border-gold-400/30 px-3 py-1 text-xs text-gold-300 transition-colors hover:border-gold-300 hover:text-gold-200"
+                                @click="showGuide = true"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-3.5 w-3.5"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+                                Як оформити?
+                            </button>
+                        </div>
                         <select v-model="form.type" class="w-full max-w-xs rounded-lg border border-white/10 bg-obsidian-900 px-3 py-2 text-white">
                             <option value="contract">Контракт</option>
                             <option value="bizwar">Бізвар</option>
@@ -406,6 +420,20 @@ function fmtDateOnly(iso) {
                 </div>
             </div>
         </div>
+
+        <Modal :show="showGuide" max-width="lg" @close="showGuide = false">
+            <div class="p-6">
+                <h3 class="font-display mb-4 text-lg text-white">Як оформити «{{ typeLabels[form.type] }}»</h3>
+                <p class="whitespace-pre-line text-sm leading-relaxed text-white/60">{{ reportGuides[form.type] || 'Для цього типу звіту поки немає окремої пам\'ятки.' }}</p>
+                <button
+                    type="button"
+                    class="mt-6 rounded-full border border-white/15 px-5 py-2 text-sm text-white/60 hover:border-white/30"
+                    @click="showGuide = false"
+                >
+                    Зрозуміло
+                </button>
+            </div>
+        </Modal>
     </div>
 </template>
 

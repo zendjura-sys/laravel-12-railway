@@ -34,6 +34,16 @@ class SettingsController extends Controller
             'ai_broadcast_assist_instructions',
             'ai_event_draft_instructions',
         ],
+        // Пам'ятки "як правильно оформити звіт" — учасник бачить їх
+        // кнопкою "Як оформити?" у формі подачі звіту, за типом. Не має
+        // нічого спільного з AI-інструкціями вище: це готовий текст для
+        // людини, а не промпт для моделі.
+        'report_guides' => [
+            'report_guide_bizwar',
+            'report_guide_contract',
+            'report_guide_investment',
+            'report_guide_other',
+        ],
     ];
 
     /**
@@ -46,6 +56,7 @@ class SettingsController extends Controller
     private const LONG_TEXT_FIELDS = [
         'ai_reports_analysis_instructions', 'ai_rejection_advice_instructions', 'ai_grade_advice_instructions',
         'ai_applications_review_instructions', 'ai_broadcast_assist_instructions', 'ai_event_draft_instructions',
+        'report_guide_bizwar', 'report_guide_contract', 'report_guide_investment', 'report_guide_other',
     ];
 
     /**

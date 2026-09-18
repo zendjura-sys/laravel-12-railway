@@ -6,6 +6,7 @@ use Addons\Reports\Events\ReportCreated;
 use Addons\Reports\Models\Report;
 use Addons\Reports\Models\ReportAttachment;
 use App\Models\User;
+use App\Support\ReportGuides;
 use Illuminate\Support\Carbon;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -38,6 +39,7 @@ class ReportController
         return Inertia::render('Reports/Index', [
             'reports' => $reports,
             'myId' => $request->user()->id,
+            'reportGuides' => ReportGuides::all(),
         ]);
     }
 

@@ -100,6 +100,35 @@ const TABS = {
             },
         ],
     },
+    report_guides: {
+        label: 'Пам\'ятки для звітів',
+        fields: [
+            {
+                key: 'report_guide_bizwar',
+                label: 'Бізвар',
+                type: 'textarea',
+                hint: 'Що писати й які скріни додавати учаснику при поданні звіту типу "Бізвар". Порожнє поле — покажеться стандартна пам\'ятка.',
+            },
+            {
+                key: 'report_guide_contract',
+                label: 'Контракт',
+                type: 'textarea',
+                hint: 'Що писати й які скріни додавати при поданні звіту типу "Контракт". Порожнє поле — покажеться стандартна пам\'ятка.',
+            },
+            {
+                key: 'report_guide_investment',
+                label: 'Інвестиції',
+                type: 'textarea',
+                hint: 'Що писати й які скріни додавати при поданні звіту типу "Інвестиції". Порожнє поле — покажеться стандартна пам\'ятка.',
+            },
+            {
+                key: 'report_guide_other',
+                label: 'Інше',
+                type: 'textarea',
+                hint: 'Що писати й які скріни додавати при поданні звіту типу "Інше". Порожнє поле — покажеться стандартна пам\'ятка.',
+            },
+        ],
+    },
 };
 
 const activeTab = ref('general');
@@ -118,6 +147,7 @@ const forms = {
     discord: makeForm('discord'),
     ai: makeForm('ai'),
     ai_prompts: makeForm('ai_prompts'),
+    report_guides: makeForm('report_guides'),
 };
 
 function submit(group) {

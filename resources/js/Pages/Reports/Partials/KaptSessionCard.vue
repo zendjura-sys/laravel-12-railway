@@ -45,10 +45,10 @@ const statusMeta = {
             <div
                 v-for="p in session.participants"
                 :key="p.report_id"
-                class="flex items-center justify-between gap-4 px-6 py-3"
+                class="flex flex-wrap items-center justify-between gap-3 px-6 py-3"
             >
-                <span class="text-sm text-white/80">{{ p.name ?? '—' }}</span>
-                <div class="flex items-center gap-3">
+                <span class="min-w-0 truncate text-sm text-white/80">{{ p.name ?? '—' }}</span>
+                <div class="flex shrink-0 items-center gap-3">
                     <span class="text-xs text-white/40">{{ p.wins }}–{{ p.losses }}</span>
                     <span class="shrink-0 rounded-full border px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-wide" :class="statusMeta[p.status]?.class">
                         {{ statusMeta[p.status]?.label }}

@@ -67,7 +67,7 @@ function fmtDate(iso) {
         </header>
 
         <div class="mx-auto max-w-4xl px-6 py-10">
-            <div v-glow class="glass-panel mb-8 flex items-center justify-between p-6">
+            <div v-glow class="glass-panel mb-8 flex flex-wrap items-center justify-between gap-3 p-6">
                 <div>
                     <p class="text-xs uppercase tracking-widest text-white/40">Ваш статус</p>
                     <p class="font-display mt-1 text-xl text-white">Учасник родини</p>
@@ -115,9 +115,9 @@ function fmtDate(iso) {
                 <div
                     v-for="lr in leaveRequests"
                     :key="lr.id"
-                    class="flex items-center justify-between gap-4 border-b border-white/5 px-6 py-4 last:border-0"
+                    class="flex flex-wrap items-center justify-between gap-3 border-b border-white/5 px-6 py-4 last:border-0"
                 >
-                    <div>
+                    <div class="min-w-0">
                         <p class="font-medium text-white">{{ fmtDate(lr.starts_on) }} — {{ fmtDate(lr.ends_on) }}</p>
                         <p v-if="lr.reason" class="mt-1 text-sm text-white/50">{{ lr.reason }}</p>
                     </div>

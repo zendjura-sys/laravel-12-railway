@@ -167,12 +167,12 @@ async function runNow() {
             <h2 class="mb-4 font-display text-lg text-white">Досягнення за інвестиції</h2>
 
             <div v-if="tiers.length" class="mb-5 space-y-2">
-                <div v-for="tier in tiers" :key="tier.id" class="flex items-center justify-between rounded-lg border border-white/10 px-4 py-2.5">
+                <div v-for="tier in tiers" :key="tier.id" class="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-white/10 px-4 py-2.5">
                     <div>
                         <span class="font-medium text-white">{{ tier.label }}</span>
                         <span class="ml-3 text-sm text-white/40">від {{ fmt(tier.threshold_amount) }} кумулятивно → +{{ fmt(tier.bonus_amount) }}</span>
                     </div>
-                    <button class="text-xs text-ember-500/70 hover:text-ember-500" @click="removeTier(tier)">Видалити</button>
+                    <button class="shrink-0 text-xs text-ember-500/70 hover:text-ember-500" @click="removeTier(tier)">Видалити</button>
                 </div>
             </div>
             <p v-else class="mb-5 text-sm text-white/30">Тірів ще немає.</p>

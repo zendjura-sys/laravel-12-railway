@@ -67,15 +67,15 @@ async function submitAdjust(userId) {
         <div class="max-w-5xl">
             <div class="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02]">
                 <div v-for="p in profiles.data" :key="p.id" class="border-b border-white/5 px-6 py-4 last:border-0">
-                    <div class="flex items-center justify-between gap-4">
+                    <div class="flex flex-wrap items-center justify-between gap-3">
                         <div>
                             <div class="font-medium text-white">{{ p.user?.name }}</div>
                             <div class="text-xs text-white/40">{{ p.user?.email }}</div>
                         </div>
-                        <div class="flex items-center gap-4">
-                            <span class="font-display text-lg text-gold-300">{{ p.xp }} очок досвіду</span>
+                        <div class="flex flex-wrap items-center gap-3">
+                            <span class="whitespace-nowrap font-display text-lg text-gold-300">{{ p.xp }} очок досвіду</span>
                             <button
-                                class="rounded-full border border-white/15 px-4 py-1.5 text-xs text-white/60 hover:border-white/30"
+                                class="shrink-0 rounded-full border border-white/15 px-4 py-1.5 text-xs text-white/60 hover:border-white/30"
                                 @click="openAdjust(p.id)"
                             >
                                 {{ adjustingUserId === p.id ? 'Скасувати' : 'Скоригувати' }}

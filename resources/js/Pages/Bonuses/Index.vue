@@ -38,7 +38,7 @@ function fmtDate(d) {
                     <div
                         v-for="tier in tiers"
                         :key="tier.id"
-                        class="flex items-center justify-between rounded-lg border px-4 py-2.5"
+                        class="flex flex-wrap items-center justify-between gap-2 rounded-lg border px-4 py-2.5"
                         :class="tier.earned ? 'border-gold-400/30 bg-gold-400/[0.04]' : 'border-white/10'"
                     >
                         <div>
@@ -47,7 +47,7 @@ function fmtDate(d) {
                             </span>
                             <span class="ml-3 text-sm text-white/40">від {{ fmt(tier.threshold_amount) }} → +{{ fmt(tier.bonus_amount) }}</span>
                         </div>
-                        <span v-if="!tier.earned && cumulativeInvestment < tier.threshold_amount" class="text-xs text-white/30">
+                        <span v-if="!tier.earned && cumulativeInvestment < tier.threshold_amount" class="shrink-0 whitespace-nowrap text-xs text-white/30">
                             лишилось {{ fmt(tier.threshold_amount - cumulativeInvestment) }}
                         </span>
                     </div>

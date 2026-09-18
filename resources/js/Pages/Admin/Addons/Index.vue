@@ -420,14 +420,14 @@ function showInfo(addon) {
                 <div
                     v-for="log in recentAudit"
                     :key="log.id"
-                    class="flex items-center justify-between border-b border-white/5 px-5 py-3 text-sm last:border-0"
+                    class="flex flex-wrap items-center justify-between gap-2 border-b border-white/5 px-5 py-3 text-sm last:border-0"
                 >
                     <span class="text-white/60">
                         <span class="text-gold-300/80">{{ log.user?.name || 'система' }}</span>
                         — {{ log.action }}
                         <span v-if="log.addon" class="text-white/40">({{ log.addon.name }})</span>
                     </span>
-                    <span class="text-xs text-white/30">{{ fmtDate(log.created_at) }}</span>
+                    <span class="shrink-0 whitespace-nowrap text-xs text-white/30">{{ fmtDate(log.created_at) }}</span>
                 </div>
                 <div v-if="recentAudit.length === 0" class="px-5 py-6 text-center text-sm text-white/30">
                     Поки що пусто

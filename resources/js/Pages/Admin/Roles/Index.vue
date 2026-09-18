@@ -20,7 +20,7 @@ const props = defineProps({
  */
 const PERMISSION_META = {
     'addons.manage': { label: 'Аддони', description: 'Встановлення, оновлення, увімкнення й вимкнення модулів/тем/плагінів' },
-    'bonuses.manage': { label: 'Премії', description: 'Ставки розрахунку, тіри інвестицій, історія виплат учасникам' },
+    'bonuses.manage': { label: 'Премії', description: 'Ставки розрахунку, інвестиційні тіри, історія виплат учасникам' },
     'broadcasts.manage': { label: 'Розсилки', description: 'Створення розсилок від адміністрації всім/за роллю/за посадою' },
     'events.manage': { label: 'Події родини', description: 'Створення, видалення подій і ручна розсилка нагадувань про них' },
     'goals.manage': { label: 'Цілі родини', description: 'Керування спільними цілями родини та їх прогресом' },
@@ -100,14 +100,14 @@ async function destroyRole(role) {
 
         <div class="space-y-6">
             <div v-for="role in roles" :key="role.id" v-reveal v-glow class="glass-panel p-6">
-                <div class="mb-4 flex items-center justify-between">
+                <div class="mb-4 flex flex-wrap items-center justify-between gap-2">
                     <div>
                         <h3 class="font-display text-xl text-white">{{ role.name }}</h3>
                         <p class="text-xs text-white/40">{{ role.users_count }} учасник(ів) з цією роллю</p>
                     </div>
                     <button
                         v-if="role.name !== 'admin'"
-                        class="rounded-full border border-ember-500/25 px-4 py-1.5 text-xs font-medium text-ember-500/80 transition-colors hover:bg-ember-600/10"
+                        class="shrink-0 rounded-full border border-ember-500/25 px-4 py-1.5 text-xs font-medium text-ember-500/80 transition-colors hover:bg-ember-600/10"
                         @click="destroyRole(role)"
                     >
                         Видалити

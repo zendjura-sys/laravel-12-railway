@@ -224,7 +224,7 @@ function fmtDateTime(iso) {
                             <p class="font-medium text-white">{{ member.name }}</p>
                             <p class="text-xs text-white/40">{{ member.email }}</p>
                         </div>
-                        <div class="flex items-center gap-3">
+                        <div class="flex flex-wrap items-center gap-3">
                             <button
                                 class="rounded-full border border-white/15 px-3 py-1.5 text-xs text-white/60 transition-colors hover:border-white/30"
                                 @click="toggleNotes(member)"

@@ -87,17 +87,17 @@ const sourceLabels = { report: 'звіт', weekly_bonus: 'тижневий бо�
                 <div
                     v-for="entry in battleLog"
                     :key="entry.id"
-                    class="flex items-center justify-between border-b border-white/5 px-5 py-3 text-sm last:border-0"
+                    class="flex flex-wrap items-center justify-between gap-2 border-b border-white/5 px-5 py-3 text-sm last:border-0"
                 >
-                    <div>
+                    <div class="min-w-0">
                         <span class="text-white/70">{{ entry.reason }}</span>
                         <span class="ml-2 text-xs text-white/30">({{ sourceLabels[entry.source_type] }})</span>
                     </div>
-                    <div class="flex items-center gap-3">
-                        <span :class="entry.amount >= 0 ? 'text-emerald-300' : 'text-ember-500'">
+                    <div class="flex shrink-0 flex-wrap items-center gap-3">
+                        <span class="whitespace-nowrap" :class="entry.amount >= 0 ? 'text-emerald-300' : 'text-ember-500'">
                             {{ entry.amount >= 0 ? '+' : '' }}{{ entry.amount }} очок досвіду
                         </span>
-                        <span class="text-xs text-white/30">{{ fmtDate(entry.created_at) }}</span>
+                        <span class="whitespace-nowrap text-xs text-white/30">{{ fmtDate(entry.created_at) }}</span>
                     </div>
                 </div>
                 <div v-if="battleLog.length === 0" class="px-5 py-10 text-center text-white/30">

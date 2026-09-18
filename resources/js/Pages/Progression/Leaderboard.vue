@@ -59,39 +59,39 @@ function winrate(entry) {
                 <div
                     v-for="(entry, i) in leaderboard"
                     :key="i"
-                    class="flex items-center justify-between gap-4 border-b border-white/5 px-6 py-4 last:border-0"
+                    class="flex flex-wrap items-center justify-between gap-4 border-b border-white/5 px-6 py-4 last:border-0"
                     :class="i < 3 ? 'bg-gold-400/[0.04]' : ''"
                 >
-                    <div class="flex items-center gap-4">
+                    <div class="flex min-w-0 items-center gap-4">
                         <span
-                            class="font-display w-8 text-center text-xl"
+                            class="font-display w-8 shrink-0 text-center text-xl"
                             :class="i === 0 ? 'text-gold-300' : i < 3 ? 'text-gold-400/60' : 'text-white/30'"
                         >
                             {{ i + 1 }}
                         </span>
-                        <div>
-                            <div class="font-medium text-white">{{ entry.name }}</div>
-                            <div class="text-xs text-white/40">
+                        <div class="min-w-0">
+                            <div class="truncate font-medium text-white">{{ entry.name }}</div>
+                            <div class="truncate text-xs text-white/40">
                                 {{ entry.position || 'без посади' }}
                                 <template v-if="category === 'xp'"> · рівень активності {{ entry.level }}</template>
                             </div>
                         </div>
                     </div>
 
-                    <span v-if="category === 'xp'" class="font-display text-xl text-gold-300">{{ entry.xp }} очок досвіду</span>
-                    <span v-else-if="category === 'bizwar'" class="text-right font-display text-xl text-gold-300">
+                    <span v-if="category === 'xp'" class="shrink-0 whitespace-nowrap font-display text-xl text-gold-300">{{ entry.xp }} очок досвіду</span>
+                    <span v-else-if="category === 'bizwar'" class="shrink-0 text-right font-display text-xl text-gold-300">
                         {{ entry.kapt_wins }}–{{ entry.kapt_losses }}
                         <span v-if="winrate(entry) !== null" class="block text-xs font-normal text-white/40">{{ winrate(entry) }}% перемог</span>
                     </span>
-                    <span v-else-if="category === 'contracts'" class="text-right font-display text-xl text-gold-300">
+                    <span v-else-if="category === 'contracts'" class="shrink-0 text-right font-display text-xl text-gold-300">
                         {{ entry.contracts_count }}
                         <span v-if="entry.heavy_contracts_count" class="block text-xs font-normal text-white/40">{{ entry.heavy_contracts_count }} важких</span>
                     </span>
-                    <span v-else-if="category === 'streak'" class="text-right font-display text-xl text-gold-300">
+                    <span v-else-if="category === 'streak'" class="shrink-0 text-right font-display text-xl text-gold-300">
                         {{ entry.current_streak }}
                         <span class="block text-xs font-normal text-white/40">найдовша: {{ entry.longest_streak }}</span>
                     </span>
-                    <span v-else-if="category === 'bonuses'" class="font-display text-xl text-gold-300">
+                    <span v-else-if="category === 'bonuses'" class="shrink-0 whitespace-nowrap font-display text-xl text-gold-300">
                         {{ entry.total_amount.toLocaleString('uk-UA') }} ₴
                     </span>
                 </div>

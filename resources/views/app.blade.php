@@ -21,6 +21,18 @@
             <link rel="icon" href="{{ $design['faviconUrl'] }}">
         @endif
 
+        {{-- PWA: «Додати на головний екран» на телефоні. Іконки — статичні
+             файли (фірмовий ромб з M), а не той самий faviconUrl вище: той
+             admin-редагований і може бути відсутній, а маніфест без хоч
+             одної валідної іконки браузер просто ігнорує — install prompt
+             не з'явиться взагалі. --}}
+        <link rel="manifest" href="/manifest.webmanifest">
+        <link rel="apple-touch-icon" href="/images/icons/apple-touch-icon.png">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+        <meta name="apple-mobile-web-app-title" content="Monsory">
+        <meta name="mobile-web-app-capable" content="yes">
+
         <meta name="description" content="Monsory Family — закрита родина на RP-сервері: спільний особняк і автопарк, свій звʼязок, спільні операції та власний кодекс.">
 
         <title inertia>{{ $design['siteName'] ?: config('app.name', 'Laravel') }}</title>

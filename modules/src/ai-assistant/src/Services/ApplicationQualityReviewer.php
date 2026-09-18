@@ -2,6 +2,7 @@
 
 namespace Addons\AiAssistant\Services;
 
+use Addons\AiAssistant\Support\AdminInstructions;
 use Addons\TelegramBot\Models\TelegramApplication;
 
 /**
@@ -23,7 +24,7 @@ class ApplicationQualityReviewer
 
         $about = trim((string) $application->about) ?: '(не заповнено)';
 
-        $prompt = <<<PROMPT
+        $task = <<<PROMPT
             Ти допомагаєш рецензенту клану (GTA RP) швидко оцінити анкету нового кандидата.
             Нік: {$application->nickname}
             Вік: {$application->age_range}
@@ -33,10 +34,10 @@ class ApplicationQualityReviewer
             Про себе: {$about}
 
             Одним коротким реченням українською (до 15 слів) дай першу оцінку: чи виглядає анкета продуманою й щирою, чи це типовий шаблон/спам/копіпаста з мінімумом зусиль. Без оцінок типу "схвалити/відхилити" — лише враження. Приклади тону: "Виглядає продумано, конкретні відповіді." або "Дуже коротко, схоже на формальність — варто розпитати додатково."
-
-            Відповідай лише цим реченням, без лапок і пояснень.
             PROMPT;
 
-        return $this->mistral->generateText($prompt);
+        $format = 'Відповідай лише цим реченням, без лапок і пояснень.';
+
+        return $this->mistral->generateText(AdminInstructions::insert($task, $format, 'ai_applications_review_instructions'));
     }
 }

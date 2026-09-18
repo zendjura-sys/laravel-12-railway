@@ -57,6 +57,35 @@ const TABS = {
             { key: 'ai_broadcast_assist_enabled', label: 'Кнопка "Покращити текст" у формі розсилки', type: 'checkbox' },
         ],
     },
+    ai_prompts: {
+        label: 'Інструкції AI',
+        fields: [
+            {
+                key: 'ai_reports_analysis_instructions',
+                label: 'Аналіз фото-доказів звіту',
+                type: 'textarea',
+                hint: 'Наприклад: де саме на скріні шукати дату й час, у якому вони форматі, на що ще звертати увагу. Порожнє поле — AI орієнтується лише на власний здоровий глузд.',
+            },
+            {
+                key: 'ai_rejection_advice_instructions',
+                label: 'Рекомендація при відхиленні звіту',
+                type: 'textarea',
+                hint: 'Додаткові правила для тексту-поради учаснику (тон, що обов\'язково згадати тощо).',
+            },
+            {
+                key: 'ai_applications_review_instructions',
+                label: 'Оцінка якості анкети на вступ',
+                type: 'textarea',
+                hint: 'На що звертати увагу в анкеті кандидата понад стандартну перевірку на шаблонність.',
+            },
+            {
+                key: 'ai_broadcast_assist_instructions',
+                label: 'Покращення тексту розсилки',
+                type: 'textarea',
+                hint: 'Стиль, тон чи вимоги до тексту розсилок (наприклад, завжди звертатись на "ви").',
+            },
+        ],
+    },
 };
 
 const activeTab = ref('general');
@@ -74,6 +103,7 @@ const forms = {
     telegram: makeForm('telegram'),
     discord: makeForm('discord'),
     ai: makeForm('ai'),
+    ai_prompts: makeForm('ai_prompts'),
 };
 
 function submit(group) {
@@ -128,6 +158,15 @@ async function testAi() {
                         <Checkbox v-model:checked="forms[activeTab][field.key]" />
                         <span class="text-sm text-white/70">{{ field.label }}</span>
                     </label>
+                    <template v-else-if="field.type === 'textarea'">
+                        <InputLabel :value="field.label" />
+                        <textarea
+                            v-model="forms[activeTab][field.key]"
+                            rows="4"
+                            class="w-full rounded-lg border border-white/10 bg-obsidian-900 px-3 py-2 text-white"
+                        ></textarea>
+                        <p v-if="field.hint" class="mt-1 text-xs text-white/30">{{ field.hint }}</p>
+                    </template>
                     <template v-else>
                         <InputLabel :value="field.label" />
                         <TextInput

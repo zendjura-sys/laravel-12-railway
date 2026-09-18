@@ -3,6 +3,7 @@
 namespace Addons\AiAssistant\Services;
 
 use Addons\AiAssistant\Models\AiReportReview;
+use Addons\AiAssistant\Support\AdminInstructions;
 use Addons\Reports\Models\Report;
 use Illuminate\Support\Facades\Storage;
 
@@ -75,7 +76,7 @@ class ReportPhotoAnalyzer
             default => (string) $report->description,
         };
 
-        return <<<PROMPT
+        $task = <<<PROMPT
             Ти допомагаєш модератору перевірити звіт учасника гри (GTA RP клан).
             Учасник заявив: дата звіту {$date}, тип "{$report->type}", деталі: {$claim}.
             Додано {$photoCount} фото-доказ(ів) — скріншотів гри.
@@ -85,10 +86,14 @@ class ReportPhotoAnalyzer
             1. Дата на скріншоті. У грі дата зазвичай видно в нижньому лівому куті екрана (телефон/годинник у грі) або в чаті. Порівняй її з датою звіту ({$date}). Якщо дата на фото чітко видно і вона НЕ збігається з датою звіту — постав date_mismatch true й коротко поясни простими словами, яка дата на фото і яка в звіті.
 
             2. Кількість. Порівняй кількість наданих фото ({$photoCount}) із заявленою кількістю виконаних робіт/результатів. Якщо очевидно замало доказів на заявлену кількість (наприклад, один скріншот на 5 контрактів) — постав count_mismatch true й поясни просто.
+            PROMPT;
 
+        $format = <<<PROMPT
             Відповідай ЛИШЕ JSON без пояснень поза ним, у форматі:
             {"date_mismatch": true/false, "date_mismatch_detail": "коротке пояснення простими словами українською або null", "count_mismatch": true/false, "count_mismatch_detail": "коротке пояснення або null", "notes": "1 речення загального враження або null"}
             PROMPT;
+
+        return AdminInstructions::insert($task, $format, 'ai_reports_analysis_instructions');
     }
 
     private function str(mixed $value): ?string

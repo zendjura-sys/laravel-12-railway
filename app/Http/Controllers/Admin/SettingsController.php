@@ -24,6 +24,24 @@ class SettingsController extends Controller
             'ai_applications_review_enabled',
             'ai_broadcast_assist_enabled',
         ],
+        'ai_prompts' => [
+            'ai_reports_analysis_instructions',
+            'ai_rejection_advice_instructions',
+            'ai_applications_review_instructions',
+            'ai_broadcast_assist_instructions',
+        ],
+    ];
+
+    /**
+     * Довільні інструкції адміна для AI-промптів — на відміну від решти
+     * текстових полів (назва сайту, URL тощо), тут очікується кілька речень
+     * чи навіть абзаців, тому ліміт довжини значно ширший.
+     *
+     * @var array<int, string>
+     */
+    private const LONG_TEXT_FIELDS = [
+        'ai_reports_analysis_instructions', 'ai_rejection_advice_instructions',
+        'ai_applications_review_instructions', 'ai_broadcast_assist_instructions',
     ];
 
     /**
@@ -78,6 +96,7 @@ class SettingsController extends Controller
             $rules[$key] = match (true) {
                 in_array($key, self::BOOLEAN_FIELDS, true) => ['boolean'],
                 in_array($key, self::URL_FIELDS, true) => ['nullable', 'string', 'max:2000', 'url:http,https'],
+                in_array($key, self::LONG_TEXT_FIELDS, true) => ['nullable', 'string', 'max:5000'],
                 default => ['nullable', 'string', 'max:2000'],
             };
         }

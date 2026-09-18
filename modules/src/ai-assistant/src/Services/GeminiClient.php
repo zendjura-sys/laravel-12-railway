@@ -26,14 +26,22 @@ class GeminiClient
 
     private ?string $apiKey;
 
+    private ?string $proxyUrl;
+
     /**
-     * $overrideKey — для перевірки підключення в адмінці ще ДО збереження:
-     * без цього "Перевірити підключення" тестував би те, що вже лежить у
-     * налаштуваннях, а не щойно введене в полі значення.
+     * $overrideKey/$overrideProxy — для перевірки підключення в адмінці ще
+     * ДО збереження: без цього "Перевірити підключення" тестував би те, що
+     * вже лежить у налаштуваннях, а не щойно введене в полі значення.
+     *
+     * $proxyUrl — на випадок, коли сам сервер (його IP чи країна хостингу)
+     * заблокований Google на мережевому рівні: генеративний API повертає
+     * фірмову HTML-сторінку 403 ще ДО будь-якої перевірки ключа. Проксі —
+     * єдиний робочий обхід у такому разі, не помилка коду чи ключа.
      */
-    public function __construct(?string $overrideKey = null)
+    public function __construct(?string $overrideKey = null, ?string $overrideProxy = null)
     {
         $this->apiKey = $overrideKey ?: (Setting::get('gemini_api_key') ?: null);
+        $this->proxyUrl = $overrideProxy ?: (Setting::get('gemini_proxy_url') ?: null);
     }
 
     public function isConfigured(): bool
@@ -95,10 +103,15 @@ class GeminiClient
             // (навіть якщо when() відмовив у повторі), і повне тіло помилки
             // від Google губиться за куцим "HTTP ... status code 403" замість
             // нижнього детального логування.
-            $response = Http::timeout(30)
+            $request = Http::timeout(30)
                 ->retry(2, 2000, fn ($e) => $e instanceof RequestException && $e->response->status() === 503, throw: false)
-                ->asJson()
-                ->post(self::API_URL.'/models/'.self::MODEL.':generateContent?key='.$this->apiKey, array_filter([
+                ->asJson();
+
+            if ($this->proxyUrl) {
+                $request = $request->withOptions(['proxy' => $this->proxyUrl]);
+            }
+
+            $response = $request->post(self::API_URL.'/models/'.self::MODEL.':generateContent?key='.$this->apiKey, array_filter([
                     'contents' => [$content],
                     'generationConfig' => $generationConfig ?: null,
                 ], static fn ($v) => $v !== null));
@@ -116,10 +129,18 @@ class GeminiClient
 
             return $json;
         } catch (\Throwable $e) {
-            Log::warning('gemini: запит кинув виняток', ['error' => $e->getMessage()]);
+            // Виняток мережевого рівня (cURL і т.п.) зазвичай містить повний
+            // URL запиту, а він у нас із ключем у query-рядку — без
+            // редагування ключ осідав би відкритим текстом у логах.
+            Log::warning('gemini: запит кинув виняток', ['error' => $this->redactKey($e->getMessage())]);
 
             return null;
         }
+    }
+
+    private function redactKey(string $message): string
+    {
+        return $this->apiKey ? str_replace($this->apiKey, '[REDACTED]', $message) : $message;
     }
 
     /** @param array<string,mixed>|null $response */

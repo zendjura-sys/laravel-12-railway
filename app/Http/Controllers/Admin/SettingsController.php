@@ -18,6 +18,7 @@ class SettingsController extends Controller
         'discord' => ['discord_client_id', 'discord_client_secret', 'discord_redirect_uri', 'discord_bot_token', 'discord_guild_id'],
         'ai' => [
             'gemini_api_key',
+            'gemini_proxy_url',
             'ai_reports_analysis_enabled',
             'ai_rejection_advice_enabled',
             'ai_applications_review_enabled',

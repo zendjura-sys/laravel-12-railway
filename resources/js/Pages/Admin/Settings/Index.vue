@@ -45,6 +45,12 @@ const TABS = {
         label: 'AI',
         fields: [
             { key: 'gemini_api_key', label: 'Gemini API Key', secret: true },
+            {
+                key: 'gemini_proxy_url',
+                label: 'HTTP proxy для Gemini (необов\'язково)',
+                secret: true,
+                hint: 'Заповнюйте лише якщо "Перевірити підключення" видає помилку — деякі хостинги заблоковані Google на мережевому рівні, і напряму достукатись до Gemini неможливо. Формат: http://user:pass@host:port',
+            },
             { key: 'ai_reports_analysis_enabled', label: 'Аналіз фото-доказів звіту (дата на скріні, кількість)', type: 'checkbox' },
             { key: 'ai_rejection_advice_enabled', label: 'Кнопка "Згенерувати рекомендацію" при відхиленні звіту', type: 'checkbox' },
             { key: 'ai_applications_review_enabled', label: 'Оцінка якості анкети при новій заявці на вступ', type: 'checkbox' },
@@ -84,7 +90,10 @@ async function testAi() {
     try {
         // Шлемо те, що зараз у полі, навіть якщо ще не натиснули "Зберегти" —
         // інакше довелось би спершу зберегти, а вже потім тестувати.
-        const { data } = await window.axios.post(route('admin.ai.test'), { api_key: forms.ai.gemini_api_key });
+        const { data } = await window.axios.post(route('admin.ai.test'), {
+            api_key: forms.ai.gemini_api_key,
+            proxy_url: forms.ai.gemini_proxy_url,
+        });
         aiTestResult.value = { ok: data.ok, message: data.message };
     } catch (e) {
         aiTestResult.value = { ok: false, message: e.response?.data?.message || 'Помилка' };
@@ -126,6 +135,7 @@ async function testAi() {
                             :type="field.secret ? 'password' : 'text'"
                             autocomplete="off"
                         />
+                        <p v-if="field.hint" class="mt-1 text-xs text-white/30">{{ field.hint }}</p>
                     </template>
                     <InputError :message="forms[activeTab].errors[field.key]" />
                 </div>

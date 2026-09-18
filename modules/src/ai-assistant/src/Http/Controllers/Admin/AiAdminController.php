@@ -13,14 +13,17 @@ class AiAdminController
      * означає, що він робочий (неправильний, прострочений, вичерпана
      * квота тощо). Reports/Telegram-адмінка мають той самий приём.
      *
-     * Ключ, введений у полі, але ще НЕ збережений — теж приймаємо
-     * (api_key): без цього довелось би спершу натиснути "Зберегти", а
-     * потім окремо "Перевірити підключення", що плутало.
+     * Ключ і проксі, введені в полях, але ще НЕ збережені — теж приймаємо
+     * (api_key/proxy_url): без цього довелось би спершу натиснути
+     * "Зберегти", а потім окремо "Перевірити підключення", що плутало.
      */
     public function test(Request $request): JsonResponse
     {
         $typedKey = trim((string) $request->input('api_key', ''));
-        $client = $typedKey !== '' ? new GeminiClient($typedKey) : app(GeminiClient::class);
+        $typedProxy = trim((string) $request->input('proxy_url', ''));
+        $client = ($typedKey !== '' || $typedProxy !== '')
+            ? new GeminiClient($typedKey ?: null, $typedProxy ?: null)
+            : app(GeminiClient::class);
 
         if (! $client->isConfigured()) {
             return response()->json([

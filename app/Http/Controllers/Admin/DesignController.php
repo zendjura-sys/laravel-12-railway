@@ -11,6 +11,7 @@ use App\Support\FamilyContent;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -50,12 +51,27 @@ class DesignController extends Controller
                 'showMembers' => DesignSettings::showMemberCarousel(),
                 'showGallery' => DesignSettings::showGalleryCarousel(),
             ],
+            'socialLinks' => DesignSettings::socialLinks(),
+            'socialPlatforms' => DesignSettings::SOCIAL_PLATFORMS,
             'gallery' => GalleryPhoto::query()
                 ->orderBy('sort_order')
                 ->orderBy('id')
                 ->get()
                 ->map(fn (GalleryPhoto $p) => ['id' => $p->id, 'url' => $p->url(), 'caption' => $p->caption]),
         ]);
+    }
+
+    public function updateSocialLinks(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'links' => ['present', 'array', 'max:12'],
+            'links.*.platform' => ['required', 'string', Rule::in(DesignSettings::SOCIAL_PLATFORMS)],
+            'links.*.url' => ['required', 'string', 'max:500', 'url:http,https'],
+        ]);
+
+        DesignSettings::saveSocialLinks($data['links']);
+
+        return back()->with('status', 'Соцмережі оновлено.');
     }
 
     public function updateCarousels(Request $request): RedirectResponse

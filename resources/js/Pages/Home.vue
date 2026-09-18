@@ -5,6 +5,7 @@ import ApplicationLogo from '@/Components/ApplicationLogo.vue';
 import AmbientBackground from '@/Components/AmbientBackground.vue';
 import ScrollProgress from '@/Components/ScrollProgress.vue';
 import PhotoCarousel from '@/Components/PhotoCarousel.vue';
+import SocialIcon from '@/Components/SocialIcon.vue';
 
 const props = defineProps({
     canLogin: { type: Boolean, default: false },
@@ -20,7 +21,19 @@ const props = defineProps({
     leadership: { type: Array, default: () => [] },
     memberPhotos: { type: Array, default: () => [] },
     galleryPhotos: { type: Array, default: () => [] },
+    socialLinks: { type: Array, default: () => [] },
 });
+
+const SOCIAL_LABELS = {
+    telegram: 'Telegram',
+    discord: 'Discord',
+    tiktok: 'TikTok',
+    youtube: 'YouTube',
+    instagram: 'Instagram',
+    twitter: 'X (Twitter)',
+    vk: 'VK',
+    website: 'Посилання',
+};
 
 /* ---------- куди веде «Подати заявку» ----------
    Поки бот не заведений у налаштуваннях, кнопка веде на звичайну реєстрацію
@@ -993,6 +1006,23 @@ const benefits = [
                         <Link v-if="canLogin" :href="route('login')" class="transition-colors duration-300 hover:text-gold-300">
                             Вхід у кабінет
                         </Link>
+                    </div>
+
+                    <div v-if="socialLinks.length > 0" class="flex flex-col items-center gap-3 sm:items-start">
+                        <span class="text-[10px] uppercase tracking-[0.35em] text-gold-300/60">Соцмережі</span>
+                        <div class="flex flex-wrap gap-2">
+                            <a
+                                v-for="link in socialLinks"
+                                :key="link.platform"
+                                :href="link.url"
+                                target="_blank"
+                                rel="noopener"
+                                :title="SOCIAL_LABELS[link.platform] || link.platform"
+                                class="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 text-white/50 transition-colors duration-300 hover:border-gold-400/40 hover:text-gold-300"
+                            >
+                                <SocialIcon :platform="link.platform" />
+                            </a>
+                        </div>
                     </div>
                 </div>
 

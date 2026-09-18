@@ -14,6 +14,8 @@ const props = defineProps({
     content: { type: Object, required: true },
     carousels: { type: Object, required: true },
     gallery: { type: Array, default: () => [] },
+    socialLinks: { type: Array, default: () => [] },
+    socialPlatforms: { type: Array, default: () => [] },
 });
 
 const TABS = [
@@ -22,6 +24,7 @@ const TABS = [
     { key: 'structure', label: 'Структура' },
     { key: 'sections', label: 'Розділи' },
     { key: 'carousels', label: 'Каруселі' },
+    { key: 'social', label: 'Соцмережі' },
 ];
 const activeTab = ref('brand');
 
@@ -152,6 +155,34 @@ function uploadGalleryPhoto() {
 function removeGalleryPhoto(photo) {
     if (!confirm('Видалити це фото з галереї?')) return;
     router.delete(route('admin.design.gallery.destroy', photo.id), { preserveScroll: true });
+}
+
+/* ---------- соцмережі у футері ---------- */
+const PLATFORM_LABELS = {
+    telegram: 'Telegram (гостьовий)',
+    discord: 'Discord',
+    tiktok: 'TikTok',
+    youtube: 'YouTube',
+    instagram: 'Instagram',
+    twitter: 'X (Twitter)',
+    vk: 'VK',
+    website: 'Інше посилання',
+};
+
+const socialForm = useForm({
+    links: props.socialLinks.map((l) => ({ ...l })),
+});
+
+function addSocialLink() {
+    socialForm.links.push({ platform: props.socialPlatforms[0] ?? 'website', url: '' });
+}
+
+function removeSocialLink(i) {
+    socialForm.links.splice(i, 1);
+}
+
+function saveSocialLinks() {
+    socialForm.put(route('admin.design.social-links'), { preserveScroll: true });
 }
 </script>
 
@@ -534,6 +565,56 @@ function removeGalleryPhoto(photo) {
                     </div>
                 </div>
                 <p v-else class="text-sm text-white/30">Ще немає жодного фото.</p>
+            </div>
+        </div>
+
+        <!-- ================= СОЦМЕРЕЖІ ================= -->
+        <div v-if="activeTab === 'social'" class="max-w-2xl">
+            <div v-glow class="glass-panel p-6 sm:p-8">
+                <h2 class="font-display mb-1 text-lg text-white">Соцмережі у футері</h2>
+                <p class="mb-6 text-sm text-white/40">Іконки-посилання внизу головної сторінки. Порядок рядків тут — порядок іконок на сайті.</p>
+
+                <div class="space-y-3">
+                    <div v-for="(link, i) in socialForm.links" :key="i" class="flex flex-wrap items-start gap-3">
+                        <select
+                            v-model="link.platform"
+                            class="rounded-lg border border-white/10 bg-obsidian-900 px-3 py-2 text-sm text-white focus:border-gold-400/50 focus:outline-none"
+                        >
+                            <option v-for="p in socialPlatforms" :key="p" :value="p">{{ PLATFORM_LABELS[p] || p }}</option>
+                        </select>
+                        <div class="min-w-[220px] flex-1">
+                            <input
+                                v-model="link.url"
+                                type="url"
+                                placeholder="https://..."
+                                class="w-full rounded-lg border border-white/10 bg-obsidian-900 px-3 py-2 text-sm text-white placeholder:text-white/30"
+                            />
+                            <InputError :message="socialForm.errors[`links.${i}.url`]" />
+                        </div>
+                        <button
+                            type="button"
+                            class="mt-1 shrink-0 text-white/30 hover:text-ember-500"
+                            title="Видалити"
+                            @click="removeSocialLink(i)"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                        </button>
+                    </div>
+                    <p v-if="socialForm.links.length === 0" class="text-sm text-white/30">Ще немає жодного посилання.</p>
+                </div>
+
+                <button
+                    type="button"
+                    class="glass-pill mt-4 px-5 py-2.5 text-xs font-semibold uppercase tracking-widest text-white/70 hover:text-white"
+                    @click="addSocialLink"
+                >
+                    + Додати посилання
+                </button>
+
+                <div class="mt-6 flex items-center gap-4">
+                    <PrimaryButton :disabled="socialForm.processing" @click="saveSocialLinks">Зберегти</PrimaryButton>
+                    <p v-if="socialForm.recentlySuccessful" class="text-sm text-emerald-300">Збережено.</p>
+                </div>
             </div>
         </div>
     </AdminLayout>

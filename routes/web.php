@@ -58,6 +58,7 @@ Route::get('/', function () {
                 ->filter(fn (array $p) => $p['url'] !== null)
                 ->values()
             : [],
+        'socialLinks' => DesignSettings::socialLinks(),
     ]);
 })->name('home');
 
@@ -122,6 +123,7 @@ Route::middleware(['auth', 'verified', 'permission:settings.manage'])
         Route::put('/content', [DesignController::class, 'updateContent'])->name('content');
         Route::post('/content/reset', [DesignController::class, 'resetContent'])->name('content.reset');
         Route::put('/carousels', [DesignController::class, 'updateCarousels'])->name('carousels');
+        Route::put('/social-links', [DesignController::class, 'updateSocialLinks'])->name('social-links');
         Route::post('/gallery', [DesignController::class, 'storeGalleryPhoto'])->name('gallery.store');
         Route::delete('/gallery/{galleryPhoto}', [DesignController::class, 'destroyGalleryPhoto'])->name('gallery.destroy');
     });

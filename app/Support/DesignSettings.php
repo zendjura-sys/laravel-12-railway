@@ -65,6 +65,43 @@ class DesignSettings
         return $value === null || $value === '1';
     }
 
+    /** Платформи соцмереж, які можна додати у футер головної. */
+    public const SOCIAL_PLATFORMS = ['telegram', 'discord', 'tiktok', 'youtube', 'instagram', 'twitter', 'vk', 'website'];
+
+    /**
+     * Посилання на соцмережі у футері головної — вільний список, який
+     * веде адмін (Дизайн → Соцмережі). Зберігається одним JSON-полем:
+     * порядок рядків важливий (як їх показувати), а окрема таблиця для
+     * рідко змінюваного списку з кількох елементів — надмірність.
+     *
+     * @return array<int,array{platform:string,url:string}>
+     */
+    public static function socialLinks(): array
+    {
+        $raw = json_decode((string) Setting::get('design_social_links'), true);
+        if (! is_array($raw)) {
+            return [];
+        }
+
+        return array_values(array_filter(array_map(static function ($row) {
+            if (! is_array($row)) {
+                return null;
+            }
+            $platform = (string) ($row['platform'] ?? '');
+            $url = trim((string) ($row['url'] ?? ''));
+
+            return in_array($platform, self::SOCIAL_PLATFORMS, true) && $url !== ''
+                ? ['platform' => $platform, 'url' => $url]
+                : null;
+        }, $raw)));
+    }
+
+    /** @param array<int,array{platform:string,url:string}> $links */
+    public static function saveSocialLinks(array $links): void
+    {
+        Setting::set('design_social_links', json_encode($links), self::GROUP);
+    }
+
     public static function accent(): string
     {
         $value = trim((string) Setting::get('design_accent'));

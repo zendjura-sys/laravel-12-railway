@@ -125,6 +125,9 @@ Route::middleware(['auth', 'verified', 'permission:users.manage'])
         Route::get('/', [UserController::class, 'index'])->name('index');
         Route::put('/{user}/roles', [UserController::class, 'updateRoles'])->name('roles');
         Route::put('/{user}/position', [UserController::class, 'updatePosition'])->name('position');
+        Route::put('/{user}', [UserController::class, 'update'])->name('update');
+        Route::post('/{user}/reset-password', [UserController::class, 'resetPassword'])->name('reset-password');
+        Route::delete('/{user}', [UserController::class, 'destroy'])->name('destroy');
     });
 
 /*

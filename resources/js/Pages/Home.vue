@@ -4,6 +4,7 @@ import { computed, onMounted, onUnmounted, ref } from 'vue';
 import ApplicationLogo from '@/Components/ApplicationLogo.vue';
 import AmbientBackground from '@/Components/AmbientBackground.vue';
 import ScrollProgress from '@/Components/ScrollProgress.vue';
+import PhotoCarousel from '@/Components/PhotoCarousel.vue';
 
 const props = defineProps({
     canLogin: { type: Boolean, default: false },
@@ -17,6 +18,8 @@ const props = defineProps({
     directions: { type: Array, default: () => [] },
     promotionCriteria: { type: Array, default: () => [] },
     leadership: { type: Array, default: () => [] },
+    memberPhotos: { type: Array, default: () => [] },
+    galleryPhotos: { type: Array, default: () => [] },
 });
 
 /* ---------- куди веде «Подати заявку» ----------
@@ -713,6 +716,21 @@ const benefits = [
             </div>
         </section>
 
+        <!-- ================= КАРУСЕЛЬ: УЧАСНИКИ РОДИНИ ================= -->
+        <!-- Порожній масив — секція просто не рендериться: без цього на
+             свіжому сайті, поки ще ніхто не завантажив фото профілю,
+             показувалась би порожня карусель без сенсу. -->
+        <section v-if="memberPhotos.length > 0" id="member-gallery" class="relative mx-auto max-w-7xl px-4 py-20 sm:px-6">
+            <div v-reveal class="mx-auto mb-12 max-w-2xl text-center">
+                <p class="mb-4 text-[11px] font-medium uppercase tracking-[0.45em] text-gold-300/90">Хто в родині</p>
+                <h2 class="text-balance font-display text-4xl font-light text-white sm:text-5xl">
+                    Обличчя <span class="text-gradient-gold italic">родини</span>
+                </h2>
+            </div>
+
+            <PhotoCarousel :items="memberPhotos" variant="round" />
+        </section>
+
         <!-- ================= АТМОСФЕРА ================= -->
         <!-- overflow-x-clip обовʼязковий: усередині є картки з появою "збоку"
              (v-reveal left/right), які до показу зсунуті на 40px за межі
@@ -815,6 +833,18 @@ const benefits = [
                     </p>
                 </div>
             </div>
+        </section>
+
+        <!-- ================= КАРУСЕЛЬ: ГАЛЕРЕЯ РОДИНИ ================= -->
+        <section v-if="galleryPhotos.length > 0" id="family-gallery" class="relative mx-auto max-w-7xl px-4 py-20 sm:px-6">
+            <div v-reveal class="mx-auto mb-12 max-w-2xl text-center">
+                <p class="mb-4 text-[11px] font-medium uppercase tracking-[0.45em] text-gold-300/90">Моменти</p>
+                <h2 class="text-balance font-display text-4xl font-light text-white sm:text-5xl">
+                    Галерея <span class="text-gradient-gold italic">родини</span>
+                </h2>
+            </div>
+
+            <PhotoCarousel :items="galleryPhotos" variant="wide" />
         </section>
 
         <!-- ================= CINEMATIC: РІЗНІ ЦІЛІ ================= -->

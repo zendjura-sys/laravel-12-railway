@@ -5,6 +5,7 @@ import TelegramLinkForm from './Partials/TelegramLinkForm.vue';
 import UpdatePasswordForm from './Partials/UpdatePasswordForm.vue';
 import UpdateBirthdayForm from './Partials/UpdateBirthdayForm.vue';
 import UpdateGenderForm from './Partials/UpdateGenderForm.vue';
+import UpdateAvatarForm from './Partials/UpdateAvatarForm.vue';
 import UpdatePositionForm from './Partials/UpdatePositionForm.vue';
 import UpdateProfileInformationForm from './Partials/UpdateProfileInformationForm.vue';
 import { Head } from '@inertiajs/vue3';
@@ -74,6 +75,10 @@ onMounted(() => {
                     щоб отримувати особисті сповіщення.
                 </p>
                 <TelegramLinkForm class="max-w-xl" />
+            </div>
+
+            <div v-reveal:125 v-glow class="glass-panel p-6 sm:p-8">
+                <UpdateAvatarForm class="max-w-xl" />
             </div>
 
             <div v-reveal:150 v-glow class="glass-panel p-6 sm:p-8">

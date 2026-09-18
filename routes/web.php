@@ -9,7 +9,9 @@ use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\GuideController;
 use App\Http\Controllers\ProfileController;
+use App\Models\GalleryPhoto;
 use App\Models\User;
+use App\Support\DesignSettings;
 use App\Support\FamilyContent;
 use App\Support\TelegramLink;
 use Illuminate\Http\Request;
@@ -34,6 +36,28 @@ Route::get('/', function () {
         'directions' => FamilyContent::directions(),
         'promotionCriteria' => FamilyContent::promotionCriteria(),
         'leadership' => FamilyContent::leadership(),
+        // Каруселі: аватарки учасників, які самі завантажили фото в
+        // профілі, і галерея знімків подій, яку веде адмін. Обидва
+        // масиви порожні, поки нема реального контенту чи вимкнено в
+        // Дизайні — сторінка сама ховає секцію, якщо масив порожній.
+        'memberPhotos' => DesignSettings::showMemberCarousel()
+            ? User::query()
+                ->whereNotNull('avatar_path')
+                ->orderBy('name')
+                ->get()
+                ->map(fn (User $u) => ['name' => $u->name, 'position' => $u->position_title, 'url' => $u->avatar_url])
+                ->filter(fn (array $p) => $p['url'] !== null)
+                ->values()
+            : [],
+        'galleryPhotos' => DesignSettings::showGalleryCarousel()
+            ? GalleryPhoto::query()
+                ->orderBy('sort_order')
+                ->orderBy('id')
+                ->get()
+                ->map(fn (GalleryPhoto $p) => ['url' => $p->url(), 'caption' => $p->caption])
+                ->filter(fn (array $p) => $p['url'] !== null)
+                ->values()
+            : [],
     ]);
 })->name('home');
 
@@ -50,6 +74,7 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile/position', [ProfileController::class, 'updatePosition'])->name('profile.position');
     Route::patch('/profile/birthday', [ProfileController::class, 'updateBirthday'])->name('profile.birthday');
     Route::patch('/profile/gender', [ProfileController::class, 'updateGender'])->name('profile.gender');
+    Route::post('/profile/avatar', [ProfileController::class, 'updateAvatar'])->name('profile.avatar');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
     // Доступна одразу після реєстрації, ще до підтвердження email — саме
@@ -96,6 +121,9 @@ Route::middleware(['auth', 'verified', 'permission:settings.manage'])
         Route::put('/theme', [DesignController::class, 'updateTheme'])->name('theme');
         Route::put('/content', [DesignController::class, 'updateContent'])->name('content');
         Route::post('/content/reset', [DesignController::class, 'resetContent'])->name('content.reset');
+        Route::put('/carousels', [DesignController::class, 'updateCarousels'])->name('carousels');
+        Route::post('/gallery', [DesignController::class, 'storeGalleryPhoto'])->name('gallery.store');
+        Route::delete('/gallery/{galleryPhoto}', [DesignController::class, 'destroyGalleryPhoto'])->name('gallery.destroy');
     });
 
 Route::middleware(['auth', 'verified', 'permission:settings.manage'])

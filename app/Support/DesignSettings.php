@@ -28,6 +28,9 @@ class DesignSettings
     /** Файлы бренда лежат в public-диске: их отдаёт веб-сервер напрямую. */
     public const BRAND_DIR = 'brand';
 
+    /** Знімки для каруселі "Галерея родини" — окремо від brand/avatars. */
+    public const GALLERY_DIR = 'gallery';
+
     /** @return array<string,mixed> */
     public static function all(): array
     {
@@ -39,6 +42,27 @@ class DesignSettings
             'logoUrl' => self::assetUrl('design_logo'),
             'faviconUrl' => self::assetUrl('design_favicon'),
         ];
+    }
+
+    /**
+     * Каруселі на головній — учасники родини (аватарки) і галерея
+     * (знімки подій, вантажені адміном). За замовчуванням обидві
+     * увімкнені: порожній набір фото просто не рендериться на сторінці,
+     * тож увімкнене за дефолтом нічого не показує, поки не з'явиться
+     * реальний контент.
+     */
+    public static function showMemberCarousel(): bool
+    {
+        $value = Setting::get('design_show_member_carousel');
+
+        return $value === null || $value === '1';
+    }
+
+    public static function showGalleryCarousel(): bool
+    {
+        $value = Setting::get('design_show_gallery_carousel');
+
+        return $value === null || $value === '1';
     }
 
     public static function accent(): string

@@ -12,6 +12,8 @@ const props = defineProps({
     theme: { type: Object, required: true },
     effectLevels: { type: Array, default: () => [] },
     content: { type: Object, required: true },
+    carousels: { type: Object, required: true },
+    gallery: { type: Array, default: () => [] },
 });
 
 const TABS = [
@@ -19,6 +21,7 @@ const TABS = [
     { key: 'theme', label: 'Оформлення' },
     { key: 'structure', label: 'Структура' },
     { key: 'sections', label: 'Розділи' },
+    { key: 'carousels', label: 'Каруселі' },
 ];
 const activeTab = ref('brand');
 
@@ -112,6 +115,43 @@ function saveContent() {
 function resetBlock(key, label) {
     if (!confirm(`Повернути «${label}» до значень за замовчуванням? Ваші правки буде втрачено.`)) return;
     router.post(route('admin.design.content.reset'), { key }, { preserveScroll: true });
+}
+
+/* ---------- каруселі на головній ---------- */
+const carouselsForm = useForm({
+    showMembers: props.carousels.showMembers,
+    showGallery: props.carousels.showGallery,
+});
+
+function saveCarousels() {
+    carouselsForm.put(route('admin.design.carousels'), { preserveScroll: true });
+}
+
+const galleryForm = useForm({ photo: null, caption: '' });
+const galleryPreview = ref(null);
+const galleryInput = ref(null);
+
+function pickGalleryPhoto(event) {
+    const file = event.target.files?.[0] ?? null;
+    galleryForm.photo = file;
+    galleryPreview.value = file ? URL.createObjectURL(file) : null;
+}
+
+function uploadGalleryPhoto() {
+    galleryForm.post(route('admin.design.gallery.store'), {
+        preserveScroll: true,
+        forceFormData: true,
+        onSuccess: () => {
+            galleryForm.reset();
+            galleryPreview.value = null;
+            if (galleryInput.value) galleryInput.value.value = '';
+        },
+    });
+}
+
+function removeGalleryPhoto(photo) {
+    if (!confirm('Видалити це фото з галереї?')) return;
+    router.delete(route('admin.design.gallery.destroy', photo.id), { preserveScroll: true });
 }
 </script>
 
@@ -420,6 +460,80 @@ function resetBlock(key, label) {
             <div class="flex items-center gap-4">
                 <PrimaryButton :disabled="contentForm.processing" @click="saveContent">Зберегти все</PrimaryButton>
                 <p class="text-xs text-white/30">Зберігає посади, критерії та «Про родину» разом.</p>
+            </div>
+        </div>
+
+        <!-- ================= КАРУСЕЛІ ================= -->
+        <div v-if="activeTab === 'carousels'" class="max-w-3xl space-y-8">
+            <div v-glow class="glass-panel p-6 sm:p-8">
+                <h2 class="font-display mb-1 text-lg text-white">Каруселі на головній</h2>
+                <p class="mb-6 text-sm text-white/40">
+                    Кожну можна вимкнути окремо. Порожня карусель (нема фото) і так не показується, незалежно від тумблера.
+                </p>
+
+                <div class="space-y-4">
+                    <label class="flex cursor-pointer items-start gap-3">
+                        <input type="checkbox" v-model="carouselsForm.showMembers" class="mt-1 h-4 w-4 rounded border-white/20 bg-obsidian-900 text-gold-400 focus:ring-gold-400/40" />
+                        <span>
+                            <span class="block text-sm text-white">«Обличчя родини» — фото учасників</span>
+                            <span class="block text-xs text-white/40">Показує тих, хто сам додав фото у своєму профілі.</span>
+                        </span>
+                    </label>
+                    <label class="flex cursor-pointer items-start gap-3">
+                        <input type="checkbox" v-model="carouselsForm.showGallery" class="mt-1 h-4 w-4 rounded border-white/20 bg-obsidian-900 text-gold-400 focus:ring-gold-400/40" />
+                        <span>
+                            <span class="block text-sm text-white">«Галерея родини» — знімки подій</span>
+                            <span class="block text-xs text-white/40">Фото з розділу нижче, вантажені тут, в адмінці.</span>
+                        </span>
+                    </label>
+                </div>
+
+                <PrimaryButton class="mt-6" :disabled="carouselsForm.processing" @click="saveCarousels">Зберегти</PrimaryButton>
+            </div>
+
+            <div v-glow class="glass-panel p-6 sm:p-8">
+                <h2 class="font-display mb-1 text-lg text-white">Галерея родини</h2>
+                <p class="mb-6 text-sm text-white/40">Знімки подій, боїв, зустрічей — потрапляють у карусель «Галерея родини» на головній.</p>
+
+                <form class="mb-6 flex flex-wrap items-end gap-3" @submit.prevent="uploadGalleryPhoto">
+                    <div class="flex h-20 w-28 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-white/10 bg-white/[0.03]">
+                        <img v-if="galleryPreview" :src="galleryPreview" alt="" class="h-full w-full object-cover" />
+                        <span v-else class="text-[10px] text-white/25">прев'ю</span>
+                    </div>
+                    <div>
+                        <label class="cursor-pointer text-xs uppercase tracking-widest text-gold-300 hover:text-gold-200">
+                            Обрати фото
+                            <input ref="galleryInput" type="file" accept="image/png,image/jpeg,image/webp" class="hidden" @change="pickGalleryPhoto" />
+                        </label>
+                        <InputError :message="galleryForm.errors.photo" />
+                    </div>
+                    <div class="min-w-[200px] flex-1">
+                        <TextInput v-model="galleryForm.caption" type="text" placeholder="Підпис (необов'язково)" />
+                    </div>
+                    <button
+                        type="submit"
+                        :disabled="galleryForm.processing || !galleryForm.photo"
+                        class="rounded-full border border-gold-400/40 px-5 py-2 text-xs font-medium tracking-widest text-gold-200 hover:border-gold-300 disabled:opacity-40"
+                    >
+                        Додати
+                    </button>
+                </form>
+
+                <div v-if="gallery.length > 0" class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
+                    <div v-for="photo in gallery" :key="photo.id" class="group relative overflow-hidden rounded-xl border border-white/10">
+                        <img :src="photo.url" :alt="photo.caption || ''" class="aspect-[4/3] w-full object-cover" />
+                        <p v-if="photo.caption" class="truncate bg-obsidian-950/80 px-2 py-1 text-[11px] text-white/60">{{ photo.caption }}</p>
+                        <button
+                            type="button"
+                            class="absolute right-1.5 top-1.5 rounded-full bg-obsidian-950/80 p-1.5 text-white/60 opacity-0 transition-opacity hover:text-ember-500 group-hover:opacity-100"
+                            title="Видалити"
+                            @click="removeGalleryPhoto(photo)"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-3.5 w-3.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                        </button>
+                    </div>
+                </div>
+                <p v-else class="text-sm text-white/30">Ще немає жодного фото.</p>
             </div>
         </div>
     </AdminLayout>

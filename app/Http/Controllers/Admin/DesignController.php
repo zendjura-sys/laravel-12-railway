@@ -3,12 +3,14 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\GalleryPhoto;
 use App\Models\Setting;
 use App\Models\User;
 use App\Support\DesignSettings;
 use App\Support\FamilyContent;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -44,7 +46,59 @@ class DesignController extends Controller
                 'promotionCriteria' => FamilyContent::promotionCriteria(),
                 'about' => FamilyContent::about(),
             ],
+            'carousels' => [
+                'showMembers' => DesignSettings::showMemberCarousel(),
+                'showGallery' => DesignSettings::showGalleryCarousel(),
+            ],
+            'gallery' => GalleryPhoto::query()
+                ->orderBy('sort_order')
+                ->orderBy('id')
+                ->get()
+                ->map(fn (GalleryPhoto $p) => ['id' => $p->id, 'url' => $p->url(), 'caption' => $p->caption]),
         ]);
+    }
+
+    public function updateCarousels(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'showMembers' => ['required', 'boolean'],
+            'showGallery' => ['required', 'boolean'],
+        ]);
+
+        Setting::set('design_show_member_carousel', $data['showMembers'] ? '1' : '0', 'design');
+        Setting::set('design_show_gallery_carousel', $data['showGallery'] ? '1' : '0', 'design');
+
+        return back()->with('status', 'Каруселі оновлено.');
+    }
+
+    public function storeGalleryPhoto(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'photo' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:6144'],
+            'caption' => ['nullable', 'string', 'max:120'],
+        ]);
+
+        $path = $request->file('photo')->store(DesignSettings::GALLERY_DIR, 'public');
+
+        GalleryPhoto::create([
+            'path' => $path,
+            'caption' => $data['caption'] ?? null,
+            'uploaded_by' => $request->user()->id,
+            'sort_order' => (int) GalleryPhoto::query()->max('sort_order') + 1,
+        ]);
+
+        return back()->with('status', 'Фото додано в галерею.');
+    }
+
+    public function destroyGalleryPhoto(GalleryPhoto $galleryPhoto): RedirectResponse
+    {
+        if (Storage::disk('public')->exists($galleryPhoto->path)) {
+            Storage::disk('public')->delete($galleryPhoto->path);
+        }
+
+        $galleryPhoto->delete();
+
+        return back()->with('status', 'Фото видалено з галереї.');
     }
 
     public function updateBrand(Request $request): RedirectResponse

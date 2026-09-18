@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Redirect;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -125,6 +126,35 @@ class ProfileController extends Controller
         ]);
 
         $request->user()->update(['gender' => $data['gender'] ?? null]);
+
+        return Redirect::route('profile.edit');
+    }
+
+    /**
+     * Фото профілю — за бажанням. Хто завантажив, потрапляє в карусель
+     * учасників родини на головній (якщо адмін її не вимкнув у Дизайні).
+     * Старий файл видаляємо: інакше storage копичить кожне завантаження.
+     */
+    public function updateAvatar(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'avatar' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
+            'remove' => ['nullable', 'boolean'],
+        ]);
+
+        $user = $request->user();
+        $old = $user->avatar_path;
+
+        if ($request->hasFile('avatar')) {
+            $path = $request->file('avatar')->store('avatars', 'public');
+            $user->update(['avatar_path' => $path]);
+        } elseif ($request->boolean('remove')) {
+            $user->update(['avatar_path' => null]);
+        }
+
+        if ($old && $old !== $user->avatar_path && Storage::disk('public')->exists($old)) {
+            Storage::disk('public')->delete($old);
+        }
 
         return Redirect::route('profile.edit');
     }

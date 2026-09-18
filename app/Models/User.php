@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Spatie\Permission\Traits\HasRoles;
 
@@ -35,6 +36,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'is_shadow',
         'birth_date',
         'gender',
+        'avatar_path',
     ];
 
     /**
@@ -56,6 +58,7 @@ class User extends Authenticatable implements MustVerifyEmail
      */
     protected $appends = [
         'position_title',
+        'avatar_url',
     ];
 
     /**
@@ -149,6 +152,20 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return Attribute::make(
             get: fn () => FamilyContent::positionByKey($this->position_key)['title'] ?? null,
+        );
+    }
+
+    /**
+     * Публічне посилання на фото профілю — обчислюване, як і position_title,
+     * щоб карусель учасників на головній не робила N окремих перевірок
+     * файлу в storage.
+     */
+    protected function avatarUrl(): Attribute
+    {
+        return Attribute::make(
+            get: fn () => $this->avatar_path && Storage::disk('public')->exists($this->avatar_path)
+                ? Storage::disk('public')->url($this->avatar_path)
+                : null,
         );
     }
 }

@@ -84,7 +84,7 @@ final class AddonAutoloader
         try {
             return Cache::remember('addons.active', 300, function () {
                 return Addon::query()
-                    ->whereIn('type', ['core', 'module', 'plugin'])
+                    ->whereIn('type', ['core', 'module', 'plugin', 'union'])
                     ->where('status', 'active')
                     ->get(['type', 'slug', 'path', 'manifest'])
                     ->map(fn ($a) => [

@@ -37,6 +37,7 @@ const navGroups = [
             { name: 'admin.union.complaints.index', label: 'Скарги', can: 'manageUnion', icon: ScrollText },
             { name: 'admin.union.announcements.index', label: 'Оголошення', can: 'manageUnion', icon: Megaphone },
             { name: 'admin.union.blacklist.index', label: 'Чорний список', can: 'manageUnion', icon: ShieldOff },
+            { name: 'admin.union.addons.index', label: 'Аддони союзу', can: 'manageUnion', icon: Blocks },
         ],
     },
     {

@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\DesignController;
 use App\Http\Controllers\Admin\FailedJobController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\SettingsController;
+use App\Http\Controllers\Admin\UnionAddonController;
 use App\Http\Controllers\Admin\UnionAnnouncementController;
 use App\Http\Controllers\Admin\UnionBlacklistController as AdminUnionBlacklistController;
 use App\Http\Controllers\Admin\UnionComplaintController as AdminUnionComplaintController;
@@ -217,6 +218,15 @@ Route::middleware(['auth', 'verified', 'permission:union.manage'])
         Route::put('/blacklist/families/{unionBlacklistedFamily}', [AdminUnionBlacklistController::class, 'updateFamily'])->name('blacklist.families.update');
         Route::delete('/blacklist/families/{unionBlacklistedFamily}', [AdminUnionBlacklistController::class, 'destroyFamily'])->name('blacklist.families.destroy');
         Route::delete('/blacklist/players/{unionBlacklistedPlayer}', [AdminUnionBlacklistController::class, 'destroyPlayer'])->name('blacklist.players.destroy');
+
+        // Незалежна від "Аддони" (addons.manage) гілка — власний тип
+        // пакета ('union') і власне право, дивись UnionAddonController.
+        Route::get('/addons', [UnionAddonController::class, 'index'])->name('addons.index');
+        Route::post('/addons/upload', [UnionAddonController::class, 'upload'])->name('addons.upload');
+        Route::post('/addons/{addon}/activate', [UnionAddonController::class, 'activate'])->name('addons.activate');
+        Route::post('/addons/{addon}/deactivate', [UnionAddonController::class, 'deactivate'])->name('addons.deactivate');
+        Route::post('/addons/{addon}/migrate', [UnionAddonController::class, 'migrate'])->name('addons.migrate');
+        Route::delete('/addons/{addon}', [UnionAddonController::class, 'destroy'])->name('addons.destroy');
     });
 
 // ЧС гравців та автодоповнення родини — доступні будь-якому зареєстрованому

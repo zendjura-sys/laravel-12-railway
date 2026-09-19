@@ -20,9 +20,20 @@ class RegisteredUserController extends Controller
     /**
      * Display the registration view.
      */
-    public function create(): Response
+    public function create(Request $request): Response
     {
-        return Inertia::render('Auth/Register');
+        return Inertia::render('Auth/Register', [
+            'isUnion' => $this->isUnionRequest($request),
+            'unionRoles' => User::UNION_ROLES,
+        ]);
+    }
+
+    /** union.monsory.net реєструє союзників, а не учасників родини — форма й валідація тут різняться. */
+    private function isUnionRequest(Request $request): bool
+    {
+        $unionDomain = config('app.union_domain');
+
+        return $unionDomain && $request->getHost() === $unionDomain;
     }
 
     /**
@@ -40,6 +51,8 @@ class RegisteredUserController extends Controller
      */
     public function store(Request $request): RedirectResponse|Response
     {
+        $isUnion = $this->isUnionRequest($request);
+
         $data = $request->validate([
             'first_name' => 'required|string|max:120',
             // Фамилия не обязательна: часть людей в игре известна одним ником.
@@ -48,17 +61,24 @@ class RegisteredUserController extends Controller
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
             'claim_shadow_id' => ['nullable', 'integer'],
             'skip_shadow_check' => ['nullable', 'boolean'],
+            'union_family_name' => [$isUnion ? 'required' : 'prohibited', 'string', 'max:120'],
+            'union_role' => [$isUnion ? 'required' : 'prohibited', 'string', 'in:'.implode(',', array_keys(User::UNION_ROLES))],
         ]);
 
         $fullName = trim($data['first_name'].' '.($data['last_name'] ?? ''));
 
-        if (empty($data['claim_shadow_id']) && empty($data['skip_shadow_check'])) {
+        // Тіньові акаунти заводить лише Reports (подача звіту "за друга") —
+        // це суто внутрішня механіка Monsory, у союзників таких збігів
+        // бути не може, тож для них цей крок пропускаємо зовсім.
+        if (! $isUnion && empty($data['claim_shadow_id']) && empty($data['skip_shadow_check'])) {
             $shadow = User::query()->where('is_shadow', true)->where('name', $fullName)->first();
 
             if ($shadow) {
                 return Inertia::render('Auth/Register', [
                     'shadowMatch' => ['id' => $shadow->id, 'name' => $shadow->name],
                     'previousInput' => $request->only('first_name', 'last_name', 'email'),
+                    'isUnion' => $isUnion,
+                    'unionRoles' => User::UNION_ROLES,
                 ]);
             }
         }
@@ -79,6 +99,18 @@ class RegisteredUserController extends Controller
             ]);
 
             $user = $shadow;
+        } elseif ($isUnion) {
+            $user = User::create([
+                'first_name' => $data['first_name'],
+                'last_name' => $data['last_name'] ?? null,
+                'email' => $data['email'],
+                'password' => Hash::make($data['password']),
+                // Союзник не входить в ієрархію Monsory — position_key
+                // навмисно лишається порожнім, замість присвоєння "Стажера".
+                'position_key' => null,
+                'union_family_name' => $data['union_family_name'],
+                'union_role' => $data['union_role'],
+            ]);
         } else {
             $user = User::create([
                 'first_name' => $data['first_name'],

@@ -9,6 +9,8 @@ import { Head, Link, useForm } from '@inertiajs/vue3';
 const props = defineProps({
     shadowMatch: { type: Object, default: null },
     previousInput: { type: Object, default: null },
+    isUnion: { type: Boolean, default: false },
+    unionRoles: { type: Object, default: () => ({}) },
 });
 
 const form = useForm({
@@ -19,6 +21,7 @@ const form = useForm({
     password_confirmation: '',
     claim_shadow_id: null,
     skip_shadow_check: false,
+    ...(props.isUnion ? { union_family_name: '', union_role: '' } : {}),
 });
 
 const submit = () => {
@@ -99,6 +102,37 @@ function chooseClaim(claim) {
 
                         <InputError :message="form.errors.last_name" />
                     </div>
+                </div>
+            </div>
+
+            <div v-if="isUnion" class="mt-4 grid gap-4 sm:grid-cols-2">
+                <div>
+                    <InputLabel for="union_family_name" value="Назва родини/спільноти" />
+
+                    <TextInput
+                        id="union_family_name"
+                        type="text"
+                        v-model="form.union_family_name"
+                        required
+                    />
+
+                    <InputError :message="form.errors.union_family_name" />
+                </div>
+
+                <div>
+                    <InputLabel for="union_role" value="Ваша позиція" />
+
+                    <select
+                        id="union_role"
+                        v-model="form.union_role"
+                        required
+                        class="w-full rounded-lg border border-white/10 bg-obsidian-900/60 px-3 py-2 text-white focus:border-gold-400/50 focus:outline-none focus:ring-1 focus:ring-gold-400/40"
+                    >
+                        <option value="" disabled>Оберіть...</option>
+                        <option v-for="(label, key) in unionRoles" :key="key" :value="key">{{ label }}</option>
+                    </select>
+
+                    <InputError :message="form.errors.union_role" />
                 </div>
             </div>
 

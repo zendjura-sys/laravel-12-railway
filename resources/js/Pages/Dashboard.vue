@@ -1,0 +1,143 @@
+<script setup>
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import { Head, Link } from '@inertiajs/vue3';
+
+defineProps({
+    memberCount: { type: Number, default: 0 },
+    telegramBotUrl: { type: String, default: null },
+});
+
+const cards = [
+    { name: 'reports.index', title: 'Мої звіти', text: 'Подайте звіт за бізваром чи контрактом та слідкуйте за статусом розгляду.' },
+    { name: 'progression.index', title: 'Мій прогрес', text: 'Досвід, рівень, досягнення та історія нарахувань.' },
+    { name: 'progression.leaderboard', title: 'Рейтинг родини', text: 'Хто попереду — за активністю, бізваром, контрактами, серією перемог чи преміями.' },
+    { name: 'member-center.index', title: 'Кадровий центр', text: 'Ваш статус у родині та заявки на відпустку.' },
+    { name: 'family-goals.index', title: 'Цілі родини', text: 'Спільні цілі з прогресом та стрічка активності.' },
+    { name: 'family-events.index', title: 'Події родини', text: 'Найближчі зустрічі, вечірки та івенти.' },
+    { name: 'notifications.index', title: 'Сповіщення', text: 'Оголошення від адміністрації та особисті сповіщення.' },
+    { name: 'bonuses.index', title: 'Мої премії', text: 'Тижневі нарахування за бізвар, контракти та інвестиції.' },
+];
+
+function fmtDate(iso) {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleDateString('uk-UA', { day: '2-digit', month: 'long', year: 'numeric' });
+}
+</script>
+
+<template>
+    <Head title="Кабінет" />
+
+    <AuthenticatedLayout>
+        <template #header>
+            <h2 class="font-display text-2xl font-light text-white">
+                Кабінет
+            </h2>
+        </template>
+
+        <div class="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+            <div v-reveal class="mb-8">
+                <p class="text-white/50">
+                    Вітаємо, <span class="text-gold-300">{{ $page.props.auth.user.name }}</span> — це ваш особистий кабінет Monsory Connect.
+                </p>
+            </div>
+
+            <!-- ================= ОБЛІКОВИЙ ЗАПИС ================= -->
+            <div v-reveal v-glow class="glass-panel mb-8 grid gap-6 p-6 sm:grid-cols-2 sm:p-8 lg:grid-cols-4">
+                <div>
+                    <p class="text-xs uppercase tracking-widest text-white/40">Ім'я</p>
+                    <p class="mt-1 font-medium text-white">{{ $page.props.auth.user.name }}</p>
+                </div>
+                <div>
+                    <p class="text-xs uppercase tracking-widest text-white/40">Посада</p>
+                    <p class="mt-1 font-medium text-white">
+                        <span v-if="$page.props.auth.user.position_title" class="text-gold-300">{{ $page.props.auth.user.position_title }}</span>
+                        <span v-else class="text-white/30">не призначено</span>
+                    </p>
+                </div>
+                <div>
+                    <p class="text-xs uppercase tracking-widest text-white/40">Пошта</p>
+                    <!-- flex-wrap обов'язковий: у 4-колонковій розкладці
+                         клітинка вужча, і без переносу бейдж
+                         "Підтверджено" наїжджав на сусідню колонку
+                         замість того, щоб піти на новий рядок. -->
+                    <p class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 font-medium text-white">
+                        <span class="break-all">{{ $page.props.auth.user.email }}</span>
+                        <span
+                            v-if="$page.props.auth.user.email_verified_at"
+                            class="rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2 py-0.5 text-[10px] uppercase tracking-wide text-emerald-300"
+                        >Підтверджено</span>
+                        <span
+                            v-else
+                            class="rounded-full border border-gold-400/30 bg-gold-400/10 px-2 py-0.5 text-[10px] uppercase tracking-wide text-gold-300"
+                        >Не підтверджено</span>
+                    </p>
+                </div>
+                <div>
+                    <p class="text-xs uppercase tracking-widest text-white/40">У родині з</p>
+                    <p class="mt-1 font-medium text-white">{{ fmtDate($page.props.auth.user.created_at) }}</p>
+                </div>
+                <div class="sm:col-span-2 lg:col-span-4">
+                    <Link :href="route('profile.edit')" class="text-xs uppercase tracking-widest text-gold-300/80 hover:text-gold-200">
+                        Редагувати профіль →
+                    </Link>
+                </div>
+            </div>
+
+            <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                <template v-for="(card, i) in cards" :key="card.name">
+                    <Link
+                        v-if="route().has(card.name)"
+                        :href="route(card.name)"
+                        v-reveal="'scale'"
+                        :style="{ transitionDelay: `${i * 80}ms` }"
+                        v-glow class="group glass-panel relative overflow-hidden p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-gold"
+                    >
+                        <div class="glass-sheen"></div>
+                        <h3 class="relative font-semibold text-white">{{ card.title }}</h3>
+                        <p class="relative mt-2 text-sm leading-relaxed text-white/50">{{ card.text }}</p>
+                        <span class="relative mt-4 inline-block text-xs uppercase tracking-widest text-gold-300/80">Відкрити →</span>
+                    </Link>
+                </template>
+
+                <Link
+                    v-if="route().has('admin.dashboard') && (
+                        $page.props.can?.manageAddons || $page.props.can?.manageReports ||
+                        $page.props.can?.manageProgression || $page.props.can?.manageSettings ||
+                        $page.props.can?.manageRoles || $page.props.can?.manageUsers || $page.props.can?.manageMembers || $page.props.can?.manageGoals || $page.props.can?.manageBroadcasts || $page.props.can?.manageTelegram || $page.props.can?.manageEvents
+                    )"
+                    :href="route('admin.dashboard')"
+                    v-reveal:240="'scale'"
+                    v-glow class="group glass-panel-gold glass-panel relative overflow-hidden p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-gold"
+                >
+                    <div class="glass-sheen"></div>
+                    <h3 class="relative font-semibold text-white">Адмін-панель CMS</h3>
+                    <p class="relative mt-2 text-sm leading-relaxed text-white/60">Аддони, права доступу, учасники, Telegram і Discord — керування всім сайтом.</p>
+                    <span class="relative mt-4 inline-block text-xs uppercase tracking-widest text-gold-300">Відкрити →</span>
+                </Link>
+
+                <!-- Поки бот не заведений у налаштуваннях, картки просто
+                     немає: учаснику кабінету пропонувати замість неї
+                     реєстрацію безглуздо, а мертве посилання — тим більше. -->
+                <a
+                    v-if="telegramBotUrl"
+                    :href="telegramBotUrl"
+                    target="_blank"
+                    rel="noopener"
+                    v-reveal:320="'scale'"
+                    v-glow class="group glass-panel relative overflow-hidden p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-gold"
+                >
+                    <div class="glass-sheen"></div>
+                    <h3 class="relative font-semibold text-white">Telegram родини</h3>
+                    <p class="relative mt-2 text-sm leading-relaxed text-white/50">Оновлення, оголошення та швидкий зв'язок — усе в одному боті.</p>
+                    <span class="relative mt-4 inline-block text-xs uppercase tracking-widest text-gold-300/80">Перейти →</span>
+                </a>
+            </div>
+
+            <!-- ================= МАСШТАБ РОДИНИ ================= -->
+            <div v-reveal v-glow class="glass-panel mt-8 inline-flex items-baseline gap-3 p-6">
+                <span class="font-display text-3xl text-gold-300">{{ memberCount }}</span>
+                <span class="text-xs uppercase tracking-widest text-white/40">учасників на сайті</span>
+            </div>
+        </div>
+    </AuthenticatedLayout>
+</template>

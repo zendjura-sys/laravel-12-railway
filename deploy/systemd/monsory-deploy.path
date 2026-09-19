@@ -1,0 +1,11 @@
+[Unit]
+Description=Watch for a deploy request from the Monsory Connect admin panel
+
+[Path]
+# Кнопка в адмінці робить file_put_contents (не touch) у цей файл — саме
+# тому спрацьовує щоразу, а не лише при першому створенні файлу.
+PathChanged=/var/www/laravel/storage/app/deploy/trigger
+Unit=monsory-deploy.service
+
+[Install]
+WantedBy=multi-user.target

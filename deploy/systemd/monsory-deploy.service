@@ -1,0 +1,13 @@
+[Unit]
+Description=Monsory Connect — run deploy script (triggered from the admin panel)
+# Не запускати одразу після завантаження ОС — лише за сигналом від .path-юніта.
+DefaultDependencies=no
+
+[Service]
+Type=oneshot
+WorkingDirectory=/var/www/laravel
+ExecStart=/var/www/laravel/deploy/setup-vps.sh
+# Деплой сам пише лог/статус у storage/app/deploy — окремий системний
+# журнал (journalctl -u monsory-deploy) лишається як другий, повний слід.
+StandardOutput=journal
+StandardError=journal

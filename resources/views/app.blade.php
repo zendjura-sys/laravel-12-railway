@@ -5,6 +5,18 @@
     // фронтенда и деплоя.
     $design = App\Support\DesignSettings::all();
     $accentCss = App\Support\DesignSettings::accentCss();
+
+    // Прев'ю посилання (Telegram, Discord тощо) читають <title> і
+    // meta description САМЕ на момент завантаження — це та сама сторінка
+    // на тому ж домені, лише інший заголовок/опис. Без цієї гілки
+    // union.monsory.net у прев'ю показував текст головного сайту, бо тег
+    // був один статичний на весь застосунок.
+    $isUnionPage = App\Support\UnionDomain::matches(request());
+    $pageTitle = $isUnionPage ? App\Support\DesignSettings::unionTitle() : ($design['siteName'] ?: config('app.name', 'Laravel'));
+    $pageDescription = $isUnionPage
+        ? (App\Support\FamilyContent::unionAbout()[0] ?? 'Союз Monsory — окремий вхід для родин-партнерів.')
+        : (App\Support\FamilyContent::about()[0] ?? 'Monsory Family — закрита родина на RP-сервері.');
+    $ogImage = $design['logoUrl'] ?: asset('images/icons/icon-512.png');
 @endphp
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-effects="{{ $design['effects'] }}" data-season="{{ $design['seasonalTheme'] }}">
     <head>
@@ -33,9 +45,20 @@
         <meta name="apple-mobile-web-app-title" content="Monsory">
         <meta name="mobile-web-app-capable" content="yes">
 
-        <meta name="description" content="Monsory Family — закрита родина на RP-сервері: спільний особняк і автопарк, свій звʼязок, спільні операції та власний кодекс.">
+        <meta name="description" content="{{ $pageDescription }}">
 
-        <title inertia>{{ $design['siteName'] ?: config('app.name', 'Laravel') }}</title>
+        {{-- Open Graph/Twitter — без них прев'ю посилання (Telegram, Discord)
+             підхоплює перший-ліпший <img> зі сторінки замість логотипу, а
+             деякі клієнти взагалі ігнорують <meta name="description">. --}}
+        <meta property="og:type" content="website">
+        <meta property="og:site_name" content="Monsory">
+        <meta property="og:url" content="{{ request()->url() }}">
+        <meta property="og:title" content="{{ $pageTitle }}">
+        <meta property="og:description" content="{{ $pageDescription }}">
+        <meta property="og:image" content="{{ $ogImage }}">
+        <meta name="twitter:card" content="summary_large_image">
+
+        <title inertia>{{ $pageTitle }}</title>
 
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.bunny.net" crossorigin>

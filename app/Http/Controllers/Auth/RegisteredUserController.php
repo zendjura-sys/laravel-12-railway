@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Models\UnionBlacklistedFamily;
 use App\Models\UnionBlacklistedPlayer;
 use App\Support\FamilyContent;
+use App\Support\UnionDomain;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -33,9 +34,7 @@ class RegisteredUserController extends Controller
     /** union.monsory.net реєструє союзників, а не учасників родини — форма й валідація тут різняться. */
     private function isUnionRequest(Request $request): bool
     {
-        $unionDomain = config('app.union_domain');
-
-        return $unionDomain && $request->getHost() === $unionDomain;
+        return UnionDomain::matches($request);
     }
 
     /**

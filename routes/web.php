@@ -28,6 +28,7 @@ use App\Models\User;
 use App\Support\DesignSettings;
 use App\Support\FamilyContent;
 use App\Support\TelegramLink;
+use App\Support\UnionDomain;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -101,13 +102,12 @@ Route::get('/', function () {
 })->name('home');
 
 // Особистий кабінет — та сама адреса й авторизація для обох аудиторій,
-// різниться лише те, ЩО рендериться: union_family_name заповнюється
-// тільки реєстрацією через union.monsory.net (RegisteredUserController),
-// тож саме ним, а не поточним доменом, вирішуємо, чий це кабінет —
-// той самий чоловік з Monsory-акаунтом, що зайшов на union.monsory.net,
-// і далі бачить свій ЗВИЧАЙНИЙ кабінет, а не союзний.
+// різниться лише те, ЩО рендериться. Вирішує ПОТОЧНИЙ ДОМЕН (той самий
+// принцип, що й для головної та реєстрації): зайшов на union.monsory.net —
+// бачиш кабінет союзу, навіть якщо акаунт зареєстрований на monsory.net
+// (union_family_name тоді просто порожнє — кабінет це враховує).
 Route::get('/dashboard', function (Request $request) {
-    if ($request->user()->union_family_name !== null) {
+    if (UnionDomain::matches($request)) {
         return app(UnionCabinetController::class)->index($request);
     }
 

@@ -1,6 +1,7 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, Link } from '@inertiajs/vue3';
+import { computed } from 'vue';
 
 const props = defineProps({
     family: { type: Object, required: true },
@@ -14,6 +15,12 @@ const ROLE_LABELS = {
     member: 'Учасник',
 };
 
+// На union.monsory.net кабінет бачить БУДЬ-ХТО (навіть учасник родини
+// Monsory, який сюди зайшов) — розділи "своя родина" й дії (скарги/ЧС),
+// доступні лише зареєстрованим союзникам, показуємо тільки якщо родина
+// союзу справді вказана.
+const isUnionMember = computed(() => Boolean(props.family.name));
+
 const cards = [
     { name: 'union.complaints.index', title: 'Скарги союзу', text: 'Подайте скаргу на союзника або перегляньте статус своїх звернень.' },
     { name: 'union.blacklist.index', title: 'Чорний список союзу', text: 'Гравці, з якими союзники родин не радять мати справу.' },
@@ -26,17 +33,18 @@ function fmtDate(iso) {
 </script>
 
 <template>
-    <Head title="Кабінет союзника" />
+    <Head title="Кабінет союзу" />
 
     <AuthenticatedLayout>
         <template #header>
-            <h2 class="font-display text-2xl font-light text-white">Кабінет союзника</h2>
+            <h2 class="font-display text-2xl font-light text-white">Кабінет союзу</h2>
         </template>
 
         <div class="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
             <div v-reveal class="mb-8">
                 <p class="text-white/50">
-                    Вітаємо, <span class="text-gold-300">{{ $page.props.auth.user.name }}</span> — це кабінет союзника Monsory.
+                    Вітаємо, <span class="text-gold-300">{{ $page.props.auth.user.name }}</span> —
+                    {{ isUnionMember ? 'це кабінет союзника Monsory.' : 'ви переглядаєте кабінет союзу union.monsory.net.' }}
                 </p>
             </div>
 
@@ -46,16 +54,22 @@ function fmtDate(iso) {
                     <p class="text-xs uppercase tracking-widest text-white/40">Ім'я</p>
                     <p class="mt-1 font-medium text-white">{{ $page.props.auth.user.name }}</p>
                 </div>
-                <div>
-                    <p class="text-xs uppercase tracking-widest text-white/40">Родина</p>
-                    <p class="mt-1 font-medium text-gold-300">{{ family.name }}</p>
+                <template v-if="isUnionMember">
+                    <div>
+                        <p class="text-xs uppercase tracking-widest text-white/40">Родина</p>
+                        <p class="mt-1 font-medium text-gold-300">{{ family.name }}</p>
+                    </div>
+                    <div>
+                        <p class="text-xs uppercase tracking-widest text-white/40">Позиція в родині</p>
+                        <p class="mt-1 font-medium text-white">{{ ROLE_LABELS[$page.props.auth.user.union_role] ?? $page.props.auth.user.union_role }}</p>
+                    </div>
+                </template>
+                <div v-else-if="$page.props.auth.user.position_title">
+                    <p class="text-xs uppercase tracking-widest text-white/40">Посада в Monsory</p>
+                    <p class="mt-1 font-medium text-gold-300">{{ $page.props.auth.user.position_title }}</p>
                 </div>
                 <div>
-                    <p class="text-xs uppercase tracking-widest text-white/40">Позиція в родині</p>
-                    <p class="mt-1 font-medium text-white">{{ ROLE_LABELS[$page.props.auth.user.union_role] ?? $page.props.auth.user.union_role }}</p>
-                </div>
-                <div>
-                    <p class="text-xs uppercase tracking-widest text-white/40">У союзі з</p>
+                    <p class="text-xs uppercase tracking-widest text-white/40">У {{ isUnionMember ? 'союзі' : 'родині' }} з</p>
                     <p class="mt-1 font-medium text-white">{{ fmtDate($page.props.auth.user.created_at) }}</p>
                 </div>
                 <div class="sm:col-span-2 lg:col-span-4">
@@ -68,7 +82,7 @@ function fmtDate(iso) {
             <div class="grid gap-8 lg:grid-cols-3">
                 <!-- ================= ГОЛОВНЕ ================= -->
                 <div class="space-y-8 lg:col-span-2">
-                    <div class="grid gap-5 sm:grid-cols-2">
+                    <div v-if="isUnionMember" class="grid gap-5 sm:grid-cols-2">
                         <template v-for="(card, i) in cards" :key="card.name">
                             <Link
                                 v-if="route().has(card.name)"
@@ -99,7 +113,7 @@ function fmtDate(iso) {
 
                 <!-- ================= РОДИНА / СОЮЗ ================= -->
                 <div class="space-y-8">
-                    <div v-reveal v-glow class="glass-panel p-6">
+                    <div v-if="isUnionMember" v-reveal v-glow class="glass-panel p-6">
                         <h3 class="font-display mb-4 text-lg text-white">Родина «{{ family.name }}»</h3>
                         <ul class="space-y-2">
                             <li v-for="m in family.members" :key="m.id" class="flex items-center justify-between text-sm">

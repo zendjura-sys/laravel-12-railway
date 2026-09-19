@@ -10,7 +10,7 @@ use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\UnionAnnouncementController;
 use App\Http\Controllers\Admin\UnionBlacklistController as AdminUnionBlacklistController;
-use App\Http\Controllers\Admin\UnionComplaintController;
+use App\Http\Controllers\Admin\UnionComplaintController as AdminUnionComplaintController;
 use App\Http\Controllers\Admin\UnionController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\ChangelogController;
@@ -19,6 +19,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PushSubscriptionController;
 use App\Http\Controllers\TwoFactorAuthenticationController;
 use App\Http\Controllers\UnionBlacklistController;
+use App\Http\Controllers\UnionComplaintController;
 use App\Http\Controllers\UnionFamilyController;
 use App\Models\GalleryPhoto;
 use App\Models\User;
@@ -190,8 +191,8 @@ Route::middleware(['auth', 'verified', 'permission:union.manage'])
         Route::get('/', [UnionController::class, 'index'])->name('index');
         Route::put('/content', [UnionController::class, 'updateContent'])->name('content');
 
-        Route::get('/complaints', [UnionComplaintController::class, 'index'])->name('complaints.index');
-        Route::put('/complaints/{unionComplaint}', [UnionComplaintController::class, 'update'])->name('complaints.update');
+        Route::get('/complaints', [AdminUnionComplaintController::class, 'index'])->name('complaints.index');
+        Route::put('/complaints/{unionComplaint}', [AdminUnionComplaintController::class, 'update'])->name('complaints.update');
 
         Route::get('/announcements', [UnionAnnouncementController::class, 'index'])->name('announcements.index');
         Route::post('/announcements', [UnionAnnouncementController::class, 'store'])->name('announcements.store');
@@ -214,6 +215,12 @@ Route::middleware(['auth', 'verified'])
         Route::prefix('union/blacklist')->name('union.blacklist.')->group(function () {
             Route::get('/', [UnionBlacklistController::class, 'index'])->name('index');
             Route::post('/players', [UnionBlacklistController::class, 'storePlayer'])->name('players.store');
+        });
+
+        Route::prefix('union/complaints')->name('union.complaints.')->group(function () {
+            Route::get('/', [UnionComplaintController::class, 'index'])->name('index');
+            Route::post('/', [UnionComplaintController::class, 'store'])->name('store');
+            Route::put('/{unionComplaint}', [UnionComplaintController::class, 'update'])->name('update');
         });
     });
 

@@ -19,6 +19,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PushSubscriptionController;
 use App\Http\Controllers\TwoFactorAuthenticationController;
 use App\Http\Controllers\UnionBlacklistController;
+use App\Http\Controllers\UnionCabinetController;
 use App\Http\Controllers\UnionComplaintController;
 use App\Http\Controllers\UnionFamilyController;
 use App\Models\GalleryPhoto;
@@ -96,7 +97,17 @@ Route::get('/', function () {
     ]);
 })->name('home');
 
-Route::get('/dashboard', function () {
+// Особистий кабінет — та сама адреса й авторизація для обох аудиторій,
+// різниться лише те, ЩО рендериться: union_family_name заповнюється
+// тільки реєстрацією через union.monsory.net (RegisteredUserController),
+// тож саме ним, а не поточним доменом, вирішуємо, чий це кабінет —
+// той самий чоловік з Monsory-акаунтом, що зайшов на union.monsory.net,
+// і далі бачить свій ЗВИЧАЙНИЙ кабінет, а не союзний.
+Route::get('/dashboard', function (Request $request) {
+    if ($request->user()->union_family_name !== null) {
+        return app(UnionCabinetController::class)->index($request);
+    }
+
     return Inertia::render('Dashboard', [
         'memberCount' => User::query()->count(),
         'telegramBotUrl' => TelegramLink::url(),

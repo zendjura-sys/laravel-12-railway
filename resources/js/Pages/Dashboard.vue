@@ -100,30 +100,6 @@ function fmtDate(iso) {
                 </template>
 
                 <Link
-                    v-if="$page.props.auth.user.union_family_name && route().has('union.complaints.index')"
-                    :href="route('union.complaints.index')"
-                    v-reveal="'scale'"
-                    v-glow class="group glass-panel relative overflow-hidden p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-gold"
-                >
-                    <div class="glass-sheen"></div>
-                    <h3 class="relative font-semibold text-white">Скарги союзу</h3>
-                    <p class="relative mt-2 text-sm leading-relaxed text-white/50">Подайте скаргу на союзника або перегляньте статус своїх звернень.</p>
-                    <span class="relative mt-4 inline-block text-xs uppercase tracking-widest text-gold-300/80">Відкрити →</span>
-                </Link>
-
-                <Link
-                    v-if="$page.props.auth.user.union_family_name && route().has('union.blacklist.index')"
-                    :href="route('union.blacklist.index')"
-                    v-reveal="'scale'"
-                    v-glow class="group glass-panel relative overflow-hidden p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-gold"
-                >
-                    <div class="glass-sheen"></div>
-                    <h3 class="relative font-semibold text-white">Чорний список союзу</h3>
-                    <p class="relative mt-2 text-sm leading-relaxed text-white/50">Гравці, з якими союзники родин не радять мати справу — додайте свій випадок.</p>
-                    <span class="relative mt-4 inline-block text-xs uppercase tracking-widest text-gold-300/80">Відкрити →</span>
-                </Link>
-
-                <Link
                     v-if="route().has('admin.dashboard') && (
                         $page.props.can?.manageAddons || $page.props.can?.manageReports ||
                         $page.props.can?.manageProgression || $page.props.can?.manageSettings ||

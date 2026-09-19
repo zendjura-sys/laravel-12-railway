@@ -28,6 +28,16 @@ fi
 find "$BACKUP_DIR" -name '*.sql.gz' -mtime "+${KEEP_DAYS}" -delete
 find "$BACKUP_DIR" -name '*.tar.gz' -mtime "+${KEEP_DAYS}" -delete
 
+# Маленький маркер для дашборда адмінки (App\Support\SystemHealth) — сам
+# BACKUP_DIR (/root/backups) для www-data недоступний і не повинен бути,
+# тому єдиний спосіб сайту дізнатись "коли востаннє" — цей файл, який
+# пише root і читає веб-процес. mtime самого маркера й є моментом
+# завершення бекапу; дійшли сюди — mysqldump (і tar, якщо public існує)
+# уже відпрацювали без помилок, бо `set -eu` спинив би скрипт раніше.
+STATUS_FILE="${APP_DIR}/storage/app/backup-status.json"
+printf '{"finished_at":"%s"}\n' "$(date -Iseconds)" > "$STATUS_FILE"
+chmod 644 "$STATUS_FILE" 2>/dev/null || true
+
 # Опционально: копия наружу, если на сервере настроен rclone-remote —
 # дампы на этом же сервере пропадут вместе с ним при повторной потере VDS.
 # Настройка: rclone config (один раз) + записать имя remote в файл

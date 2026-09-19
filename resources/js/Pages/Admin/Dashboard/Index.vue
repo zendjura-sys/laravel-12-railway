@@ -5,7 +5,17 @@ import { computed } from 'vue';
 
 defineProps({
     stats: { type: Object, required: true },
+    health: { type: Object, default: null },
 });
+
+function fmtRelative(iso) {
+    if (!iso) return 'немає даних';
+    const diffMs = Date.now() - new Date(iso).getTime();
+    const hours = Math.floor(diffMs / 3_600_000);
+    if (hours < 1) return 'щойно';
+    if (hours < 24) return `${hours} год тому`;
+    return `${Math.floor(hours / 24)} д тому`;
+}
 
 const page = usePage();
 // roles.manage — право, яке видано винятково ролі admin (SystemPermissionsSeeder),
@@ -61,6 +71,39 @@ const sections = [
             <div v-reveal:160="'scale'" v-glow class="glass-panel p-6">
                 <p class="text-xs uppercase tracking-widest text-white/40">Активних аддонів</p>
                 <p class="font-display mt-2 text-4xl text-white">{{ stats.activeAddons }}</p>
+            </div>
+        </div>
+
+        <div v-if="health" v-reveal class="mb-10">
+            <p class="mb-3 text-xs uppercase tracking-widest text-white/30">Стан сервера</p>
+            <div class="grid gap-4 sm:grid-cols-4">
+                <Link
+                    :href="route().has('admin.failed-jobs.index') ? route('admin.failed-jobs.index') : '#'"
+                    v-glow
+                    class="glass-panel p-5"
+                    :class="health.failedJobs > 0 ? 'border-ember-500/30' : ''"
+                >
+                    <p class="text-[11px] uppercase tracking-widest text-white/40">Провалені джоби</p>
+                    <p class="font-display mt-1 text-2xl" :class="health.failedJobs > 0 ? 'text-ember-500' : 'text-white'">
+                        {{ health.failedJobs }}
+                    </p>
+                </Link>
+                <div v-glow class="glass-panel p-5">
+                    <p class="text-[11px] uppercase tracking-widest text-white/40">У черзі</p>
+                    <p class="font-display mt-1 text-2xl text-white">{{ health.queuedJobs }}</p>
+                </div>
+                <div v-glow class="glass-panel p-5">
+                    <p class="text-[11px] uppercase tracking-widest text-white/40">Диск вільно</p>
+                    <p class="font-display mt-1 text-2xl text-white">
+                        {{ health.disk ? `${health.disk.freeGb} / ${health.disk.totalGb} ГБ` : '—' }}
+                    </p>
+                </div>
+                <div v-glow class="glass-panel p-5">
+                    <p class="text-[11px] uppercase tracking-widest text-white/40">Останній бекап</p>
+                    <p class="font-display mt-1 text-2xl" :class="!health.lastBackupAt ? 'text-ember-500' : 'text-white'">
+                        {{ fmtRelative(health.lastBackupAt) }}
+                    </p>
+                </div>
             </div>
         </div>
 

@@ -8,12 +8,18 @@ use App\Http\Controllers\Admin\DesignController;
 use App\Http\Controllers\Admin\FailedJobController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\SettingsController;
+use App\Http\Controllers\Admin\UnionAnnouncementController;
+use App\Http\Controllers\Admin\UnionBlacklistController as AdminUnionBlacklistController;
+use App\Http\Controllers\Admin\UnionComplaintController;
+use App\Http\Controllers\Admin\UnionController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\ChangelogController;
 use App\Http\Controllers\GuideController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PushSubscriptionController;
 use App\Http\Controllers\TwoFactorAuthenticationController;
+use App\Http\Controllers\UnionBlacklistController;
+use App\Http\Controllers\UnionFamilyController;
 use App\Models\GalleryPhoto;
 use App\Models\User;
 use App\Support\DesignSettings;
@@ -129,7 +135,7 @@ Route::middleware('auth')->group(function () {
 
 require __DIR__.'/auth.php';
 
-Route::middleware(['auth', 'verified', 'permission:addons.manage|reports.manage|progression.manage|settings.manage|roles.manage|users.manage|members.manage|goals.manage|broadcasts.manage|telegram.manage|bonuses.manage|events.manage'])
+Route::middleware(['auth', 'verified', 'permission:addons.manage|reports.manage|progression.manage|settings.manage|roles.manage|users.manage|members.manage|goals.manage|broadcasts.manage|telegram.manage|bonuses.manage|events.manage|union.manage'])
     ->get('/admin', [DashboardController::class, 'index'])
     ->name('admin.dashboard');
 
@@ -165,7 +171,6 @@ Route::middleware(['auth', 'verified', 'permission:settings.manage'])
         Route::put('/theme', [DesignController::class, 'updateTheme'])->name('theme');
         Route::put('/content', [DesignController::class, 'updateContent'])->name('content');
         Route::post('/content/reset', [DesignController::class, 'resetContent'])->name('content.reset');
-        Route::put('/union', [DesignController::class, 'updateUnion'])->name('union');
         Route::put('/carousels', [DesignController::class, 'updateCarousels'])->name('carousels');
         Route::put('/social-links', [DesignController::class, 'updateSocialLinks'])->name('social-links');
         Route::post('/gallery', [DesignController::class, 'storeGalleryPhoto'])->name('gallery.store');
@@ -174,6 +179,42 @@ Route::middleware(['auth', 'verified', 'permission:settings.manage'])
         Route::delete('/gallery/{galleryPhoto}', [DesignController::class, 'destroyGalleryPhoto'])->name('gallery.destroy');
         Route::post('/avatars/{user}/approve', [DesignController::class, 'approveAvatar'])->name('avatars.approve');
         Route::delete('/avatars/{user}', [DesignController::class, 'rejectAvatar'])->name('avatars.reject');
+    });
+
+// Союз (union.monsory.net) — окреме право union.manage, а не settings.manage:
+// цим розділом можуть опікуватись інші люди, ніж дизайном основного сайту.
+Route::middleware(['auth', 'verified', 'permission:union.manage'])
+    ->prefix('admin/union')
+    ->name('admin.union.')
+    ->group(function () {
+        Route::get('/', [UnionController::class, 'index'])->name('index');
+        Route::put('/content', [UnionController::class, 'updateContent'])->name('content');
+
+        Route::get('/complaints', [UnionComplaintController::class, 'index'])->name('complaints.index');
+        Route::put('/complaints/{unionComplaint}', [UnionComplaintController::class, 'update'])->name('complaints.update');
+
+        Route::get('/announcements', [UnionAnnouncementController::class, 'index'])->name('announcements.index');
+        Route::post('/announcements', [UnionAnnouncementController::class, 'store'])->name('announcements.store');
+        Route::put('/announcements/{unionAnnouncement}', [UnionAnnouncementController::class, 'update'])->name('announcements.update');
+        Route::delete('/announcements/{unionAnnouncement}', [UnionAnnouncementController::class, 'destroy'])->name('announcements.destroy');
+
+        Route::get('/blacklist', [AdminUnionBlacklistController::class, 'index'])->name('blacklist.index');
+        Route::post('/blacklist/families', [AdminUnionBlacklistController::class, 'storeFamily'])->name('blacklist.families.store');
+        Route::put('/blacklist/families/{unionBlacklistedFamily}', [AdminUnionBlacklistController::class, 'updateFamily'])->name('blacklist.families.update');
+        Route::delete('/blacklist/families/{unionBlacklistedFamily}', [AdminUnionBlacklistController::class, 'destroyFamily'])->name('blacklist.families.destroy');
+        Route::delete('/blacklist/players/{unionBlacklistedPlayer}', [AdminUnionBlacklistController::class, 'destroyPlayer'])->name('blacklist.players.destroy');
+    });
+
+// ЧС гравців та автодоповнення родини — доступні будь-якому зареєстрованому
+// союзнику (не лише адміну), на відміну від адмінського блоку вище.
+Route::middleware(['auth', 'verified'])
+    ->group(function () {
+        Route::get('/union/families/search', [UnionFamilyController::class, 'search'])->name('union.families.search');
+
+        Route::prefix('union/blacklist')->name('union.blacklist.')->group(function () {
+            Route::get('/', [UnionBlacklistController::class, 'index'])->name('index');
+            Route::post('/players', [UnionBlacklistController::class, 'storePlayer'])->name('players.store');
+        });
     });
 
 Route::middleware(['auth', 'verified', 'permission:settings.manage'])

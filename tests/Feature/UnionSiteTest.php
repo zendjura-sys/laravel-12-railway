@@ -20,7 +20,7 @@ class UnionSiteTest extends TestCase
 
     private function admin(): User
     {
-        $permission = Permission::firstOrCreate(['name' => 'settings.manage', 'guard_name' => 'web']);
+        $permission = Permission::firstOrCreate(['name' => 'union.manage', 'guard_name' => 'web']);
         $role = Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'web']);
         $role->givePermissionTo($permission);
 
@@ -55,10 +55,12 @@ class UnionSiteTest extends TestCase
     public function test_an_admin_can_edit_the_union_page_text(): void
     {
         $this->actingAs($this->admin())
-            ->put(route('admin.design.union'), [
+            ->put(route('admin.union.content'), [
                 'title' => 'Союзники Monsory',
                 'tagline' => 'Разом сильніші',
                 'about' => ['Перший абзац.', 'Другий абзац.'],
+                'rules' => ['Правило.'],
+                'terms' => ['Умова.'],
             ])
             ->assertRedirect();
 
@@ -69,10 +71,10 @@ class UnionSiteTest extends TestCase
                 ->where('about', ['Перший абзац.', 'Другий абзац.']));
     }
 
-    public function test_a_member_without_settings_permission_cannot_edit_the_union_page(): void
+    public function test_a_member_without_union_manage_permission_cannot_edit_the_union_page(): void
     {
         $this->actingAs(User::factory()->create())
-            ->put(route('admin.design.union'), ['title' => 'x', 'about' => []])
+            ->put(route('admin.union.content'), ['title' => 'x', 'about' => [], 'rules' => [], 'terms' => []])
             ->assertForbidden();
     }
 }

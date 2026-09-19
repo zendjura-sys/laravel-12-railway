@@ -98,6 +98,9 @@ class UnionComplaint extends Model
      * Лідер/заступник обвинуваченої родини бачить скарги проти СВОЄЇ
      * родини (за union_family_name, без урахування регістру — люди
      * вводять назву по-різному), Monsory-адмін (union.manage) — усі.
+     *
+     * Звірка — у PHP через mb_strtolower(), НЕ SQL LOWER(): у SQLite
+     * LOWER() лоуркейсить лише ASCII, кириличні назви родин не збіглися б.
      */
     public static function visibleTo(User $user): \Illuminate\Database\Eloquent\Builder
     {
@@ -108,7 +111,13 @@ class UnionComplaint extends Model
         }
 
         if ($user->union_family_name && in_array($user->union_role, ['leader', 'deputy'], true)) {
-            return $query->whereRaw('LOWER(against_family) = ?', [mb_strtolower($user->union_family_name)]);
+            $needle = mb_strtolower(trim($user->union_family_name));
+            $matchingIds = self::query()
+                ->get(['id', 'against_family'])
+                ->filter(fn (self $c) => mb_strtolower($c->against_family) === $needle)
+                ->pluck('id');
+
+            return $query->whereIn('id', $matchingIds);
         }
 
         return $query->whereRaw('1 = 0');

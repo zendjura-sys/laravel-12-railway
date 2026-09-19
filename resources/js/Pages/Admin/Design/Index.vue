@@ -18,7 +18,6 @@ const props = defineProps({
     gallery: { type: Array, default: () => [] },
     socialLinks: { type: Array, default: () => [] },
     socialPlatforms: { type: Array, default: () => [] },
-    union: { type: Object, default: () => ({ enabled: false }) },
 });
 
 const TABS = computed(() => [
@@ -28,7 +27,6 @@ const TABS = computed(() => [
     { key: 'sections', label: 'Розділи' },
     { key: 'carousels', label: props.pendingAvatars.length > 0 ? `Каруселі (${props.pendingAvatars.length})` : 'Каруселі' },
     { key: 'social', label: 'Соцмережі' },
-    ...(props.union.enabled ? [{ key: 'union', label: 'Союзники' }] : []),
 ]);
 const activeTab = ref('brand');
 
@@ -220,16 +218,6 @@ function saveSocialLinks() {
     socialForm.put(route('admin.design.social-links'), { preserveScroll: true });
 }
 
-/* ---------- союзники (union.monsory.net) ---------- */
-const unionForm = useForm({
-    title: props.union.title ?? '',
-    tagline: props.union.tagline ?? '',
-    about: [...(props.union.about ?? [])],
-});
-
-function saveUnion() {
-    unionForm.put(route('admin.design.union'), { preserveScroll: true });
-}
 </script>
 
 <template>
@@ -738,53 +726,5 @@ function saveUnion() {
                 </div>
             </div>
         </div>
-
-        <!-- ================= СОЮЗНИКИ (union.monsory.net) ================= -->
-        <form v-if="activeTab === 'union'" v-glow class="glass-panel max-w-2xl p-6 sm:p-8" @submit.prevent="saveUnion">
-            <h2 class="font-display mb-1 text-lg text-white">Головна на {{ union.domain }}</h2>
-            <p class="mb-6 text-sm text-white/40">
-                Окремий публічний вхід для союзників родини — той самий логін, база й адмінка, що й тут, різниться лише ця сторінка.
-            </p>
-
-            <div class="space-y-5">
-                <div>
-                    <InputLabel for="union_title" value="Заголовок" />
-                    <TextInput id="union_title" v-model="unionForm.title" type="text" />
-                    <InputError :message="unionForm.errors.title" />
-                </div>
-
-                <div>
-                    <InputLabel for="union_tagline" value="Слоган (необов'язково)" />
-                    <TextInput id="union_tagline" v-model="unionForm.tagline" type="text" />
-                    <InputError :message="unionForm.errors.tagline" />
-                </div>
-
-                <div>
-                    <InputLabel value="Текст" />
-                    <div class="mt-2 space-y-3">
-                        <div v-for="(_, i) in unionForm.about" :key="i" class="flex items-start gap-3">
-                            <textarea
-                                v-model="unionForm.about[i]"
-                                rows="3"
-                                class="w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2.5 text-sm text-white focus:border-gold-400/40 focus:ring-0"
-                            ></textarea>
-                            <button type="button" class="mt-2 text-xs text-white/30 hover:text-ember-500" @click="unionForm.about.splice(i, 1)">✕</button>
-                        </div>
-                    </div>
-                    <button
-                        type="button"
-                        class="glass-pill mt-3 px-5 py-2.5 text-xs font-semibold uppercase tracking-widest text-white/70 hover:text-white"
-                        @click="unionForm.about.push('')"
-                    >
-                        + Додати абзац
-                    </button>
-                </div>
-            </div>
-
-            <div class="mt-7 flex items-center gap-4">
-                <PrimaryButton :disabled="unionForm.processing">Зберегти</PrimaryButton>
-                <p v-if="unionForm.recentlySuccessful" class="text-sm text-emerald-300">Збережено.</p>
-            </div>
-        </form>
     </AdminLayout>
 </template>

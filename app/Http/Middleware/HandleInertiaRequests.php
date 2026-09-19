@@ -44,6 +44,9 @@ class HandleInertiaRequests extends Middleware
             // приватний ключ на фронт ніколи не потрапляє. null, поки не
             // налаштовано в .env — форма підписки просто себе ховає.
             'webPushPublicKey' => config('webpush.vapid.public_key'),
+            // Пункт «Союз» у навігації адмінки ховається, поки фіча вимкнена
+            // (UNION_DOMAIN порожній) — так само, як сам union.monsory.net.
+            'unionEnabled' => (bool) config('app.union_domain'),
             'flash' => [
                 'status' => fn () => $request->session()->get('status'),
             ],
@@ -60,6 +63,7 @@ class HandleInertiaRequests extends Middleware
                 'manageTelegram' => $request->user()?->can('telegram.manage') ?? false,
                 'manageBonuses' => $request->user()?->can('bonuses.manage') ?? false,
                 'manageEvents' => $request->user()?->can('events.manage') ?? false,
+                'manageUnion' => $request->user()?->can('union.manage') ?? false,
             ],
             // Бейдж у навігації видно з будь-якої сторінки, тому лічильник
             // рахується тут, а не в NotificationController — той бачить

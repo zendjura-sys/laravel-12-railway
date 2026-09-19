@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Models\UnionBlacklistedFamily;
+use App\Models\UnionBlacklistedPlayer;
 use App\Support\FamilyContent;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
@@ -66,6 +68,19 @@ class RegisteredUserController extends Controller
         ]);
 
         $fullName = trim($data['first_name'].' '.($data['last_name'] ?? ''));
+
+        // ЧС гравця діє на ОБОХ сайтах — і союзному, і основному
+        // (monsory.net): гравець, якого союзники занесли в чорний список,
+        // не може зареєструватись у родині так само, як не може
+        // зареєструватись союзником. ЧСС родин — лише для union.monsory.net,
+        // на основному сайті поняття "родина союзника" не існує.
+        if (UnionBlacklistedPlayer::isBlacklisted($data['first_name'], $data['last_name'] ?? null)) {
+            throw ValidationException::withMessages(['first_name' => 'Цей гравець у чорному списку союзу — реєстрація недоступна.']);
+        }
+
+        if ($isUnion && UnionBlacklistedFamily::isBlacklisted($data['union_family_name'])) {
+            throw ValidationException::withMessages(['union_family_name' => 'Ця родина в чорному списку союзу — реєстрація недоступна.']);
+        }
 
         // Тіньові акаунти заводить лише Reports (подача звіту "за друга") —
         // це суто внутрішня механіка Monsory, у союзників таких збігів

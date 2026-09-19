@@ -3,7 +3,7 @@ import ApplicationLogo from '@/Components/ApplicationLogo.vue';
 import AmbientBackground from '@/Components/AmbientBackground.vue';
 import { Link } from '@inertiajs/vue3';
 import { ref } from 'vue';
-import { AlertTriangle, Blocks, CalendarDays, History, IdCard, LayoutDashboard, Megaphone, Menu, MessageCircle, Palette, ScrollText, Settings, ShieldCheck, Target, TrendingUp, Users, Wallet, X } from '@lucide/vue';
+import { AlertTriangle, Blocks, CalendarDays, Handshake, History, IdCard, LayoutDashboard, Megaphone, Menu, MessageCircle, Palette, ScrollText, Settings, ShieldCheck, ShieldOff, Target, TrendingUp, Users, Wallet, X } from '@lucide/vue';
 
 defineProps({
     title: { type: String, default: '' },
@@ -27,6 +27,16 @@ const navGroups = [
             { name: 'admin.broadcasts.index', label: 'Розсилки', can: 'manageBroadcasts', icon: Megaphone },
             { name: 'admin.bonuses.index', label: 'Премії', can: 'manageBonuses', icon: Wallet },
             { name: 'admin.users.index', label: 'Учасники', can: 'manageUsers', icon: Users },
+        ],
+    },
+    {
+        label: 'Союз',
+        requiresUnion: true,
+        items: [
+            { name: 'admin.union.index', label: 'Контент і союзники', can: 'manageUnion', icon: Handshake },
+            { name: 'admin.union.complaints.index', label: 'Скарги', can: 'manageUnion', icon: ScrollText },
+            { name: 'admin.union.announcements.index', label: 'Оголошення', can: 'manageUnion', icon: Megaphone },
+            { name: 'admin.union.blacklist.index', label: 'Чорний список', can: 'manageUnion', icon: ShieldOff },
         ],
     },
     {
@@ -76,7 +86,7 @@ const mobileOpen = ref(false);
                 </div>
 
                 <nav class="space-y-6">
-                    <div v-for="group in navGroups" :key="group.label">
+                    <div v-for="group in navGroups" v-show="!group.requiresUnion || $page.props.unionEnabled" :key="group.label">
                         <p class="mb-2 px-2 text-[10px] font-medium uppercase tracking-[0.3em] text-white/30">{{ group.label }}</p>
                         <div class="space-y-1">
                             <template v-for="item in group.items" :key="item.name">

@@ -84,4 +84,18 @@ class UnionComplaintModelTest extends TestCase
 
         $this->assertSame(0, UnionComplaint::visibleTo($outsider)->count());
     }
+
+    /** SQLite LOWER() лоуркейсить лише ASCII — звірка мусить іти через PHP mb_strtolower(). */
+    public function test_family_leader_visibility_works_for_cyrillic_family_names(): void
+    {
+        $leader = User::factory()->create(['union_family_name' => 'Родина Корво', 'union_role' => 'leader']);
+
+        $this->complaint('Родина Корво');
+        $this->complaint('Родина Дель Ріо');
+
+        $visible = UnionComplaint::visibleTo($leader)->get();
+
+        $this->assertCount(1, $visible);
+        $this->assertSame('Родина Корво', $visible->first()->against_family);
+    }
 }

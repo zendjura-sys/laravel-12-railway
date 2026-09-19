@@ -3,7 +3,7 @@ import ApplicationLogo from '@/Components/ApplicationLogo.vue';
 import AmbientBackground from '@/Components/AmbientBackground.vue';
 import { Link } from '@inertiajs/vue3';
 import { ref } from 'vue';
-import { Blocks, CalendarDays, History, IdCard, LayoutDashboard, Megaphone, Menu, MessageCircle, Palette, ScrollText, Settings, ShieldCheck, Target, TrendingUp, Users, Wallet, X } from '@lucide/vue';
+import { AlertTriangle, Blocks, CalendarDays, History, IdCard, LayoutDashboard, Megaphone, Menu, MessageCircle, Palette, ScrollText, Settings, ShieldCheck, Target, TrendingUp, Users, Wallet, X } from '@lucide/vue';
 
 defineProps({
     title: { type: String, default: '' },
@@ -37,6 +37,7 @@ const navGroups = [
             { name: 'admin.telegram.index', label: 'Telegram-бот', can: 'manageTelegram', icon: MessageCircle },
             { name: 'admin.design.index', label: 'Дизайн', can: 'manageSettings', icon: Palette },
             { name: 'admin.changelog.index', label: 'Що нового', can: 'manageSettings', icon: History },
+            { name: 'admin.failed-jobs.index', label: 'Провалені джоби', can: 'manageSettings', icon: AlertTriangle },
             { name: 'admin.settings.index', label: 'Налаштування', can: 'manageSettings', icon: Settings },
         ],
     },

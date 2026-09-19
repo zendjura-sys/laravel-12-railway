@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\ChangelogController as AdminChangelogController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\DeployController;
 use App\Http\Controllers\Admin\DesignController;
+use App\Http\Controllers\Admin\FailedJobController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\UserController;
@@ -158,6 +159,17 @@ Route::middleware(['auth', 'verified', 'permission:settings.manage'])
         Route::post('/', [AdminChangelogController::class, 'store'])->name('store');
         Route::put('/{changelogEntry}', [AdminChangelogController::class, 'update'])->name('update');
         Route::delete('/{changelogEntry}', [AdminChangelogController::class, 'destroy'])->name('destroy');
+    });
+
+Route::middleware(['auth', 'verified', 'permission:settings.manage'])
+    ->prefix('admin/failed-jobs')
+    ->name('admin.failed-jobs.')
+    ->group(function () {
+        Route::get('/', [FailedJobController::class, 'index'])->name('index');
+        Route::post('/retry-all', [FailedJobController::class, 'retryAll'])->name('retry-all');
+        Route::post('/{failedJob}/retry', [FailedJobController::class, 'retry'])->name('retry');
+        Route::delete('/clear', [FailedJobController::class, 'clear'])->name('clear');
+        Route::delete('/{failedJob}', [FailedJobController::class, 'destroy'])->name('destroy');
     });
 
 Route::middleware(['auth', 'verified', 'permission:settings.manage'])

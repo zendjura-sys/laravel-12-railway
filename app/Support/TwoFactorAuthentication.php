@@ -56,4 +56,75 @@ class TwoFactorAuthentication
     {
         return collect()->times($count, fn () => Str::random(10).'-'.Str::random(10))->all();
     }
+
+    /** Ім'я cookie з токеном довіреного пристрою. */
+    public const TRUST_COOKIE = 'two_factor_remember';
+
+    private const TRUST_DAYS = 30;
+
+    /**
+     * Позначає ЦЕЙ браузер довіреним на TRUST_DAYS — повторний вхід з
+     * нього не питатиме код, доки термін не спливе чи пристрій не забудуть
+     * вручну. У базі лежить лише sha256 токена (як remember_token), сам
+     * токен — тільки в httpOnly cookie: навіть витік бази не дає готового
+     * пропуска повз 2FA.
+     */
+    public function trustDevice(User $user): string
+    {
+        $token = Str::random(64);
+
+        $devices = $this->activeTrustedDevices($user);
+        $devices[] = [
+            'hash' => hash('sha256', $token),
+            'expires_at' => now()->addDays(self::TRUST_DAYS)->toIso8601String(),
+        ];
+
+        $user->forceFill(['two_factor_trusted_devices' => $devices])->save();
+
+        return $token;
+    }
+
+    /** Токен із cookie довіряти можна лише якщо його хеш є в НЕпростроченому списку саме цього юзера. */
+    public function isDeviceTrusted(User $user, ?string $token): bool
+    {
+        if (! $token) {
+            return false;
+        }
+
+        $hash = hash('sha256', $token);
+
+        foreach ($this->activeTrustedDevices($user) as $device) {
+            if (hash_equals($device['hash'], $hash)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public function forgetAllTrustedDevices(User $user): void
+    {
+        $user->forceFill(['two_factor_trusted_devices' => []])->save();
+    }
+
+    public function trustedDeviceCount(User $user): int
+    {
+        return count($this->activeTrustedDevices($user));
+    }
+
+    /**
+     * Список без прострочених записів — заразом і чистить їх у базі при
+     * кожній перевірці, окрема команда очищення для цього не потрібна.
+     *
+     * @return array<int, array{hash:string, expires_at:string}>
+     */
+    private function activeTrustedDevices(User $user): array
+    {
+        $devices = collect($user->two_factor_trusted_devices ?? [])
+            ->filter(fn (array $d) => isset($d['hash'], $d['expires_at']) && now()->lt($d['expires_at']))
+            ->values()
+            ->all();
+
+        return $devices;
+    }
 }

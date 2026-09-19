@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
+use App\Support\TwoFactorAuthentication;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -13,6 +14,10 @@ use Inertia\Response;
 
 class AuthenticatedSessionController extends Controller
 {
+    public function __construct(private readonly TwoFactorAuthentication $twoFactor)
+    {
+    }
+
     /**
      * Display the login view.
      */
@@ -31,6 +36,11 @@ class AuthenticatedSessionController extends Controller
      * — це вже ПОВНІСТЮ логінить сесію. Якщо в акаунта підтверджена 2FA,
      * одразу відкочуємо цей логін (Auth::logout) і лишаємо тільки id у сесії:
      * людина ще НЕ автентифікована, доки не введе код на другому кроці.
+     *
+     * Виняток — довірений пристрій (cookie з TwoFactorChallengeController,
+     * "Довіряти цьому пристрою на 30 днів"): якщо токен звідти є й ще не
+     * прострочений саме для ЦЬОГО користувача, другий крок пропускається
+     * зовсім, як для акаунтів без 2FA.
      */
     public function store(LoginRequest $request): RedirectResponse
     {
@@ -38,7 +48,9 @@ class AuthenticatedSessionController extends Controller
 
         $user = $request->user();
 
-        if ($user->hasConfirmedTwoFactor()) {
+        $trusted = $this->twoFactor->isDeviceTrusted($user, $request->cookie(TwoFactorAuthentication::TRUST_COOKIE));
+
+        if ($user->hasConfirmedTwoFactor() && ! $trusted) {
             $remember = $request->boolean('remember');
             Auth::guard('web')->logout();
 

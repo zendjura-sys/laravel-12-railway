@@ -49,6 +49,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'remember_token',
         'two_factor_secret',
         'two_factor_recovery_codes',
+        'two_factor_trusted_devices',
     ];
 
     /**
@@ -82,6 +83,9 @@ class User extends Authenticatable implements MustVerifyEmail
             'two_factor_secret' => 'encrypted',
             'two_factor_recovery_codes' => 'encrypted:array',
             'two_factor_confirmed_at' => 'datetime',
+            // Тут лежать лише sha256-хеші токенів, не самі токени — 'array'
+            // достатньо, шифрувати нема чого приховувати додатково.
+            'two_factor_trusted_devices' => 'array',
         ];
     }
 

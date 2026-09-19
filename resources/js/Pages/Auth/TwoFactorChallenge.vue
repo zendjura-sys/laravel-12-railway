@@ -1,5 +1,6 @@
 <script setup>
 import GuestLayout from '@/Layouts/GuestLayout.vue';
+import Checkbox from '@/Components/Checkbox.vue';
 import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import TextInput from '@/Components/TextInput.vue';
@@ -12,12 +13,15 @@ const useRecovery = ref(false);
 const form = useForm({
     code: '',
     recovery_code: '',
+    remember_device: true,
 });
 
 function submit() {
-    form.transform((data) => (useRecovery.value ? { recovery_code: data.recovery_code } : { code: data.code }))
+    form.transform((data) => (useRecovery.value
+        ? { recovery_code: data.recovery_code, remember_device: data.remember_device }
+        : { code: data.code, remember_device: data.remember_device }))
         .post(route('two-factor.login.store'), {
-            onFinish: () => form.reset(),
+            onFinish: () => form.reset('code', 'recovery_code'),
         });
 }
 
@@ -63,6 +67,13 @@ function toggleMode() {
                     autofocus
                 />
                 <InputError :message="form.errors.recovery_code" />
+            </div>
+
+            <div class="mt-4 block">
+                <label class="flex items-center">
+                    <Checkbox name="remember_device" v-model:checked="form.remember_device" />
+                    <span class="ms-2 text-sm text-white/50">Довіряти цьому пристрою на 30 днів</span>
+                </label>
             </div>
 
             <div class="mt-6 flex items-center justify-between">

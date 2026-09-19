@@ -90,6 +90,8 @@ Route::middleware('auth')->group(function () {
         Route::post('/confirm', [TwoFactorAuthenticationController::class, 'confirm'])->name('confirm');
         Route::delete('/cancel', [TwoFactorAuthenticationController::class, 'cancel'])->name('cancel');
         Route::post('/recovery-codes', [TwoFactorAuthenticationController::class, 'regenerateRecoveryCodes'])->name('recovery-codes');
+        Route::get('/trusted-devices', [TwoFactorAuthenticationController::class, 'trustedDevices'])->name('trusted-devices');
+        Route::delete('/trusted-devices', [TwoFactorAuthenticationController::class, 'forgetTrustedDevices'])->name('forget-trusted-devices');
         Route::delete('/', [TwoFactorAuthenticationController::class, 'destroy'])->name('disable');
     });
 

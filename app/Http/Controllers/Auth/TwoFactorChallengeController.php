@@ -8,6 +8,7 @@ use App\Support\TwoFactorAuthentication;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cookie;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -42,6 +43,7 @@ class TwoFactorChallengeController extends Controller
         $data = $request->validate([
             'code' => ['nullable', 'string'],
             'recovery_code' => ['nullable', 'string'],
+            'remember_device' => ['nullable', 'boolean'],
         ]);
 
         $user = User::find($userId);
@@ -65,7 +67,20 @@ class TwoFactorChallengeController extends Controller
         Auth::login($user, $remember);
         $request->session()->regenerate();
 
-        return redirect()->intended(route('dashboard', absolute: false));
+        $response = redirect()->intended(route('dashboard', absolute: false));
+
+        if ($data['remember_device'] ?? false) {
+            $token = $this->service->trustDevice($user);
+            $response->withCookie(Cookie::make(
+                TwoFactorAuthentication::TRUST_COOKIE,
+                $token,
+                60 * 24 * 30,
+                httpOnly: true,
+                sameSite: 'lax',
+            ));
+        }
+
+        return $response;
     }
 
     private function verifyCode(User $user, array $data): bool

@@ -21,6 +21,24 @@ const regenerateForm = useForm({ password: '' });
 const showDisable = ref(false);
 const showRegenerate = ref(false);
 
+const trustedDeviceCount = ref(null);
+
+async function refreshTrustedDevices() {
+    if (!enabled.value) return;
+    const { data } = await window.axios.get(route('two-factor.trusted-devices'));
+    trustedDeviceCount.value = data.data.count;
+}
+
+function forgetTrustedDevices() {
+    if (!confirm('Забути всі довірені пристрої? Наступний вхід усюди знову попросить код.')) return;
+    router.delete(route('two-factor.forget-trusted-devices'), {
+        preserveScroll: true,
+        onSuccess: refreshTrustedDevices,
+    });
+}
+
+watch(enabled, refreshTrustedDevices, { immediate: true });
+
 function enable() {
     router.post(route('two-factor.enable'), {}, {
         preserveScroll: true,
@@ -115,6 +133,14 @@ watch(() => page.props.flash?.recoveryCodes, (v) => {
                         @click="showRegenerate = !showRegenerate"
                     >
                         Оновити резервні коди
+                    </button>
+                    <button
+                        v-if="trustedDeviceCount > 0"
+                        type="button"
+                        class="rounded-full border border-white/15 px-4 py-2 text-xs text-white/60 hover:border-white/30"
+                        @click="forgetTrustedDevices"
+                    >
+                        Забути довірені пристрої ({{ trustedDeviceCount }})
                     </button>
                     <button
                         type="button"

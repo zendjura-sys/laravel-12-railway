@@ -114,4 +114,23 @@ class TwoFactorAuthenticationController extends Controller
 
         return back()->with('recoveryCodes', $codes);
     }
+
+    public function trustedDevices(Request $request): JsonResponse
+    {
+        return response()->json(['data' => [
+            'count' => $this->service->trustedDeviceCount($request->user()),
+        ]]);
+    }
+
+    /**
+     * Забуває ВСІ довірені пристрої одразу, не лише поточний — після цього
+     * 2FA-код запитається знову скрізь, включно з пристроєм, з якого
+     * натиснули цю кнопку.
+     */
+    public function forgetTrustedDevices(Request $request): RedirectResponse
+    {
+        $this->service->forgetAllTrustedDevices($request->user());
+
+        return back()->withCookie(cookie()->forget(TwoFactorAuthentication::TRUST_COOKIE));
+    }
 }

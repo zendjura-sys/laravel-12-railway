@@ -6,6 +6,7 @@ import InputError from '@/Components/InputError.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import { Head, router, useForm, usePage } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
+import { toDateInputValue } from '@/lib/date';
 
 const props = defineProps({
     entries: { type: Array, default: () => [] },
@@ -30,7 +31,7 @@ function startEdit(entry) {
     editingId.value = entry.id;
     editForm.title = entry.title;
     editForm.description = entry.description || '';
-    editForm.published_at = entry.published_at;
+    editForm.published_at = toDateInputValue(entry.published_at);
 }
 
 function saveEdit(entry) {

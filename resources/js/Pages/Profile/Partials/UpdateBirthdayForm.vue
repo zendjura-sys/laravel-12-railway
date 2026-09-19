@@ -3,11 +3,12 @@ import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import { useForm, usePage } from '@inertiajs/vue3';
+import { toDateInputValue } from '@/lib/date';
 
 const user = usePage().props.auth.user;
 
 const form = useForm({
-    birth_date: user.birth_date ?? '',
+    birth_date: toDateInputValue(user.birth_date),
 });
 </script>
 

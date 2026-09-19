@@ -116,10 +116,28 @@ class FamilyContent
     /** @return array<int,string> Текст для union.monsory.net — див. коментар у config/family.php. */
     public static function unionAbout(): array
     {
-        $stored = self::decode('union_about');
+        return self::simpleList('union_about');
+    }
+
+    /** @return array<int,string> */
+    public static function unionRules(): array
+    {
+        return self::simpleList('union_rules');
+    }
+
+    /** @return array<int,string> */
+    public static function unionTerms(): array
+    {
+        return self::simpleList('union_terms');
+    }
+
+    /** @return array<int,string> Список рядків: правка з адмінки або значення за замовчуванням з config/family.php. */
+    private static function simpleList(string $key): array
+    {
+        $stored = self::decode($key);
 
         if ($stored === null) {
-            return (array) config('family.union_about', []);
+            return (array) config("family.{$key}", []);
         }
 
         return array_values(array_filter(

@@ -82,6 +82,7 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile/birthday', [ProfileController::class, 'updateBirthday'])->name('profile.birthday');
     Route::patch('/profile/gender', [ProfileController::class, 'updateGender'])->name('profile.gender');
     Route::post('/profile/avatar', [ProfileController::class, 'updateAvatar'])->name('profile.avatar');
+    Route::delete('/profile/other-sessions', [ProfileController::class, 'destroyOtherSessions'])->name('profile.other-sessions.destroy');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
     Route::prefix('user/two-factor-authentication')->name('two-factor.')->group(function () {

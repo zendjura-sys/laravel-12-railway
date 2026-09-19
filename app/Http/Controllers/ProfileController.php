@@ -9,8 +9,10 @@ use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Redirect;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -33,7 +35,27 @@ class ProfileController extends Controller
                 fn (array $p) => ['key' => $p['key'], 'title' => $p['title']],
                 FamilyContent::positions(),
             ),
+            'otherActiveSessions' => $this->otherActiveSessionsCount($request),
         ]);
+    }
+
+    /**
+     * "Вийти з інших сесій" можливий лише з SESSION_DRIVER=database —
+     * тільки тоді чужі сесії взагалі видно й можна прибрати рядком з
+     * таблиці. З file/redis-драйвером ховаємо кнопку зовсім (0), а не
+     * показуємо нефункціональну.
+     */
+    private function otherActiveSessionsCount(Request $request): int
+    {
+        if (config('session.driver') !== 'database' || ! Schema::hasTable('sessions')) {
+            return 0;
+        }
+
+        return DB::table('sessions')
+            ->where('user_id', $request->user()->id)
+            ->where('id', '!=', $request->session()->getId())
+            ->where('last_activity', '>=', now()->subMinutes((int) config('session.lifetime'))->getTimestamp())
+            ->count();
     }
 
     /**
@@ -185,5 +207,26 @@ class ProfileController extends Controller
         $request->session()->regenerateToken();
 
         return Redirect::to('/');
+    }
+
+    /**
+     * Знімає всі ІНШІ сесії цього юзера — забутий увімкненим комп'ютер,
+     * старий телефон тощо. Просте видалення рядків із sessions: для
+     * database-драйвера цього досить — наступний запит з того пристрою
+     * не знайде свій id у таблиці й опиниться неавтентифікованим, той
+     * самий ефект, що дає AuthenticateSession, без додаткового middleware.
+     */
+    public function destroyOtherSessions(Request $request): RedirectResponse
+    {
+        $request->validate(['password' => ['required', 'current_password']]);
+
+        if (config('session.driver') === 'database') {
+            DB::table('sessions')
+                ->where('user_id', $request->user()->id)
+                ->where('id', '!=', $request->session()->getId())
+                ->delete();
+        }
+
+        return back();
     }
 }

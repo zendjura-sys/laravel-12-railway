@@ -10,6 +10,7 @@ import UpdatePositionForm from './Partials/UpdatePositionForm.vue';
 import UpdateProfileInformationForm from './Partials/UpdateProfileInformationForm.vue';
 import TwoFactorAuthenticationForm from './Partials/TwoFactorAuthenticationForm.vue';
 import PushNotificationsForm from './Partials/PushNotificationsForm.vue';
+import LogOutOtherSessionsForm from './Partials/LogOutOtherSessionsForm.vue';
 import { Head } from '@inertiajs/vue3';
 import { onMounted } from 'vue';
 
@@ -31,6 +32,10 @@ const props = defineProps({
     positions: {
         type: Array,
         default: () => [],
+    },
+    otherActiveSessions: {
+        type: Number,
+        default: 0,
     },
 });
 
@@ -105,6 +110,10 @@ onMounted(() => {
 
             <div v-reveal:275 v-glow class="glass-panel p-6 sm:p-8">
                 <TwoFactorAuthenticationForm class="max-w-xl" />
+            </div>
+
+            <div v-if="otherActiveSessions > 0" v-reveal:290 v-glow class="glass-panel p-6 sm:p-8">
+                <LogOutOtherSessionsForm :other-active-sessions="otherActiveSessions" class="max-w-xl" />
             </div>
 
             <div v-reveal:300 v-glow class="glass-panel p-6 sm:p-8">

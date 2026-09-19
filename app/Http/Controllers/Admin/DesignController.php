@@ -68,6 +68,16 @@ class DesignController extends Controller
                 ->orderBy('id')
                 ->get()
                 ->map(fn (GalleryPhoto $p) => ['id' => $p->id, 'url' => $p->url(), 'caption' => $p->caption]),
+            // enabled: false, якщо UNION_DOMAIN не задано в .env — тоді
+            // вкладка "Союзники" в адмінці ховається зовсім, а не показує
+            // налаштування для того, чого немає.
+            'union' => [
+                'enabled' => (bool) config('app.union_domain'),
+                'domain' => config('app.union_domain'),
+                'title' => DesignSettings::unionTitle(),
+                'tagline' => DesignSettings::unionTagline(),
+                'about' => FamilyContent::unionAbout(),
+            ],
         ]);
     }
 
@@ -321,5 +331,23 @@ class DesignController extends Controller
         FamilyContent::reset($data['key']);
 
         return back()->with('status', 'Повернуто до значень за замовчуванням.');
+    }
+
+    /** Текст для union.monsory.net — вкладка активна лише коли UNION_DOMAIN задано в .env. */
+    public function updateUnion(Request $request): RedirectResponse
+    {
+        abort_unless((bool) config('app.union_domain'), 404);
+
+        $data = $request->validate([
+            'title' => ['required', 'string', 'max:150'],
+            'tagline' => ['nullable', 'string', 'max:255'],
+            'about' => ['present', 'array', 'max:12'],
+            'about.*' => ['string', 'max:600'],
+        ]);
+
+        DesignSettings::saveUnion($data['title'], $data['tagline'] ?? null);
+        FamilyContent::save('union_about', $data['about']);
+
+        return back()->with('status', 'Сторінку союзників оновлено.');
     }
 }

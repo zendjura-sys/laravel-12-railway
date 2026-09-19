@@ -113,6 +113,21 @@ class FamilyContent
         ));
     }
 
+    /** @return array<int,string> Текст для union.monsory.net — див. коментар у config/family.php. */
+    public static function unionAbout(): array
+    {
+        $stored = self::decode('union_about');
+
+        if ($stored === null) {
+            return (array) config('family.union_about', []);
+        }
+
+        return array_values(array_filter(
+            array_map(static fn ($v) => trim((string) $v), $stored),
+            static fn (string $v) => $v !== '',
+        ));
+    }
+
     public static function baseCount(): int
     {
         return (int) config('family.base_count', 5);

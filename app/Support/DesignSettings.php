@@ -54,6 +54,23 @@ class DesignSettings
         ];
     }
 
+    /** Заголовок і слоган union.monsory.net — той самий Setting-патерн, що й siteName/siteTagline вище. */
+    public static function unionTitle(): string
+    {
+        return Setting::get('union_title') ?: 'Спільнота союзників Monsory';
+    }
+
+    public static function unionTagline(): ?string
+    {
+        return Setting::get('union_tagline') ?: null;
+    }
+
+    public static function saveUnion(string $title, ?string $tagline): void
+    {
+        Setting::set('union_title', trim($title) ?: null, self::GROUP);
+        Setting::set('union_tagline', trim((string) $tagline) ?: null, self::GROUP);
+    }
+
     public static function seasonalTheme(): string
     {
         $value = trim((string) Setting::get('design_seasonal_theme'));

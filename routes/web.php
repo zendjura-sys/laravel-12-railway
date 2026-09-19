@@ -23,6 +23,27 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
+// union.monsory.net — окремий публічний вхід для союзників родини. Той
+// самий застосунок, база, логін і адмінка, що й на основному домені;
+// різниться лише ЦЯ головна сторінка (до логіну). Зареєстровано ДО
+// загального '/' нижче — інакше той матчив би будь-який хост першим, і
+// union-версія ніколи не спрацювала б. UNION_DOMAIN порожній за
+// замовчуванням — тоді цей блок просто не реєструється.
+if ($unionDomain = config('app.union_domain')) {
+    Route::domain($unionDomain)->group(function () {
+        Route::get('/', function () {
+            return Inertia::render('Union/Home', [
+                'canLogin' => Route::has('login'),
+                'canRegister' => Route::has('register'),
+                'title' => DesignSettings::unionTitle(),
+                'tagline' => DesignSettings::unionTagline(),
+                'about' => FamilyContent::unionAbout(),
+                'socialLinks' => DesignSettings::socialLinks(),
+            ]);
+        })->name('union.home');
+    });
+}
+
 Route::get('/', function () {
     // Только реальные цифры — модулей Reports/Progression ещё нет,
     // поэтому XP/рейтинги/звіти на главной пока не показываем вообще,
@@ -144,6 +165,7 @@ Route::middleware(['auth', 'verified', 'permission:settings.manage'])
         Route::put('/theme', [DesignController::class, 'updateTheme'])->name('theme');
         Route::put('/content', [DesignController::class, 'updateContent'])->name('content');
         Route::post('/content/reset', [DesignController::class, 'resetContent'])->name('content.reset');
+        Route::put('/union', [DesignController::class, 'updateUnion'])->name('union');
         Route::put('/carousels', [DesignController::class, 'updateCarousels'])->name('carousels');
         Route::put('/social-links', [DesignController::class, 'updateSocialLinks'])->name('social-links');
         Route::post('/gallery', [DesignController::class, 'storeGalleryPhoto'])->name('gallery.store');

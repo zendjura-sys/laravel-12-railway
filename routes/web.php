@@ -46,6 +46,8 @@ if ($unionDomain = config('app.union_domain')) {
                 'title' => DesignSettings::unionTitle(),
                 'tagline' => DesignSettings::unionTagline(),
                 'about' => FamilyContent::unionAbout(),
+                'rules' => FamilyContent::unionRules(),
+                'terms' => FamilyContent::unionTerms(),
                 'socialLinks' => DesignSettings::socialLinks(),
             ]);
         })->name('union.home');

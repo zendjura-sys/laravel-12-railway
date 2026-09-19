@@ -37,7 +37,9 @@ class UnionSiteTest extends TestCase
             ->assertInertia(fn ($page) => $page
                 ->component('Union/Home', shouldExist: false)
                 ->has('title')
-                ->has('about'));
+                ->has('about')
+                ->has('rules')
+                ->has('terms'));
     }
 
     public function test_the_main_domain_still_shows_the_regular_home_page(): void

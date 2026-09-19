@@ -40,6 +40,20 @@ die()  { printf '\033[1;31m[x] %s\033[0m\n' "$*" >&2; exit 1; }
 if [ "$APP_DOMAIN" != "_" ]; then
     printf '%s\n' "$APP_DOMAIN" > "$DOMAIN_STATE_FILE"
 fi
+
+# Токен Hostinger DNS API (опційно, для wildcard-сертифіката — див. розділ
+# https нижче) запам'ятовується так само, як APP_DOMAIN вище: кнопка
+# "Задеплоїти" в адмінці запускає цей скрипт зовсім без змінних оточення
+# (див. deploy/systemd/README.md), тож без цього файлу wildcard-режим
+# губився б на кожному наступному деплої.
+HOSTINGER_TOKEN_STATE_FILE="/etc/laravel-deploy-hostinger-token"
+if [ -z "${HOSTINGER_API_TOKEN:-}" ] && [ -r "$HOSTINGER_TOKEN_STATE_FILE" ]; then
+    HOSTINGER_API_TOKEN="$(cat "$HOSTINGER_TOKEN_STATE_FILE")"
+fi
+if [ -n "${HOSTINGER_API_TOKEN:-}" ]; then
+    (umask 077 && printf '%s\n' "$HOSTINGER_API_TOKEN" > "$HOSTINGER_TOKEN_STATE_FILE")
+fi
+
 [ -f "${APP_DIR}/artisan" ] || [ -f ./artisan ] || die "Не вижу artisan. Сначала помести код проекта в ${APP_DIR}."
 
 # ------------------------------------------------------- deploy status/log
@@ -454,6 +468,16 @@ PHP_SOCK="/run/php/php${PHP_VER}-fpm.sock"
 [ -S "$PHP_SOCK" ] || warn "Сокет ${PHP_SOCK} не найден — проверь, запущен ли php${PHP_VER}-fpm."
 
 PRIMARY_DOMAIN="${APP_DOMAIN%% *}"
+CERT_DIR="/etc/letsencrypt/live/${PRIMARY_DOMAIN}"
+
+# З токеном Hostinger DNS API сертифікат — wildcard (див. розділ https
+# нижче), тож і server_name повинен приймати будь-який піддомен, а не
+# лише перелічені в APP_DOMAIN. *.domain НЕ покриває голий apex-домен без
+# піддомену, тому APP_DOMAIN (звичайно містить apex) лишається в списку.
+SERVER_NAME_VALUE="$APP_DOMAIN"
+if [ "$APP_DOMAIN" != "_" ] && [ -n "${HOSTINGER_API_TOKEN:-}" ]; then
+    SERVER_NAME_VALUE="${APP_DOMAIN} *.${PRIMARY_DOMAIN}"
+fi
 
 # Раньше конфиг на каждом прогоне писался из HTTP-only шаблона, а SSL-блок
 # в него дописывал `certbot --nginx` отдельным шагом ниже. Это било мимо:
@@ -465,13 +489,13 @@ PRIMARY_DOMAIN="${APP_DOMAIN%% *}"
 # диске — сразу собираем финальный конфиг с SSL-блоком, читающим готовые
 # файлы сертификата, без обращения к certbot вообще. certbot нужен только
 # один раз — чтобы этот сертификат появился.
-if [ "$APP_DOMAIN" != "_" ] && [ -d "/etc/letsencrypt/live/${PRIMARY_DOMAIN}" ]; then
+if [ "$APP_DOMAIN" != "_" ] && [ -f "${CERT_DIR}/fullchain.pem" ]; then
     NGINX_TEMPLATE="${APP_DIR}/deploy/nginx-laravel-ssl.conf"
 else
     NGINX_TEMPLATE="${APP_DIR}/deploy/nginx-laravel.conf"
 fi
 
-sed -e "s|__SERVER_NAME__|${APP_DOMAIN}|g" \
+sed -e "s|__SERVER_NAME__|${SERVER_NAME_VALUE}|g" \
     -e "s|__APP_DIR__|${APP_DIR}|g" \
     -e "s|__PHP_SOCK__|${PHP_SOCK}|g" \
     -e "s|__PRIMARY_DOMAIN__|${PRIMARY_DOMAIN}|g" \
@@ -490,16 +514,54 @@ else
 fi
 
 # ----------------------------------------------------------------------- https
-# Сертификата ещё нет на диске — выпускаем его. `certonly` используется
-# намеренно вместо `--nginx`: certbot тут выступает только как ACME-клиент
-# (сам поднимет временный конфиг для HTTP-01 challenge и уберёт его), но
-# НЕ трогает наш /etc/nginx/sites-available/laravel — им теперь полностью
-# управляет этот скрипт. --deploy-hook прописывается в файл продления
-# у certbot один раз и переживает этот процесс: он гарантирует, что после
-# каждого будущего автопродления (systemd-таймер certbot.timer, который
-# работает независимо от деплоев) nginx перечитает обновлённый сертификат.
-if [ "$APP_DOMAIN" != "_" ] && command -v certbot >/dev/null 2>&1; then
-    if [ ! -d "/etc/letsencrypt/live/${PRIMARY_DOMAIN}" ]; then
+if [ "$APP_DOMAIN" != "_" ] && [ -n "${HOSTINGER_API_TOKEN:-}" ]; then
+    # Wildcard-сертифікат (*.domain) видається лише через DNS-01 — ACME
+    # має підтвердити володіння ВСІМ доменом (запис TXT у DNS-зоні), а не
+    # однією адресою по HTTP-01, як звичайний сертифікат вище. У certbot
+    # нема офіційного (безкоштовного) плагіна під Hostinger DNS, тому тут —
+    # acme.sh з вбудованим dns_hostinger: авторизується токеном з hPanel →
+    # API, сам ставить і знімає TXT-записи через Hostinger DNS API. Порт 80
+    # для цього не потрібен зовсім (на відміну від HTTP-01 нижче).
+    if [ ! -f "${CERT_DIR}/fullchain.pem" ]; then
+        log "Ставлю acme.sh і випускаю wildcard-сертифікат для ${PRIMARY_DOMAIN} + *.${PRIMARY_DOMAIN}"
+        export HOME="${HOME:-/root}"
+        ACME_SH="$HOME/.acme.sh/acme.sh"
+        [ -x "$ACME_SH" ] || curl -s https://get.acme.sh | sh -s email="${CERTBOT_EMAIL:-admin@${PRIMARY_DOMAIN}}"
+
+        mkdir -p "$CERT_DIR"
+        export HOSTINGER_API_TOKEN
+        # --install-cert прописує ці шляхи й --reloadcmd у свій конфіг
+        # продовження назавжди: наступне автопродовження (власний таймер
+        # acme.sh, незалежний від деплоїв) саме перекладе сертифікат сюди
+        # ж і сам перезавантажить nginx — точно як certbot.timer нижче.
+        if "$ACME_SH" --issue --dns dns_hostinger \
+                -d "${PRIMARY_DOMAIN}" -d "*.${PRIMARY_DOMAIN}" --server letsencrypt \
+            && "$ACME_SH" --install-cert -d "${PRIMARY_DOMAIN}" \
+                --fullchain-file "${CERT_DIR}/fullchain.pem" \
+                --key-file "${CERT_DIR}/privkey.pem" \
+                --reloadcmd "systemctl reload nginx"
+        then
+            log "Wildcard-сертифікат випущено — переписую nginx під https з *.${PRIMARY_DOMAIN}"
+            sed -e "s|__SERVER_NAME__|${SERVER_NAME_VALUE}|g" \
+                -e "s|__APP_DIR__|${APP_DIR}|g" \
+                -e "s|__PHP_SOCK__|${PHP_SOCK}|g" \
+                -e "s|__PRIMARY_DOMAIN__|${PRIMARY_DOMAIN}|g" \
+                "${APP_DIR}/deploy/nginx-laravel-ssl.conf" > /etc/nginx/sites-available/laravel
+            nginx -t && systemctl reload nginx
+        else
+            warn "Не вдалося випустити wildcard-сертифікат — перевір HOSTINGER_API_TOKEN (hPanel → API). Сайт лишиться на http. Повтори вручну: HOSTINGER_API_TOKEN=... $ACME_SH --issue --dns dns_hostinger -d ${PRIMARY_DOMAIN} -d '*.${PRIMARY_DOMAIN}' --server letsencrypt"
+        fi
+    fi
+elif [ "$APP_DOMAIN" != "_" ] && command -v certbot >/dev/null 2>&1; then
+    # Сертификата ещё нет на диске — выпускаем его. `certonly` используется
+    # намеренно вместо `--nginx`: certbot тут выступает только как ACME-клиент
+    # (сам поднимет временный конфиг для HTTP-01 challenge и уберёт его), но
+    # НЕ трогает наш /etc/nginx/sites-available/laravel — им теперь полностью
+    # управляет этот скрипт. --deploy-hook прописывается в файл продления
+    # у certbot один раз и переживает этот процесс: он гарантирует, что после
+    # каждого будущего автопродления (systemd-таймер certbot.timer, который
+    # работает независимо от деплоев) nginx перечитает обновлённый сертификат.
+    if [ ! -f "${CERT_DIR}/fullchain.pem" ]; then
         log "Выпускаю сертификат для ${APP_DOMAIN}"
         CERT_DOMAINS=""
         for d in $APP_DOMAIN; do CERT_DOMAINS="${CERT_DOMAINS} -d ${d}"; done
@@ -509,7 +571,7 @@ if [ "$APP_DOMAIN" != "_" ] && command -v certbot >/dev/null 2>&1; then
             --deploy-hook "systemctl reload nginx"
         then
             log "Сертификат выпущен — переписываю nginx под https"
-            sed -e "s|__SERVER_NAME__|${APP_DOMAIN}|g" \
+            sed -e "s|__SERVER_NAME__|${SERVER_NAME_VALUE}|g" \
                 -e "s|__APP_DIR__|${APP_DIR}|g" \
                 -e "s|__PHP_SOCK__|${PHP_SOCK}|g" \
                 -e "s|__PRIMARY_DOMAIN__|${PRIMARY_DOMAIN}|g" \

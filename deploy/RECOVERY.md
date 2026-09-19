@@ -74,6 +74,22 @@ APP_DOMAIN="monsory.net www.monsory.net" ./deploy/setup-vps.sh
 собирает фронтенд, настраивает nginx, cron и systemd-сервис очереди.
 Пароль к базе останется в `/root/laravel-deploy-credentials.txt`.
 
+**Wildcard-піддомени (опційно).** Якщо в DNS вже стоїть wildcard-запис
+(`*` → IP сервера) і піддомени `щось.monsory.net` мають працювати без
+додавання кожного в DNS окремо, передай токен Hostinger DNS API — тоді
+скрипт сам видасть wildcard-сертифікат (`*.monsory.net`) через DNS-01
+(`acme.sh` + `dns_hostinger`, а не звичайний HTTP-01 сертифікат нижче) і
+пропише `*.monsory.net` у `server_name` nginx:
+
+```bash
+HOSTINGER_API_TOKEN="токен_з_hPanel→API" APP_DOMAIN="monsory.net www.monsory.net" ./deploy/setup-vps.sh
+```
+
+Токен, як і `APP_DOMAIN`, запам'ятовується (`/etc/laravel-deploy-hostinger-token`,
+права 600) — досить передати один раз, кнопка «Задеплоїти» далі й сама його
+підхопить. Без токена — звичайний сертифікат нижче, лише на явно перелічені
+в `APP_DOMAIN` домени.
+
 ### 4. HTTPS
 
 Скрипт поднимает только HTTP — сертификат выпускается отдельно, уже после

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../api_client.dart';
 import '../theme.dart';
 import 'admin_broadcasts_screen.dart';
+import 'admin_events_screen.dart';
 import 'admin_leave_requests_screen.dart';
 import 'admin_reports_screen.dart';
 
@@ -111,7 +112,8 @@ class _AdminScreenState extends State<AdminScreen> {
                     children: [
                       if (_permissions.contains('reports.manage') ||
                           _permissions.contains('members.manage') ||
-                          _permissions.contains('broadcasts.manage')) ...[
+                          _permissions.contains('broadcasts.manage') ||
+                          _permissions.contains('events.manage')) ...[
                         Text('Модерація',
                             style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w500)),
                         const SizedBox(height: 10),
@@ -144,6 +146,14 @@ class _AdminScreenState extends State<AdminScreen> {
                             count: null,
                             onTap: () => Navigator.of(context)
                                 .push(MaterialPageRoute(builder: (_) => const AdminBroadcastsScreen())),
+                          ),
+                        if (_permissions.contains('events.manage'))
+                          _ModerationTile(
+                            icon: Icons.event_outlined,
+                            label: 'Події родини',
+                            count: null,
+                            onTap: () => Navigator.of(context)
+                                .push(MaterialPageRoute(builder: (_) => const AdminEventsScreen())),
                           ),
                         const SizedBox(height: 28),
                       ],

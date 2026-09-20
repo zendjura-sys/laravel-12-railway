@@ -561,4 +561,68 @@ class ApiClient {
     final data = _decode(response) as Map<String, dynamic>;
     return (data['data'] as Map<String, dynamic>)['gifs'] as List<dynamic>;
   }
+
+  // ---------------- Події родини (модуль Family Events) ----------------
+
+  Future<List<dynamic>> events() async {
+    final response = await http.get(_uri('/events'), headers: await _headers(auth: true));
+    final data = _decode(response) as Map<String, dynamic>;
+    return data['events'] as List<dynamic>;
+  }
+
+  Future<String?> rsvpEvent(int id, String status) async {
+    final response = await http.post(
+      _uri('/events/$id/rsvp'),
+      headers: await _headers(auth: true),
+      body: jsonEncode({'status': status}),
+    );
+    final data = _decode(response) as Map<String, dynamic>;
+    return (data['data'] as Map<String, dynamic>)['myRsvp'] as String?;
+  }
+
+  Future<List<dynamic>> adminEvents() async {
+    final response = await http.get(_uri('/admin/events'), headers: await _headers(auth: true));
+    final data = _decode(response) as Map<String, dynamic>;
+    return data['events'] as List<dynamic>;
+  }
+
+  Future<void> adminCreateEvent({
+    required String title,
+    String? description,
+    String? location,
+    required String startsAt,
+  }) async {
+    final response = await http.post(
+      _uri('/admin/events'),
+      headers: await _headers(auth: true),
+      body: jsonEncode({
+        'title': title,
+        if (description != null && description.isNotEmpty) 'description': description,
+        if (location != null && location.isNotEmpty) 'location': location,
+        'starts_at': startsAt,
+      }),
+    );
+    _decode(response);
+  }
+
+  Future<void> adminDeleteEvent(int id) async {
+    final response = await http.delete(_uri('/admin/events/$id'), headers: await _headers(auth: true));
+    _decode(response);
+  }
+
+  Future<void> adminSendEventsDigest() async {
+    final response =
+        await http.post(_uri('/admin/events/send-digest'), headers: await _headers(auth: true));
+    _decode(response);
+  }
+
+  Future<Map<String, dynamic>> adminEventAiDraft(String hint) async {
+    final response = await http.post(
+      _uri('/admin/events/ai-draft'),
+      headers: await _headers(auth: true),
+      body: jsonEncode({'hint': hint}),
+    );
+    final data = _decode(response) as Map<String, dynamic>;
+    return data['data'] as Map<String, dynamic>;
+  }
 }

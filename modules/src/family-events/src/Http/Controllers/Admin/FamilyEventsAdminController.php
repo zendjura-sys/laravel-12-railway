@@ -7,6 +7,7 @@ use Addons\FamilyEvents\Events\FamilyEventCreated;
 use Addons\FamilyEvents\Events\FamilyEventsDigestRequested;
 use Addons\FamilyEvents\Models\FamilyEvent;
 use App\Models\Setting;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -76,21 +77,33 @@ class FamilyEventsAdminController
 
     public function store(Request $request): RedirectResponse
     {
-        $data = $request->validate([
+        $this->createEvent($this->validated($request), $request->user());
+
+        return back()->with('success', 'Подію створено.');
+    }
+
+    /** @return array<string, mixed> */
+    protected function validated(Request $request): array
+    {
+        return $request->validate([
             'title' => ['required', 'string', 'max:150'],
             'description' => ['nullable', 'string', 'max:2000'],
             'location' => ['nullable', 'string', 'max:150'],
             'starts_at' => ['required', 'date'],
         ]);
+    }
 
+    /** @param array<string, mixed> $data */
+    protected function createEvent(array $data, User $user): FamilyEvent
+    {
         $event = FamilyEvent::create([
             ...$data,
-            'created_by' => $request->user()->id,
+            'created_by' => $user->id,
         ]);
 
         Event::dispatch(new FamilyEventCreated($event));
 
-        return back()->with('success', 'Подію створено.');
+        return $event;
     }
 
     public function destroy(FamilyEvent $familyEvent): RedirectResponse

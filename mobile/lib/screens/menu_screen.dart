@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../api_client.dart';
 import '../theme.dart';
 import 'admin_screen.dart';
+import 'events_screen.dart';
 import 'leaderboard_screen.dart';
 import 'messenger/conversations_screen.dart';
 import 'reports_screen.dart';
@@ -76,6 +77,13 @@ class _MenuScreenState extends State<MenuScreen> {
               onTap: () => Navigator.of(context).push(
                   MaterialPageRoute(builder: (_) => const LeaderboardScreen())),
             ),
+          _MenuTile(
+            icon: Icons.event_outlined,
+            title: 'Події родини',
+            subtitle: 'Найближчі події й відповідь "прийду/не прийду"',
+            onTap: () => Navigator.of(context)
+                .push(MaterialPageRoute(builder: (_) => const EventsScreen())),
+          ),
           if (_isAdmin)
             _MenuTile(
               icon: Icons.admin_panel_settings_outlined,

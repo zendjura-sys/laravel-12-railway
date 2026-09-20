@@ -64,6 +64,7 @@ class SettingsController extends Controller
             'mobile_app_min_build',
             'mobile_app_bank_enabled',
             'mobile_app_leaderboard_enabled',
+            'mobile_app_reports_enabled',
             'mobile_app_download_url',
         ],
     ];
@@ -91,7 +92,7 @@ class SettingsController extends Controller
     private const BOOLEAN_FIELDS = [
         'ai_reports_analysis_enabled', 'ai_rejection_advice_enabled', 'ai_grade_advice_enabled',
         'ai_applications_review_enabled', 'ai_broadcast_assist_enabled', 'ai_event_draft_enabled',
-        'mobile_app_enabled', 'mobile_app_bank_enabled', 'mobile_app_leaderboard_enabled',
+        'mobile_app_enabled', 'mobile_app_bank_enabled', 'mobile_app_leaderboard_enabled', 'mobile_app_reports_enabled',
     ];
 
     /**
@@ -105,7 +106,7 @@ class SettingsController extends Controller
      * @var array<int, string>
      */
     private const DEFAULT_ENABLED_BOOLEAN_FIELDS = [
-        'mobile_app_enabled', 'mobile_app_bank_enabled', 'mobile_app_leaderboard_enabled',
+        'mobile_app_enabled', 'mobile_app_bank_enabled', 'mobile_app_leaderboard_enabled', 'mobile_app_reports_enabled',
     ];
 
     /**

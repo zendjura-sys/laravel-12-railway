@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
+import 'package:image_picker/image_picker.dart';
 
 /// Помилка API з людяним повідомленням (ValidationException з Laravel
 /// приходить як {message, errors} — саме message і показуємо користувачу).
@@ -205,5 +206,42 @@ class ApiClient {
         : _uri('/leaderboard');
     final response = await http.get(uri, headers: await _headers(auth: true));
     return _decode(response) as Map<String, dynamic>;
+  }
+
+  // ---------------- Звіти (модуль Reports) ----------------
+
+  Future<List<dynamic>> reports() async {
+    final response =
+        await http.get(_uri('/reports'), headers: await _headers(auth: true));
+    final data = _decode(response) as Map<String, dynamic>;
+    return data['reports'] as List<dynamic>;
+  }
+
+  /// multipart/form-data — те саме подання "за себе", що й на сайті,
+  /// просто без "за друга" (v1 застосунку). [fields] містить лише
+  /// непорожні значення (порожній 'report_date' на бізварі/контракті
+  /// зламав би валідацію 'required_if').
+  Future<void> submitReport({
+    required Map<String, String> fields,
+    List<String> kaptTimes = const [],
+    List<XFile> photos = const [],
+  }) async {
+    final token = await this.token;
+    final request = http.MultipartRequest('POST', _uri('/reports'))
+      ..headers['Accept'] = 'application/json'
+      ..headers['Authorization'] = 'Bearer $token'
+      ..fields.addAll(fields);
+
+    for (var i = 0; i < kaptTimes.length; i++) {
+      request.fields['kapt_times[$i]'] = kaptTimes[i];
+    }
+    for (var i = 0; i < photos.length; i++) {
+      request.files
+          .add(await http.MultipartFile.fromPath('photos[$i]', photos[i].path));
+    }
+
+    final streamed = await request.send();
+    final response = await http.Response.fromStream(streamed);
+    _decode(response);
   }
 }

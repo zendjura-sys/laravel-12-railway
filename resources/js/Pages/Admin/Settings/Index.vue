@@ -151,6 +151,7 @@ const TABS = {
             },
             { key: 'mobile_app_bank_enabled', label: 'Показувати вкладку "Банк"', type: 'checkbox' },
             { key: 'mobile_app_leaderboard_enabled', label: 'Показувати вкладку "Рейтинг"', type: 'checkbox' },
+            { key: 'mobile_app_reports_enabled', label: 'Показувати вкладку "Звіти"', type: 'checkbox' },
             {
                 key: 'mobile_app_download_url',
                 label: 'Посилання на завантаження .apk',

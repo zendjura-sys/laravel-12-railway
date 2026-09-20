@@ -1,5 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- image_picker: зйомка фото-доказу до звіту прямо з камери. -->
+    <uses-permission android:name="android.permission.CAMERA"/>
     <application
         android:label="Monsory Connect"
         android:name="${applicationName}"

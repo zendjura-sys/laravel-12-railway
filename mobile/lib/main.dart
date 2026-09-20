@@ -119,6 +119,7 @@ class _AfterConfigGate extends StatelessWidget {
             ? HomeShell(
                 bankTabEnabled: config['bankTabEnabled'] != false,
                 leaderboardTabEnabled: config['leaderboardTabEnabled'] != false,
+                reportsTabEnabled: config['reportsTabEnabled'] != false,
               )
             : const LoginScreen();
       },

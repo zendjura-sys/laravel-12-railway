@@ -22,6 +22,7 @@ class AppConfigController extends Controller
             'minBuild' => (int) (Setting::get('mobile_app_min_build') ?? 0),
             'bankTabEnabled' => Setting::get('mobile_app_bank_enabled') !== '0',
             'leaderboardTabEnabled' => Setting::get('mobile_app_leaderboard_enabled') !== '0',
+            'reportsTabEnabled' => Setting::get('mobile_app_reports_enabled') !== '0',
             'downloadUrl' => Setting::get('mobile_app_download_url'),
         ]);
     }

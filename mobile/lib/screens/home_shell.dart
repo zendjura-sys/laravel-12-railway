@@ -3,20 +3,24 @@ import '../theme.dart';
 import 'bank_screen.dart';
 import 'dashboard_screen.dart';
 import 'leaderboard_screen.dart';
+import 'reports_screen.dart';
 
 /// Нижня навігація. Кількість і склад вкладок залежать від app-config
 /// (Admin → Налаштування → Мобільний застосунок на сайті) — "Кабінет"
-/// завжди є, "Банк"/"Рейтинг" можна вимкнути звідти без оновлення
-/// застосунку. IndexedStack тримає ввімкнені вкладки в памʼяті одразу,
-/// щоб перемикання між ними не смикало мережу щоразу заново.
+/// завжди є, решта можна вимкнути звідти без оновлення застосунку.
+/// IndexedStack тримає ввімкнені вкладки в памʼяті одразу, щоб перемикання
+/// між ними не смикало мережу щоразу заново.
 class HomeShell extends StatefulWidget {
   final bool bankTabEnabled;
   final bool leaderboardTabEnabled;
+  final bool reportsTabEnabled;
 
-  const HomeShell(
-      {super.key,
-      this.bankTabEnabled = true,
-      this.leaderboardTabEnabled = true});
+  const HomeShell({
+    super.key,
+    this.bankTabEnabled = true,
+    this.leaderboardTabEnabled = true,
+    this.reportsTabEnabled = true,
+  });
 
   @override
   State<HomeShell> createState() => _HomeShellState();
@@ -29,6 +33,7 @@ class _HomeShellState extends State<HomeShell> {
   Widget build(BuildContext context) {
     final screens = [
       const DashboardScreen(),
+      if (widget.reportsTabEnabled) const ReportsScreen(),
       if (widget.bankTabEnabled) const BankScreen(),
       if (widget.leaderboardTabEnabled) const LeaderboardScreen(),
     ];
@@ -37,6 +42,11 @@ class _HomeShellState extends State<HomeShell> {
           icon: Icon(Icons.home_outlined),
           selectedIcon: Icon(Icons.home, color: AppColors.gold300),
           label: 'Кабінет'),
+      if (widget.reportsTabEnabled)
+        const NavigationDestination(
+            icon: Icon(Icons.assignment_outlined),
+            selectedIcon: Icon(Icons.assignment, color: AppColors.gold300),
+            label: 'Звіти'),
       if (widget.bankTabEnabled)
         const NavigationDestination(
             icon: Icon(Icons.account_balance_outlined),

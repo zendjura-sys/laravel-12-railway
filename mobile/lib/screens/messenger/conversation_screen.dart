@@ -309,7 +309,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
                               icon: _sending
                                   ? const SizedBox(
                                       width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                                  : const Icon(Icons.send, color: AppColors.gold300),
+                                  : Icon(Icons.send, color: AppColors.gold300),
                               onPressed: (_sending || (_draftController.text.trim().isEmpty && _photo == null))
                                   ? null
                                   : _sendText,
@@ -382,7 +382,7 @@ class _MessageBubble extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(left: 4, bottom: 2),
               child: Text(message['senderName'] as String? ?? '',
-                  style: const TextStyle(color: AppColors.gold300, fontSize: 11, fontWeight: FontWeight.w500)),
+                  style: TextStyle(color: AppColors.gold300, fontSize: 11, fontWeight: FontWeight.w500)),
             ),
           ConstrainedBox(
             constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.72),

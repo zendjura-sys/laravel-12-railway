@@ -79,7 +79,7 @@ class _UpdateDialog extends StatelessWidget {
                     Border.all(color: AppColors.gold400.withValues(alpha: 0.5)),
                 color: AppColors.gold400.withValues(alpha: 0.08),
               ),
-              child: const Icon(Icons.auto_awesome,
+              child: Icon(Icons.auto_awesome,
                   color: AppColors.gold300, size: 26),
             ),
             const SizedBox(height: 18),

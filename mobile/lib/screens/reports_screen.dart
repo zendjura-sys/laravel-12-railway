@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../api_client.dart';
 import '../theme.dart';
+import '../widgets/photo_thumbnails.dart';
 import 'report_submit_screen.dart';
 
 const _typeLabels = {
@@ -12,7 +13,7 @@ const _typeLabels = {
   'other': 'Інше'
 };
 
-const _statusMeta = {
+final _statusMeta = {
   'pending': ('На розгляді', AppColors.gold300),
   'approved': (
     'Затверджено',
@@ -113,6 +114,7 @@ class _ReportTile extends StatelessWidget {
     final meta = _statusMeta[status] ?? ('—', Colors.white38);
     final type = report['type'] as String? ?? 'other';
     final createdAt = DateTime.tryParse(report['created_at'] as String? ?? '');
+    final photos = (report['photos'] as List?)?.cast<String>() ?? [];
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -164,14 +166,14 @@ class _ReportTile extends StatelessWidget {
                         const TextStyle(color: Colors.white38, fontSize: 12)),
               if (report['grade'] != null)
                 Text('Оцінка: ${report['grade']}',
-                    style: const TextStyle(
+                    style: TextStyle(
                         color: AppColors.gold300, fontSize: 12)),
-              if ((report['photo_count'] as int? ?? 0) > 0)
-                Text('📷 ${report['photo_count']}',
-                    style:
-                        const TextStyle(color: Colors.white38, fontSize: 12)),
             ],
           ),
+          if (photos.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            PhotoThumbnails(photos: photos),
+          ],
           if (createdAt != null) ...[
             const SizedBox(height: 6),
             Text(DateFormat('dd.MM.yyyy HH:mm').format(createdAt),

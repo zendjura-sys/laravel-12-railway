@@ -3,6 +3,7 @@
 namespace Addons\Reports\Http\Controllers\Api;
 
 use Addons\Reports\Models\Report;
+use Addons\Reports\Models\ReportAttachment;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -37,6 +38,7 @@ class AdminReportController
                 'amount' => $r->amount,
                 'description' => $r->description,
                 'photoCount' => $r->attachments->count(),
+                'photos' => $r->attachments->map(fn (ReportAttachment $a) => $a->url)->values(),
                 'createdAt' => $r->created_at,
             ]);
 

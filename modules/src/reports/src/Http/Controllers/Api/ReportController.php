@@ -42,6 +42,7 @@ class ReportController
                 'amount' => $r->amount,
                 'description' => $r->description,
                 'photo_count' => $r->attachments->count(),
+                'photos' => $r->attachments->map(fn (ReportAttachment $a) => $a->url)->values(),
                 'created_at' => $r->created_at,
             ]);
 

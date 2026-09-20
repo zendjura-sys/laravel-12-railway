@@ -51,14 +51,30 @@ class BroadcastController
 
     public function store(Request $request): RedirectResponse
     {
-        $data = $request->validate([
+        $this->publish($this->validated($request), $request->user());
+
+        return back()->with('success', 'Розсилку опубліковано.');
+    }
+
+    /** @return array<string, mixed> */
+    protected function validated(Request $request): array
+    {
+        return $request->validate([
             'title' => ['required', 'string', 'max:150'],
             'body' => ['required', 'string', 'max:4000'],
             'pinned' => ['boolean'],
             'audience_type' => ['required', Rule::in(['all', 'role', 'position'])],
             'audience_value' => ['required_unless:audience_type,all', 'nullable', 'string', 'max:100'],
         ]);
+    }
 
+    /**
+     * Спільне для веб-форми й мобільного API: рахує аудиторію, заводить
+     * Broadcast, bulk-insert веб-копій у notifications і диспатчить
+     * Telegram-доставку тим, хто прив'язаний.
+     */
+    protected function publish(array $data, User $author): Broadcast
+    {
         $recipients = User::query()
             ->select('id')
             ->when($data['audience_type'] === 'role', fn ($q) => $q->role($data['audience_value']))
@@ -72,11 +88,9 @@ class BroadcastController
             'audience_type' => $data['audience_type'],
             'audience_value' => $data['audience_type'] === 'all' ? null : $data['audience_value'],
             'recipients_count' => $recipients->count(),
-            'created_by' => $request->user()->id,
+            'created_by' => $author->id,
         ]);
 
-        // Web-копія — завжди миттєвий bulk-insert (як і раніше), незалежно
-        // від сегменту.
         $now = now();
         $recipients->chunk(200)->each(function ($chunk) use ($broadcast, $now) {
             DB::table('notifications')->insert($chunk->map(fn (User $user) => [
@@ -92,7 +106,7 @@ class BroadcastController
 
         $this->dispatchTelegramDeliveries($broadcast, $recipients);
 
-        return back()->with('success', 'Розсилку опубліковано.');
+        return $broadcast;
     }
 
     /**
@@ -129,7 +143,7 @@ class BroadcastController
      * Telegram, — інакше довелось би тримати "skipped"-статус лише заради
      * того, кому й так нема куди слати.
      */
-    private function dispatchTelegramDeliveries(Broadcast $broadcast, $recipients): void
+    protected function dispatchTelegramDeliveries(Broadcast $broadcast, $recipients): void
     {
         if (! class_exists(TelegramLink::class) || $recipients->isEmpty()) {
             return;

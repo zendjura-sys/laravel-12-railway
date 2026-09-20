@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../api_client.dart';
 import '../theme.dart';
+import 'admin_broadcasts_screen.dart';
 import 'admin_leave_requests_screen.dart';
 import 'admin_reports_screen.dart';
 
@@ -108,7 +109,9 @@ class _AdminScreenState extends State<AdminScreen> {
                 : ListView(
                     padding: const EdgeInsets.all(20),
                     children: [
-                      if (_permissions.contains('reports.manage') || _permissions.contains('members.manage')) ...[
+                      if (_permissions.contains('reports.manage') ||
+                          _permissions.contains('members.manage') ||
+                          _permissions.contains('broadcasts.manage')) ...[
                         Text('Модерація',
                             style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w500)),
                         const SizedBox(height: 10),
@@ -134,6 +137,14 @@ class _AdminScreenState extends State<AdminScreen> {
                               _load();
                             },
                           ),
+                        if (_permissions.contains('broadcasts.manage'))
+                          _ModerationTile(
+                            icon: Icons.campaign_outlined,
+                            label: 'Розсилка',
+                            count: null,
+                            onTap: () => Navigator.of(context)
+                                .push(MaterialPageRoute(builder: (_) => const AdminBroadcastsScreen())),
+                          ),
                         const SizedBox(height: 28),
                       ],
                       if (_stats.isNotEmpty) ...[
@@ -153,7 +164,7 @@ class _AdminScreenState extends State<AdminScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text('${stat['value']}',
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                           color: AppColors.gold300, fontSize: 22, fontWeight: FontWeight.w600)),
                                   const SizedBox(height: 4),
                                   Text(stat['label'] as String,
@@ -204,7 +215,7 @@ class _AdminScreenState extends State<AdminScreen> {
                                     border: Border.all(color: AppColors.gold400.withValues(alpha: 0.3)),
                                   ),
                                   child: Text(roles.first,
-                                      style: const TextStyle(color: AppColors.gold300, fontSize: 11)),
+                                      style: TextStyle(color: AppColors.gold300, fontSize: 11)),
                                 ),
                             ],
                           ),

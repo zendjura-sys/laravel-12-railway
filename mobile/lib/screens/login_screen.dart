@@ -87,7 +87,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     letterSpacing: 1,
                   ),
                 ),
-                const Text(
+                Text(
                   'Connect',
                   textAlign: TextAlign.center,
                   style: TextStyle(

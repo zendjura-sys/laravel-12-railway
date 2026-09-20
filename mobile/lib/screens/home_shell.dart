@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../theme.dart';
 import '../update_prompt.dart';
@@ -62,17 +63,17 @@ class _HomeShellState extends State<HomeShell> {
           leaderboardEnabled: widget.leaderboardTabEnabled),
     ];
     final destinations = [
-      const NavigationDestination(
-          icon: Icon(Icons.home_outlined),
+      NavigationDestination(
+          icon: const Icon(Icons.home_outlined),
           selectedIcon: Icon(Icons.home, color: AppColors.gold300),
           label: 'Кабінет'),
       if (widget.bankTabEnabled)
-        const NavigationDestination(
-            icon: Icon(Icons.account_balance_outlined),
+        NavigationDestination(
+            icon: const Icon(Icons.account_balance_outlined),
             selectedIcon: Icon(Icons.account_balance, color: AppColors.gold300),
             label: 'Банк'),
-      const NavigationDestination(
-          icon: Icon(Icons.menu_outlined),
+      NavigationDestination(
+          icon: const Icon(Icons.menu_outlined),
           selectedIcon: Icon(Icons.menu, color: AppColors.gold300),
           label: 'Меню'),
     ];
@@ -80,12 +81,20 @@ class _HomeShellState extends State<HomeShell> {
 
     return Scaffold(
       body: IndexedStack(index: index, children: screens),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: index,
-        onDestinationSelected: (i) => setState(() => _index = i),
-        backgroundColor: AppColors.obsidian900,
-        indicatorColor: AppColors.gold400.withValues(alpha: 0.12),
-        destinations: destinations,
+      // Справжнє "рідке скло" на панелі навігації — BackdropFilter
+      // блюрить контент, що скролиться позаду, а не просто малює
+      // напівпрозорий колір поверх.
+      bottomNavigationBar: ClipRect(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+          child: NavigationBar(
+            selectedIndex: index,
+            onDestinationSelected: (i) => setState(() => _index = i),
+            backgroundColor: AppColors.obsidian900.withValues(alpha: 0.55),
+            indicatorColor: AppColors.gold400.withValues(alpha: 0.16),
+            destinations: destinations,
+          ),
+        ),
       ),
     );
   }

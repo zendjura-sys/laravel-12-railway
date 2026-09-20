@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../api_client.dart';
 import '../theme.dart';
+import '../widgets/photo_thumbnails.dart';
 
 const _grades = ['S', 'A', 'B', 'C', 'D', 'F', 'G'];
 const _lowGrades = ['D', 'F', 'G'];
@@ -53,7 +54,7 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
     final result = await showModalBottomSheet<(String, String?)>(
       context: context,
       backgroundColor: AppColors.obsidian900,
-      builder: (_) => const _GradeSheet(),
+      builder: (_) => _GradeSheet(reportId: report['id'] as int),
     );
     if (result == null) return;
 
@@ -72,19 +73,55 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
     final noteController = TextEditingController();
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.obsidian900,
-        title: const Text('Відхилити звіт?', style: TextStyle(color: Colors.white)),
-        content: TextField(
-          controller: noteController,
-          decoration: const InputDecoration(hintText: 'Причина (необовʼязково)'),
-          maxLines: 3,
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Скасувати')),
-          TextButton(onPressed: () => Navigator.of(ctx).pop(true), child: const Text('Відхилити')),
-        ],
-      ),
+      builder: (ctx) {
+        var aiBusy = false;
+        return StatefulBuilder(
+          builder: (ctx, setDialogState) {
+          return AlertDialog(
+            backgroundColor: AppColors.obsidian900,
+            title: const Text('Відхилити звіт?', style: TextStyle(color: Colors.white)),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                TextField(
+                  controller: noteController,
+                  decoration: const InputDecoration(hintText: 'Причина (необовʼязково)'),
+                  maxLines: 3,
+                ),
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton(
+                    onPressed: aiBusy
+                        ? null
+                        : () async {
+                            setDialogState(() => aiBusy = true);
+                            try {
+                              final draft = await ApiClient.instance
+                                  .adminAiRejectionDraft(report['id'] as int, hint: noteController.text.trim());
+                              noteController.text = draft;
+                            } on ApiException catch (e) {
+                              if (ctx.mounted) {
+                                ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(e.message)));
+                              }
+                            } finally {
+                              setDialogState(() => aiBusy = false);
+                            }
+                          },
+                    child: Text(aiBusy ? 'Генерую…' : '✨ Підказка AI'),
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Скасувати')),
+              TextButton(onPressed: () => Navigator.of(ctx).pop(true), child: const Text('Відхилити')),
+            ],
+          );
+          },
+        );
+      },
     );
     if (confirmed != true) return;
 
@@ -154,6 +191,10 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
                                   Text(r['description'] as String,
                                       style: const TextStyle(color: Colors.white38, fontSize: 12)),
                                 ],
+                                if ((r['photos'] as List?)?.isNotEmpty ?? false) ...[
+                                  const SizedBox(height: 10),
+                                  PhotoThumbnails(photos: (r['photos'] as List).cast<String>()),
+                                ],
                                 const SizedBox(height: 12),
                                 Row(
                                   children: [
@@ -196,7 +237,9 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
 }
 
 class _GradeSheet extends StatefulWidget {
-  const _GradeSheet();
+  final int reportId;
+
+  const _GradeSheet({required this.reportId});
 
   @override
   State<_GradeSheet> createState() => _GradeSheetState();
@@ -205,11 +248,31 @@ class _GradeSheet extends StatefulWidget {
 class _GradeSheetState extends State<_GradeSheet> {
   String? _selected;
   final _reasonController = TextEditingController();
+  bool _aiBusy = false;
+  String? _aiError;
 
   @override
   void dispose() {
     _reasonController.dispose();
     super.dispose();
+  }
+
+  Future<void> _askAi() async {
+    setState(() {
+      _aiBusy = true;
+      _aiError = null;
+    });
+    try {
+      final suggestion = await ApiClient.instance.adminAiGradeSuggestion(widget.reportId);
+      setState(() {
+        _selected = suggestion['grade'] as String?;
+        if (suggestion['reason'] != null) _reasonController.text = suggestion['reason'] as String;
+      });
+    } on ApiException catch (e) {
+      setState(() => _aiError = e.message);
+    } finally {
+      if (mounted) setState(() => _aiBusy = false);
+    }
   }
 
   @override
@@ -223,8 +286,24 @@ class _GradeSheetState extends State<_GradeSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Оцінка звіту', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w500)),
-          const SizedBox(height: 14),
+          Row(
+            children: [
+              const Expanded(
+                child: Text('Оцінка звіту',
+                    style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w500)),
+              ),
+              TextButton(
+                onPressed: _aiBusy ? null : _askAi,
+                child: Text(_aiBusy ? 'Аналізую…' : '✨ Підказка AI'),
+              ),
+            ],
+          ),
+          if (_aiError != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Text(_aiError!, style: const TextStyle(color: Colors.redAccent, fontSize: 12)),
+            ),
+          const SizedBox(height: 6),
           Wrap(
             spacing: 8,
             runSpacing: 8,

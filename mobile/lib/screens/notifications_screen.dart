@@ -111,7 +111,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                       margin: const EdgeInsets.only(top: 5, right: 10),
                                       width: 8,
                                       height: 8,
-                                      decoration: const BoxDecoration(
+                                      decoration: BoxDecoration(
                                           color: AppColors.gold400, shape: BoxShape.circle),
                                     ),
                                   Expanded(

@@ -342,6 +342,77 @@ class ApiClient {
     _decode(response);
   }
 
+  /// Чернетка пояснення для відхилення — той самий AI Assistant, що на
+  /// сайті. Кидає ApiException(422) з людяним повідомленням, якщо
+  /// модуль не встановлено чи вимкнено тумблером — виклик не міняє
+  /// нічого в звіті сам по собі.
+  Future<String> adminAiRejectionDraft(int id, {String? hint}) async {
+    final response = await http.post(
+      _uri('/admin/reports/$id/ai-recommendation'),
+      headers: await _headers(auth: true),
+      body: jsonEncode({if (hint != null && hint.isNotEmpty) 'hint': hint}),
+    );
+    final data = _decode(response) as Map<String, dynamic>;
+    return (data['data'] as Map<String, dynamic>)['text'] as String;
+  }
+
+  /// {grade, explanation} — рекомендована оцінка й пояснення чому; сам
+  /// адмін клікає потрібний grade-чіп, нічого не змінює автоматично.
+  Future<Map<String, dynamic>> adminAiGradeSuggestion(int id) async {
+    final response = await http.post(
+      _uri('/admin/reports/$id/ai-grade-recommendation'),
+      headers: await _headers(auth: true),
+    );
+    final data = _decode(response) as Map<String, dynamic>;
+    return data['data'] as Map<String, dynamic>;
+  }
+
+  // ---------------- Адмін-розсилки (модуль Notifications) ----------------
+
+  Future<Map<String, dynamic>> adminBroadcastAudienceOptions() async {
+    final response = await http.get(_uri('/admin/broadcasts/audience-options'), headers: await _headers(auth: true));
+    return _decode(response) as Map<String, dynamic>;
+  }
+
+  Future<List<dynamic>> adminRecentBroadcasts() async {
+    final response = await http.get(_uri('/admin/broadcasts/recent'), headers: await _headers(auth: true));
+    final data = _decode(response) as Map<String, dynamic>;
+    return data['broadcasts'] as List<dynamic>;
+  }
+
+  Future<void> adminSendBroadcast({
+    required String title,
+    required String body,
+    bool pinned = false,
+    required String audienceType,
+    String? audienceValue,
+  }) async {
+    final response = await http.post(
+      _uri('/admin/broadcasts'),
+      headers: await _headers(auth: true),
+      body: jsonEncode({
+        'title': title,
+        'body': body,
+        'pinned': pinned,
+        'audience_type': audienceType,
+        if (audienceValue != null) 'audience_value': audienceValue,
+      }),
+    );
+    _decode(response);
+  }
+
+  /// Чернетка — AI Assistant стилістично покращує текст, нічого не
+  /// публікує сам по собі.
+  Future<String> adminPolishBroadcastText(String body) async {
+    final response = await http.post(
+      _uri('/admin/broadcasts/polish'),
+      headers: await _headers(auth: true),
+      body: jsonEncode({'body': body}),
+    );
+    final data = _decode(response) as Map<String, dynamic>;
+    return (data['data'] as Map<String, dynamic>)['text'] as String;
+  }
+
   Future<List<dynamic>> adminPendingLeaveRequests() async {
     final response = await http.get(_uri('/admin/leave-requests/pending'), headers: await _headers(auth: true));
     final data = _decode(response) as Map<String, dynamic>;

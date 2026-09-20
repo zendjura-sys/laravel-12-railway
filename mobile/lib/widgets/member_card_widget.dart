@@ -85,7 +85,7 @@ class MemberCardWidget extends StatelessWidget {
             Center(
               child: Text(
                 balanceText,
-                style: const TextStyle(
+                style: TextStyle(
                   color: AppColors.gold200,
                   fontSize: 26,
                   fontWeight: FontWeight.w700,
@@ -121,7 +121,7 @@ class _SealIcon extends StatelessWidget {
         shape: BoxShape.circle,
         border: Border.all(color: AppColors.gold400, width: 1.5),
       ),
-      child: const Center(
+      child: Center(
         child: Text(
           'M',
           style: TextStyle(

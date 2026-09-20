@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Setting;
+use App\Support\DesignSettings;
 use Illuminate\Http\JsonResponse;
 
 /**
@@ -29,6 +30,18 @@ class AppConfigController extends Controller
             'leaderboardTabEnabled' => Setting::get('mobile_app_leaderboard_enabled') !== '0',
             'reportsTabEnabled' => Setting::get('mobile_app_reports_enabled') !== '0',
             'downloadUrl' => Setting::get('mobile_app_download_url'),
+            // Палітра керується з сайту (Admin → Дизайн → Оформлення) —
+            // застосунок фарбує свою gold-гаму цими ж відтінками, тому
+            // зміна бренд-кольору на сайті одразу видно й у застосунку,
+            // без нової збірки APK. null, поки колір дефолтний: формула
+            // змішування лише наближає оригінальні hand-picked відтінки
+            // (як і на сайті — accentCss() так само мовчить за дефолту),
+            // тож застосунок тоді лишається на своїх точних дефолтних
+            // кольорах, а не трохи інакших "приблизних".
+            'accent' => DesignSettings::accent(),
+            'accentShades' => DesignSettings::accent() === DesignSettings::DEFAULT_ACCENT
+                ? null
+                : DesignSettings::accentShades(),
         ]);
     }
 }

@@ -177,7 +177,7 @@ class _RankTile extends StatelessWidget {
             ),
           ),
           Text(_statValue(),
-              style: const TextStyle(
+              style: TextStyle(
                   color: AppColors.gold300,
                   fontWeight: FontWeight.w600,
                   fontSize: 14)),

@@ -198,6 +198,30 @@ class DesignSettings
     }
 
     /**
+     * Ті самі відтінки акценту, що й accentCss(), але як HEX-рядки і
+     * завжди повним набором (навіть коли колір ще дефолтний) — мобільний
+     * застосунок будує свою кольорову схему з цих значень через
+     * /api/app-config, а не тримає власну копію формули змішування.
+     *
+     * @return array<int,string>
+     */
+    public static function accentShades(): array
+    {
+        $accent = self::accent();
+        [$r, $g, $b] = sscanf($accent, '#%02x%02x%02x');
+
+        $amounts = [100 => 0.81, 200 => 0.65, 300 => 0.39, 350 => 0.25, 400 => 0.0, 500 => -0.06, 600 => -0.20];
+
+        $shades = [];
+        foreach ($amounts as $key => $amount) {
+            [$sr, $sg, $sb] = $amount === 0.0 ? [$r, $g, $b] : self::mix($r, $g, $b, $amount);
+            $shades[$key] = sprintf('#%02X%02X%02X', $sr, $sg, $sb);
+        }
+
+        return $shades;
+    }
+
+    /**
      * Смешивает цвет с белым (amount > 0) или чёрным (amount < 0).
      *
      * @return array{0:int,1:int,2:int}

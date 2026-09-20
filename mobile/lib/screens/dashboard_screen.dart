@@ -190,7 +190,7 @@ class _ProgressStats extends StatelessWidget {
                       child: Column(
                         children: [
                           Text(t.$2,
-                              style: const TextStyle(
+                              style: TextStyle(
                                   color: AppColors.gold300, fontSize: 18, fontWeight: FontWeight.w600)),
                           const SizedBox(height: 2),
                           Text(t.$1,

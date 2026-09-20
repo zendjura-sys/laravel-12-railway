@@ -22,4 +22,10 @@ Route::prefix('api')->middleware(['auth:sanctum', SubstituteBindings::class, 'pe
     Route::get('/admin/reports/pending', [AdminReportController::class, 'pendingJson']);
     Route::post('/admin/reports/{report}/approve', [ReportReviewController::class, 'approve']);
     Route::post('/admin/reports/{report}/reject', [ReportReviewController::class, 'reject']);
+    // AI Assistant (опційно) — ті самі підказки, що на сайті: чернетка
+    // пояснення при відхиленні, рекомендована оцінка при затвердженні.
+    // Обидва методи вже самі повертають 422 з поясненням, якщо AI
+    // Assistant не встановлено — окремої перевірки тут не треба.
+    Route::post('/admin/reports/{report}/ai-recommendation', [ReportReviewController::class, 'aiRecommendation']);
+    Route::post('/admin/reports/{report}/ai-grade-recommendation', [ReportReviewController::class, 'aiGradeRecommendation']);
 });

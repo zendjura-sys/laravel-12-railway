@@ -175,7 +175,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           if (_me?['position'] != null) ...[
                             const SizedBox(height: 4),
                             Text(_me!['position'] as String,
-                                style: const TextStyle(
+                                style: TextStyle(
                                     color: AppColors.gold300, fontSize: 13)),
                           ],
                           const SizedBox(height: 10),
@@ -193,11 +193,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Row(
+                            Row(
                               children: [
                                 Icon(Icons.send_outlined, color: AppColors.gold300, size: 18),
-                                SizedBox(width: 8),
-                                Text('Telegram',
+                                const SizedBox(width: 8),
+                                const Text('Telegram',
                                     style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w500)),
                               ],
                             ),

@@ -94,7 +94,7 @@ class _AdminLeaveRequestsScreenState extends State<AdminLeaveRequestsScreen> {
                                         color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500)),
                                 const SizedBox(height: 4),
                                 Text('${r['startsOn']} — ${r['endsOn']}',
-                                    style: const TextStyle(color: AppColors.gold300, fontSize: 12)),
+                                    style: TextStyle(color: AppColors.gold300, fontSize: 12)),
                                 if (r['reason'] != null) ...[
                                   const SizedBox(height: 6),
                                   Text(r['reason'] as String,

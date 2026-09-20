@@ -5,21 +5,38 @@ import 'screens/blocking_screen.dart';
 import 'screens/home_shell.dart';
 import 'screens/login_screen.dart';
 import 'theme.dart';
+import 'widgets/aurora_background.dart';
 
 void main() {
   runApp(const MonsoryConnectApp());
 }
 
-class MonsoryConnectApp extends StatelessWidget {
+class MonsoryConnectApp extends StatefulWidget {
   const MonsoryConnectApp({super.key});
 
+  @override
+  State<MonsoryConnectApp> createState() => _MonsoryConnectAppState();
+}
+
+class _MonsoryConnectAppState extends State<MonsoryConnectApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Monsory Connect',
       debugShowCheckedModeBanner: false,
+      // Перебудовується наново кожного разу, коли _StartupGate повідомляє
+      // про застосовану палітру з /api/app-config — buildAppTheme() тоді
+      // читає вже оновлені AppColors.gold*.
       theme: buildAppTheme(),
-      home: const _StartupGate(),
+      // Аврора-фон підключається тут один раз — позаду кожного екрана,
+      // без потреби вставляти окремо в кожен Scaffold.
+      builder: (context, child) => Stack(
+        children: [
+          const AuroraBackground(),
+          if (child != null) child,
+        ],
+      ),
+      home: _StartupGate(onAccentChanged: () => setState(() {})),
     );
   }
 }
@@ -31,7 +48,9 @@ class MonsoryConnectApp extends StatelessWidget {
 /// він прострочений/відкликаний, вкладка "Кабінет" сама зловить 401 на
 /// першому запиті й поверне на логін.
 class _StartupGate extends StatefulWidget {
-  const _StartupGate();
+  final VoidCallback? onAccentChanged;
+
+  const _StartupGate({this.onAccentChanged});
 
   @override
   State<_StartupGate> createState() => _StartupGateState();
@@ -39,6 +58,7 @@ class _StartupGate extends StatefulWidget {
 
 class _StartupGateState extends State<_StartupGate> {
   late Future<Map<String, dynamic>> _configFuture;
+  bool _accentApplied = false;
 
   @override
   void initState() {
@@ -70,6 +90,22 @@ class _StartupGateState extends State<_StartupGate> {
         }
 
         final config = snapshot.data!;
+
+        // Лише один раз за життя цього стану — далі static AppColors.gold*
+        // вже оновлені, повторний виклик при _retry() чи ребілді нічого не
+        // зламає, але й не потрібен.
+        if (!_accentApplied) {
+          _accentApplied = true;
+          final accentShades = config['accentShades'];
+          if (accentShades is Map) {
+            final changed =
+                AppColors.applyAccentShades(Map<String, dynamic>.from(accentShades));
+            if (changed) {
+              WidgetsBinding.instance
+                  .addPostFrameCallback((_) => widget.onAccentChanged?.call());
+            }
+          }
+        }
 
         if (config['enabled'] != true) {
           return BlockingScreen(

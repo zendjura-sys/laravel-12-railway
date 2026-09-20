@@ -1,20 +1,50 @@
 import 'package:flutter/material.dart';
+import '../api_client.dart';
 import '../theme.dart';
+import 'admin_screen.dart';
 import 'leaderboard_screen.dart';
+import 'messenger/conversations_screen.dart';
 import 'reports_screen.dart';
 import 'settings_screen.dart';
 
 /// Друга вкладка нижньої навігації — сюди винесено все, чому не місце в
 /// тісному бар'ю знизу (Кабінет/Банк лишаються прямими вкладками як
-/// найчастіші дії): Рейтинг, Звіти й Налаштування застосунку зараз, і
+/// найчастіші дії): Чат, Рейтинг, Звіти й Налаштування зараз, і
 /// природне місце для всього, що додасться пізніше, без розпухання самого
-/// нижнього бару.
-class MenuScreen extends StatelessWidget {
+/// нижнього бару. "Адмін" з'являється лише в того, у кого є хоч один
+/// *.manage дозвіл — перевіряємо на льоту через /api/me, не чекаючи
+/// перелогіну після видачі ролі.
+class MenuScreen extends StatefulWidget {
   final bool reportsEnabled;
   final bool leaderboardEnabled;
 
   const MenuScreen(
       {super.key, this.reportsEnabled = true, this.leaderboardEnabled = true});
+
+  @override
+  State<MenuScreen> createState() => _MenuScreenState();
+}
+
+class _MenuScreenState extends State<MenuScreen> {
+  bool _isAdmin = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkAdmin();
+  }
+
+  Future<void> _checkAdmin() async {
+    try {
+      final me = await ApiClient.instance.me();
+      final permissions = (me['permissions'] as List?)?.cast<String>() ?? [];
+      final isAdmin = permissions.any((p) => p.endsWith('.manage'));
+      if (mounted) setState(() => _isAdmin = isAdmin);
+    } catch (_) {
+      // Немає доступу до /api/me прямо зараз — пункт "Адмін" просто не
+      // з'явиться, це не критична для решти меню помилка.
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -23,7 +53,14 @@ class MenuScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
-          if (reportsEnabled)
+          _MenuTile(
+            icon: Icons.forum_outlined,
+            title: 'Чат',
+            subtitle: 'Сімейний чат і особисті розмови',
+            onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const ConversationsScreen())),
+          ),
+          if (widget.reportsEnabled)
             _MenuTile(
               icon: Icons.assignment_outlined,
               title: 'Мої звіти',
@@ -31,7 +68,7 @@ class MenuScreen extends StatelessWidget {
               onTap: () => Navigator.of(context).push(
                   MaterialPageRoute(builder: (_) => const ReportsScreen())),
             ),
-          if (leaderboardEnabled)
+          if (widget.leaderboardEnabled)
             _MenuTile(
               icon: Icons.leaderboard_outlined,
               title: 'Рейтинг родини',
@@ -39,10 +76,18 @@ class MenuScreen extends StatelessWidget {
               onTap: () => Navigator.of(context).push(
                   MaterialPageRoute(builder: (_) => const LeaderboardScreen())),
             ),
+          if (_isAdmin)
+            _MenuTile(
+              icon: Icons.admin_panel_settings_outlined,
+              title: 'Адмін',
+              subtitle: 'Статистика родини й список учасників',
+              onTap: () => Navigator.of(context)
+                  .push(MaterialPageRoute(builder: (_) => const AdminScreen())),
+            ),
           _MenuTile(
             icon: Icons.settings_outlined,
             title: 'Налаштування',
-            subtitle: 'Профіль і вихід з акаунту',
+            subtitle: 'Профіль, Telegram і вихід з акаунту',
             onTap: () => Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => const SettingsScreen())),
           ),

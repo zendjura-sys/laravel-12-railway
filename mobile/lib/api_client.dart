@@ -67,6 +67,36 @@ class ApiClient {
         body is Map<String, dynamic> ? body : null);
   }
 
+  /// Реєстрація "за себе" — той самий /api/register, що описаний вище.
+  /// Тіньовий акаунт (звіт "за друга" до реєстрації) тут не підхоплюється —
+  /// бекенд поверне помилку з проханням завершити реєстрацію на сайті.
+  Future<Map<String, dynamic>> register({
+    required String firstName,
+    String? lastName,
+    required String email,
+    required String password,
+    required String passwordConfirmation,
+    required String deviceName,
+  }) async {
+    final response = await http.post(
+      _uri('/register'),
+      headers: await _headers(),
+      body: jsonEncode({
+        'first_name': firstName,
+        if (lastName != null && lastName.isNotEmpty) 'last_name': lastName,
+        'email': email,
+        'password': password,
+        'password_confirmation': passwordConfirmation,
+        'device_name': deviceName,
+      }),
+    );
+    final data = _decode(response) as Map<String, dynamic>;
+    if (data['token'] != null) {
+      await _saveToken(data['token'] as String);
+    }
+    return data;
+  }
+
   /// Крок 1 логіну. Якщо на акаунті увімкнено 2FA — повертає
   /// {requiresTwoFactor: true, challengeToken}, інакше одразу токен.
   Future<Map<String, dynamic>> login(
@@ -243,5 +273,159 @@ class ApiClient {
     final streamed = await request.send();
     final response = await http.Response.fromStream(streamed);
     _decode(response);
+  }
+
+  // ---------------- Telegram (модуль Telegram Bot) ----------------
+
+  Future<Map<String, dynamic>> telegramStatus() async {
+    final response = await http.get(_uri('/telegram/status'), headers: await _headers(auth: true));
+    final data = _decode(response) as Map<String, dynamic>;
+    return data['data'] as Map<String, dynamic>;
+  }
+
+  /// Повертає {code, bot_username} — застосунок сам будує
+  /// https://t.me/{bot}?start={code} і відкриває його url_launcher'ом.
+  Future<Map<String, dynamic>> telegramGenerateCode() async {
+    final response = await http.post(_uri('/telegram/generate-code'), headers: await _headers(auth: true));
+    final data = _decode(response) as Map<String, dynamic>;
+    return data['data'] as Map<String, dynamic>;
+  }
+
+  Future<void> telegramUnlink() async {
+    final response = await http.post(_uri('/telegram/unlink'), headers: await _headers(auth: true));
+    _decode(response);
+  }
+
+  // ---------------- Адмінка (лише ядро, без аддонів) ----------------
+
+  Future<List<dynamic>> adminStats() async {
+    final response = await http.get(_uri('/admin/stats'), headers: await _headers(auth: true));
+    final data = _decode(response) as Map<String, dynamic>;
+    return data['stats'] as List<dynamic>;
+  }
+
+  Future<List<dynamic>> adminUsers({String query = ''}) async {
+    final uri = query.isEmpty
+        ? _uri('/admin/users')
+        : _uri('/admin/users').replace(queryParameters: {'q': query});
+    final response = await http.get(uri, headers: await _headers(auth: true));
+    final data = _decode(response) as Map<String, dynamic>;
+    return data['users'] as List<dynamic>;
+  }
+
+  // ---------------- Месенджер (модуль Messenger) ----------------
+
+  Future<List<dynamic>> messengerConversations() async {
+    final response = await http.get(_uri('/messenger'), headers: await _headers(auth: true));
+    final data = _decode(response) as Map<String, dynamic>;
+    return (data['data'] as Map<String, dynamic>)['conversations'] as List<dynamic>;
+  }
+
+  Future<Map<String, dynamic>> messengerConversation(int id) async {
+    final response = await http.get(_uri('/messenger/$id'), headers: await _headers(auth: true));
+    final data = _decode(response) as Map<String, dynamic>;
+    return data['data'] as Map<String, dynamic>;
+  }
+
+  Future<List<dynamic>> messengerMessagesSince(int conversationId, int afterId) async {
+    final response = await http.get(
+      _uri('/messenger/$conversationId/messages').replace(queryParameters: {'after_id': '$afterId'}),
+      headers: await _headers(auth: true),
+    );
+    final data = _decode(response) as Map<String, dynamic>;
+    return (data['data'] as Map<String, dynamic>)['messages'] as List<dynamic>;
+  }
+
+  Future<Map<String, dynamic>> sendMessengerText(int conversationId, String body) async {
+    final response = await http.post(
+      _uri('/messenger/$conversationId/messages'),
+      headers: await _headers(auth: true),
+      body: jsonEncode({'type': 'text', 'body': body}),
+    );
+    final data = _decode(response) as Map<String, dynamic>;
+    return (data['data'] as Map<String, dynamic>)['message'] as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> sendMessengerGif(int conversationId, String gifUrl) async {
+    final response = await http.post(
+      _uri('/messenger/$conversationId/messages'),
+      headers: await _headers(auth: true),
+      body: jsonEncode({'type': 'gif', 'gif_url': gifUrl}),
+    );
+    final data = _decode(response) as Map<String, dynamic>;
+    return (data['data'] as Map<String, dynamic>)['message'] as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> sendMessengerSticker(int conversationId, int stickerId) async {
+    final response = await http.post(
+      _uri('/messenger/$conversationId/messages'),
+      headers: await _headers(auth: true),
+      body: jsonEncode({'type': 'sticker', 'sticker_id': stickerId}),
+    );
+    final data = _decode(response) as Map<String, dynamic>;
+    return (data['data'] as Map<String, dynamic>)['message'] as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> sendMessengerPhoto(int conversationId, XFile photo, {String? caption}) async {
+    final token = await this.token;
+    final request = http.MultipartRequest('POST', _uri('/messenger/$conversationId/messages'))
+      ..headers['Accept'] = 'application/json'
+      ..headers['Authorization'] = 'Bearer $token'
+      ..fields['type'] = 'photo';
+    if (caption != null && caption.isNotEmpty) request.fields['body'] = caption;
+    request.files.add(await http.MultipartFile.fromPath('photo', photo.path));
+
+    final streamed = await request.send();
+    final response = await http.Response.fromStream(streamed);
+    final data = _decode(response) as Map<String, dynamic>;
+    return (data['data'] as Map<String, dynamic>)['message'] as Map<String, dynamic>;
+  }
+
+  Future<List<dynamic>> searchMessengerMembers(String query) async {
+    final response = await http.get(
+      _uri('/messenger/members/search').replace(queryParameters: {'q': query}),
+      headers: await _headers(auth: true),
+    );
+    final data = _decode(response) as Map<String, dynamic>;
+    return (data['data'] as Map<String, dynamic>)['members'] as List<dynamic>;
+  }
+
+  Future<int> startMessengerDirect(int targetUserId) async {
+    final response = await http.post(_uri('/messenger/direct/$targetUserId'), headers: await _headers(auth: true));
+    final data = _decode(response) as Map<String, dynamic>;
+    return (data['data'] as Map<String, dynamic>)['conversationId'] as int;
+  }
+
+  Future<List<dynamic>> messengerStickers() async {
+    final response = await http.get(_uri('/messenger/stickers'), headers: await _headers(auth: true));
+    final data = _decode(response) as Map<String, dynamic>;
+    return (data['data'] as Map<String, dynamic>)['stickers'] as List<dynamic>;
+  }
+
+  Future<Map<String, dynamic>> uploadMessengerSticker(XFile image) async {
+    final token = await this.token;
+    final request = http.MultipartRequest('POST', _uri('/messenger/stickers'))
+      ..headers['Accept'] = 'application/json'
+      ..headers['Authorization'] = 'Bearer $token';
+    request.files.add(await http.MultipartFile.fromPath('image', image.path));
+
+    final streamed = await request.send();
+    final response = await http.Response.fromStream(streamed);
+    final data = _decode(response) as Map<String, dynamic>;
+    return (data['data'] as Map<String, dynamic>)['sticker'] as Map<String, dynamic>;
+  }
+
+  Future<void> deleteMessengerSticker(int id) async {
+    final response = await http.delete(_uri('/messenger/stickers/$id'), headers: await _headers(auth: true));
+    _decode(response);
+  }
+
+  Future<List<dynamic>> searchGifs(String query) async {
+    final response = await http.get(
+      _uri('/messenger/gifs/search').replace(queryParameters: {'q': query}),
+      headers: await _headers(auth: true),
+    );
+    final data = _decode(response) as Map<String, dynamic>;
+    return (data['data'] as Map<String, dynamic>)['gifs'] as List<dynamic>;
   }
 }

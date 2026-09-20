@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../api_client.dart';
 import '../theme.dart';
 import 'home_shell.dart';
+import 'register_screen.dart';
 import 'two_factor_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -135,7 +136,15 @@ class _LoginScreenState extends State<LoginScreen> {
                           child: CircularProgressIndicator(strokeWidth: 2))
                       : const Text('УВІЙТИ'),
                 ),
-                const SizedBox(height: 32),
+                const SizedBox(height: 16),
+                TextButton(
+                  onPressed: _loading
+                      ? null
+                      : () => Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const RegisterScreen())),
+                  child: const Text('Ще немає акаунту? Зареєструватись'),
+                ),
+                const SizedBox(height: 16),
               ],
             ),
           ),

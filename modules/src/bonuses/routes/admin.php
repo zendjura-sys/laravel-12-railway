@@ -14,4 +14,7 @@ Route::middleware(['web', 'auth', 'verified', 'permission:bonuses.manage'])
         Route::delete('/tiers/{tier}', [BonusAdminController::class, 'destroyTier'])->name('tiers.destroy');
         Route::post('/payouts/{payout}/mark-paid', [BonusAdminController::class, 'markPaid'])->name('payouts.mark-paid');
         Route::post('/run-now', [BonusAdminController::class, 'runNow'])->name('run-now');
+        Route::get('/members/search', [BonusAdminController::class, 'searchMembers'])->name('members.search');
+        Route::post('/manual', [BonusAdminController::class, 'storeManualAward'])->name('manual.store');
+        Route::delete('/manual/{manualAward}', [BonusAdminController::class, 'destroyManualAward'])->name('manual.destroy');
     });

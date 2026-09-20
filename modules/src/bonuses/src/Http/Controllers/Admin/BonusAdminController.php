@@ -5,8 +5,10 @@ namespace Addons\Bonuses\Http\Controllers\Admin;
 use Addons\Bonuses\Models\BonusPayout;
 use Addons\Bonuses\Models\BonusSettings;
 use Addons\Bonuses\Models\InvestmentAchievementTier;
+use Addons\Bonuses\Models\ManualBonusAward;
 use Addons\Bonuses\Services\BonusCalculator;
 use Addons\Bonuses\Services\BonusDigest;
+use App\Models\User;
 use App\Support\CsvExport;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -52,7 +54,59 @@ class BonusAdminController
             'tiers' => InvestmentAchievementTier::query()->orderBy('sort_order')->orderBy('threshold_amount')->get(),
             'payouts' => $payouts,
             'filters' => $filters,
+            'manualAwards' => ManualBonusAward::query()
+                ->with(['user:id,name', 'awardedBy:id,name'])
+                ->latest()
+                ->limit(30)
+                ->get(),
         ]);
+    }
+
+    /** Пошук учасника для форми ручної виплати — той самий контракт, що й Reports::searchMembers. */
+    public function searchMembers(Request $request): JsonResponse
+    {
+        $query = trim((string) $request->query('q', ''));
+        if (mb_strlen($query) < 2) {
+            return response()->json(['ok' => true, 'message' => null, 'data' => ['members' => []], 'errors' => null, 'redirect' => null]);
+        }
+
+        $members = User::query()
+            ->where('is_shadow', false)
+            ->where('name', 'like', '%'.$query.'%')
+            ->orderBy('name')
+            ->limit(10)
+            ->get(['id', 'name']);
+
+        return response()->json([
+            'ok' => true,
+            'message' => null,
+            'data' => ['members' => $members],
+            'errors' => null,
+            'redirect' => null,
+        ]);
+    }
+
+    public function storeManualAward(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'user_id' => ['required', 'integer', 'exists:users,id'],
+            'amount' => ['required', 'integer', 'min:1'],
+            'note' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        ManualBonusAward::create([
+            ...$data,
+            'awarded_by' => $request->user()->id,
+        ]);
+
+        return back()->with('success', 'Премію видано.');
+    }
+
+    public function destroyManualAward(ManualBonusAward $manualAward): RedirectResponse
+    {
+        $manualAward->delete();
+
+        return back()->with('success', 'Запис видалено.');
     }
 
     /** Той самий фільтр, що й на екрані. */

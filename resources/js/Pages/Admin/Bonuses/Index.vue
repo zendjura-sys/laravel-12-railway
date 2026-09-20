@@ -1,13 +1,14 @@
 <script setup>
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { Head, Link, useForm, router } from '@inertiajs/vue3';
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
 
 const props = defineProps({
     settings: { type: Object, required: true },
     tiers: { type: Array, required: true },
     payouts: { type: Object, required: true },
     filters: { type: Object, default: () => ({ from: '', to: '', paid: '' }) },
+    manualAwards: { type: Array, default: () => [] },
 });
 
 const filterForm = ref({ from: props.filters.from, to: props.filters.to, paid: props.filters.paid });
@@ -95,6 +96,52 @@ async function runNow() {
     } finally {
         running.value = false;
     }
+}
+
+/* ------------------------- Ручна виплата ------------------------- */
+
+const manualForm = useForm({ user_id: null, amount: '', note: '' });
+const memberQuery = ref('');
+const memberMatches = ref([]);
+const memberSelected = ref(null);
+let memberSearchTimer = null;
+
+watch(memberQuery, (q) => {
+    memberSelected.value = null;
+    manualForm.user_id = null;
+    clearTimeout(memberSearchTimer);
+
+    if (q.trim().length < 2) {
+        memberMatches.value = [];
+        return;
+    }
+    memberSearchTimer = setTimeout(async () => {
+        const { data } = await window.axios.get(route('admin.bonuses.members.search'), { params: { q } });
+        memberMatches.value = data.data.members;
+    }, 300);
+});
+
+function pickMember(member) {
+    memberSelected.value = member;
+    manualForm.user_id = member.id;
+    memberQuery.value = member.name;
+    memberMatches.value = [];
+}
+
+function submitManualAward() {
+    manualForm.post(route('admin.bonuses.manual.store'), {
+        preserveScroll: true,
+        onSuccess: () => {
+            manualForm.reset();
+            memberQuery.value = '';
+            memberSelected.value = null;
+        },
+    });
+}
+
+function removeManualAward(award) {
+    if (!confirm(`Видалити ручну премію «${award.user?.name}» на ${fmt(award.amount)}?`)) return;
+    router.delete(route('admin.bonuses.manual.destroy', award.id), { preserveScroll: true });
 }
 </script>
 
@@ -201,6 +248,58 @@ async function runNow() {
                     </button>
                 </div>
             </form>
+        </section>
+
+        <!-- ================= РУЧНА ВИПЛАТА ================= -->
+        <section class="mb-8 rounded-2xl border border-white/10 bg-white/[0.03] p-6">
+            <h2 class="mb-1 font-display text-lg text-white">Ручна виплата</h2>
+            <p class="mb-4 text-sm text-white/40">Разова премія поза автоматичним тижневим розрахунком — за потреби, будь-якому учаснику.</p>
+
+            <form class="grid gap-3 sm:grid-cols-4" @submit.prevent="submitManualAward">
+                <div class="relative sm:col-span-2">
+                    <input
+                        v-model="memberQuery"
+                        type="text"
+                        placeholder="Ім'я учасника"
+                        class="w-full rounded-lg border border-white/10 bg-obsidian-900 px-3 py-2 text-sm text-white"
+                    />
+                    <div v-if="memberMatches.length" class="absolute z-10 mt-1 w-full overflow-hidden rounded-lg border border-white/10 bg-obsidian-900 shadow-xl">
+                        <button
+                            v-for="m in memberMatches"
+                            :key="m.id"
+                            type="button"
+                            class="block w-full px-3 py-2 text-left text-sm text-white hover:bg-white/5"
+                            @click="pickMember(m)"
+                        >
+                            {{ m.name }}
+                        </button>
+                    </div>
+                    <p v-if="memberSelected" class="mt-1 text-xs text-emerald-400/70">Обрано: {{ memberSelected.name }}</p>
+                </div>
+                <input v-model.number="manualForm.amount" type="number" min="1" placeholder="Сума, ₴" class="rounded-lg border border-white/10 bg-obsidian-900 px-3 py-2 text-sm text-white" />
+                <input v-model="manualForm.note" type="text" placeholder="Причина (необов'язково)" class="rounded-lg border border-white/10 bg-obsidian-900 px-3 py-2 text-sm text-white" />
+                <div class="sm:col-span-4">
+                    <button
+                        type="submit"
+                        :disabled="manualForm.processing || !manualForm.user_id"
+                        class="rounded-full border border-gold-400/40 px-5 py-2 text-xs font-medium uppercase tracking-widest text-gold-200 hover:border-gold-300 disabled:opacity-40"
+                    >
+                        Видати премію
+                    </button>
+                </div>
+            </form>
+
+            <div v-if="manualAwards.length" class="mt-5 space-y-2">
+                <div v-for="a in manualAwards" :key="a.id" class="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-white/10 px-4 py-2.5">
+                    <div>
+                        <span class="font-medium text-white">{{ a.user?.name }}</span>
+                        <span class="ml-3 text-sm text-gold-200">{{ fmt(a.amount) }}</span>
+                        <span v-if="a.note" class="ml-2 text-sm text-white/40">— {{ a.note }}</span>
+                        <span class="ml-2 text-xs text-white/30">{{ fmtDate(a.created_at) }} · видав {{ a.awarded_by?.name ?? '—' }}</span>
+                    </div>
+                    <button class="shrink-0 text-xs text-ember-500/70 hover:text-ember-500" @click="removeManualAward(a)">Видалити</button>
+                </div>
+            </div>
         </section>
 
         <!-- ================= ІСТОРІЯ ВИПЛАТ ================= -->

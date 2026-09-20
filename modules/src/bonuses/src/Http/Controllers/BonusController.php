@@ -4,8 +4,10 @@ namespace Addons\Bonuses\Http\Controllers;
 
 use Addons\Bonuses\Models\BonusPayout;
 use Addons\Bonuses\Models\InvestmentAchievementTier;
+use Addons\Bonuses\Models\ManualBonusAward;
 use Addons\Bonuses\Models\UserInvestmentAchievement;
 use Addons\Reports\Models\Report;
+use App\Support\MemberCard;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -38,10 +40,26 @@ class BonusController
                 'earned' => $earnedTierIds->contains($tier->id),
             ]);
 
+        $manualAwards = ManualBonusAward::query()
+            ->where('user_id', $userId)
+            ->latest()
+            ->get();
+
+        // Разом — авто-нарахування (усі тижні, незалежно від "виплачено")
+        // + ручні премії; те, що показує картка вгорі сторінки.
+        $totalEarned = (int) BonusPayout::query()->where('user_id', $userId)->sum('total_amount')
+            + (int) $manualAwards->sum('amount');
+
         return Inertia::render('Bonuses/Index', [
             'payouts' => $payouts,
             'cumulativeInvestment' => $cumulativeInvestment,
             'tiers' => $tiers,
+            'manualAwards' => $manualAwards,
+            'card' => [
+                'number' => MemberCard::masked($request->user()),
+                'name' => $request->user()->name,
+                'totalEarned' => $totalEarned,
+            ],
         ]);
     }
 }

@@ -1,10 +1,13 @@
 <script setup>
 import { Head, Link } from '@inertiajs/vue3';
+import MemberCard from '@/Components/MemberCard.vue';
 
 defineProps({
     payouts: { type: Object, required: true },
     cumulativeInvestment: { type: Number, default: 0 },
     tiers: { type: Array, default: () => [] },
+    manualAwards: { type: Array, default: () => [] },
+    card: { type: Object, required: true },
 });
 
 function fmt(amount) {
@@ -30,6 +33,11 @@ function fmtDate(d) {
         </header>
 
         <div class="mx-auto max-w-3xl px-6 py-10">
+            <!-- ================= КАРТКА УЧАСНИКА ================= -->
+            <div class="mb-8">
+                <MemberCard :number="card.number" :name="card.name" :amount="card.totalEarned" />
+            </div>
+
             <!-- ================= ІНВЕСТИЦІЙНІ ТІРИ ================= -->
             <section v-if="tiers.length" v-reveal v-glow class="glass-panel mb-8 p-6">
                 <h2 class="mb-1 font-display text-lg text-white">Інвестиційні досягнення</h2>
@@ -50,6 +58,17 @@ function fmtDate(d) {
                         <span v-if="!tier.earned && cumulativeInvestment < tier.threshold_amount" class="shrink-0 whitespace-nowrap text-xs text-white/30">
                             лишилось {{ fmt(tier.threshold_amount - cumulativeInvestment) }}
                         </span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ================= РУЧНІ ПРЕМІЇ ================= -->
+            <section v-if="manualAwards.length" v-reveal v-glow class="glass-panel mb-8 overflow-hidden">
+                <h2 class="p-6 pb-4 font-display text-lg text-white">Ручні премії</h2>
+                <div v-for="a in manualAwards" :key="a.id" class="border-b border-white/5 px-6 py-4 last:border-0">
+                    <div class="flex items-start justify-between gap-3">
+                        <span class="text-sm text-white/50">{{ fmtDate(a.created_at) }}<span v-if="a.note"> — {{ a.note }}</span></span>
+                        <span class="shrink-0 text-lg font-semibold text-gold-200">{{ fmt(a.amount) }}</span>
                     </div>
                 </div>
             </section>

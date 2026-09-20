@@ -6,12 +6,14 @@ import AmbientBackground from '@/Components/AmbientBackground.vue';
 import ScrollProgress from '@/Components/ScrollProgress.vue';
 import PhotoCarousel from '@/Components/PhotoCarousel.vue';
 import SocialIcon from '@/Components/SocialIcon.vue';
+import StatsBarChart from '@/Components/StatsBarChart.vue';
 
 const props = defineProps({
     canLogin: { type: Boolean, default: false },
     canRegister: { type: Boolean, default: false },
     memberCount: { type: Number, default: 0 },
     telegramBotUrl: { type: String, default: null },
+    stats: { type: Array, default: () => [] },
     // Содержание приходит из config/family.php — единый источник для сайта
     // и бота в Telegram. Здесь остаётся только отображение.
     positions: { type: Array, default: () => [] },
@@ -52,6 +54,10 @@ const promotionCriteria = computed(() => props.promotionCriteria);
 
 const applyUrl = computed(() => props.telegramBotUrl || route('register'));
 const applyExternal = computed(() => Boolean(props.telegramBotUrl));
+
+function fmtStat(v) {
+    return new Intl.NumberFormat('uk-UA').format(v ?? 0);
+}
 
 /* ---------- шапка: прозора -> скляна під час скролу ---------- */
 const scrolled = ref(false);
@@ -467,6 +473,34 @@ const benefits = [
                     <h3 class="relative mb-3 text-lg font-semibold text-white">{{ benefit.title }}</h3>
                     <p class="relative text-sm leading-relaxed text-white/55">{{ benefit.text }}</p>
                 </div>
+            </div>
+        </section>
+
+        <!-- ================= СТАТИСТИКА РОДИНИ ================= -->
+        <section v-if="stats.length > 0" id="stats" class="relative mx-auto max-w-5xl px-4 py-20 sm:px-6">
+            <div v-reveal class="mx-auto mb-12 max-w-2xl text-center">
+                <p class="mb-4 text-[11px] font-medium uppercase tracking-[0.45em] text-gold-300/90">Родина в цифрах</p>
+                <h2 class="text-balance font-display text-4xl font-light text-white sm:text-5xl">
+                    Не слова, а <span class="text-gradient-gold italic">результат</span>
+                </h2>
+            </div>
+
+            <div class="mb-10 grid gap-4 sm:grid-cols-2" :class="stats.length >= 3 ? 'lg:grid-cols-4' : ''">
+                <div
+                    v-for="(stat, i) in stats"
+                    :key="stat.key"
+                    v-reveal="'scale'"
+                    :style="{ transitionDelay: `${i * 90}ms` }"
+                    v-glow
+                    class="glass-panel-gold glass-panel p-6 text-center"
+                >
+                    <p class="font-display text-3xl text-gold-200 sm:text-4xl">{{ fmtStat(stat.value) }}</p>
+                    <p class="mt-2 text-xs uppercase tracking-widest text-white/40">{{ stat.label }}</p>
+                </div>
+            </div>
+
+            <div v-if="stats.length > 1" v-reveal v-glow class="glass-panel p-6 sm:p-8">
+                <StatsBarChart :items="stats" />
             </div>
         </section>
 

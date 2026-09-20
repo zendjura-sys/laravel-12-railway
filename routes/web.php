@@ -27,6 +27,7 @@ use App\Models\GalleryPhoto;
 use App\Models\User;
 use App\Support\DesignSettings;
 use App\Support\FamilyContent;
+use App\Support\FamilyStats;
 use App\Support\TelegramLink;
 use App\Support\UnionDomain;
 use Illuminate\Http\Request;
@@ -65,6 +66,9 @@ Route::get('/', function () {
         'canRegister' => Route::has('register'),
         'memberCount' => User::query()->count(),
         'telegramBotUrl' => TelegramLink::url(),
+        // Обране в адмінці (Панель CMS → Статистика родини) — реальні
+        // числа з бази, не текст, вписаний уручну.
+        'stats' => FamilyStats::selected(),
         // Содержание идёт через FamilyContent: правки из админки, а при их
         // отсутствии — значения из config/family.php. Тот же источник читает
         // бот в Telegram. Пока список жил во Vue, правка должностей означала
@@ -153,6 +157,10 @@ require __DIR__.'/auth.php';
 Route::middleware(['auth', 'verified', 'permission:addons.manage|reports.manage|progression.manage|settings.manage|roles.manage|users.manage|members.manage|goals.manage|broadcasts.manage|telegram.manage|bonuses.manage|events.manage|union.manage'])
     ->get('/admin', [DashboardController::class, 'index'])
     ->name('admin.dashboard');
+
+Route::middleware(['auth', 'verified', 'permission:settings.manage'])
+    ->put('/admin/stats', [DashboardController::class, 'updateFamilyStats'])
+    ->name('admin.stats.update');
 
 Route::middleware(['auth', 'verified', 'permission:addons.manage'])
     ->prefix('admin/addons')

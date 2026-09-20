@@ -1,12 +1,31 @@
 <script setup>
 import AdminLayout from '@/Layouts/AdminLayout.vue';
-import { Head, Link, usePage } from '@inertiajs/vue3';
+import StatsBarChart from '@/Components/StatsBarChart.vue';
+import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 import { computed } from 'vue';
 
-defineProps({
+const props = defineProps({
     stats: { type: Object, required: true },
     health: { type: Object, default: null },
+    familyStats: { type: Object, default: null },
 });
+
+const statsForm = useForm({
+    keys: props.familyStats ? [...props.familyStats.selectedKeys] : [],
+});
+
+function toggleStatKey(key) {
+    const idx = statsForm.keys.indexOf(key);
+    if (idx === -1) {
+        statsForm.keys.push(key);
+    } else {
+        statsForm.keys.splice(idx, 1);
+    }
+}
+
+function saveFamilyStats() {
+    statsForm.put(route('admin.stats.update'), { preserveScroll: true });
+}
 
 function fmtRelative(iso) {
     if (!iso) return 'немає даних';
@@ -72,6 +91,38 @@ const sections = [
                 <p class="text-xs uppercase tracking-widest text-white/40">Активних аддонів</p>
                 <p class="font-display mt-2 text-4xl text-white">{{ stats.activeAddons }}</p>
             </div>
+        </div>
+
+        <div v-if="familyStats" v-reveal class="mb-10 glass-panel p-6 sm:p-8">
+            <div class="mb-5 flex flex-wrap items-center justify-between gap-3">
+                <div>
+                    <h2 class="font-display text-lg text-white">Статистика родини</h2>
+                    <p class="mt-1 text-sm text-white/40">Реальні числа з бази — оберіть, які показувати на головній сторінці сайту.</p>
+                </div>
+                <button
+                    type="button"
+                    :disabled="statsForm.processing"
+                    class="rounded-full border border-gold-400/40 px-5 py-2 text-xs font-medium uppercase tracking-widest text-gold-200 hover:border-gold-300 disabled:opacity-40"
+                    @click="saveFamilyStats"
+                >
+                    Зберегти вибір
+                </button>
+            </div>
+
+            <StatsBarChart :items="familyStats.available" class="mb-6" />
+
+            <div class="flex flex-wrap gap-2 border-t border-white/10 pt-5">
+                <label
+                    v-for="item in familyStats.available"
+                    :key="item.key"
+                    class="flex cursor-pointer items-center gap-2 rounded-full border px-3.5 py-1.5 text-xs transition-colors"
+                    :class="statsForm.keys.includes(item.key) ? 'border-gold-400/40 bg-gold-400/[0.08] text-gold-200' : 'border-white/10 text-white/50 hover:border-white/25'"
+                >
+                    <input type="checkbox" class="sr-only" :checked="statsForm.keys.includes(item.key)" @change="toggleStatKey(item.key)" />
+                    {{ item.label }}
+                </label>
+            </div>
+            <p v-if="statsForm.recentlySuccessful" class="mt-3 text-xs text-emerald-300">Збережено.</p>
         </div>
 
         <div v-if="health" v-reveal class="mb-10">

@@ -24,6 +24,7 @@ use App\Http\Controllers\UnionCabinetController;
 use App\Http\Controllers\UnionComplaintController;
 use App\Http\Controllers\UnionFamilyController;
 use App\Models\GalleryPhoto;
+use App\Models\Setting;
 use App\Models\User;
 use App\Support\DesignSettings;
 use App\Support\FamilyContent;
@@ -134,6 +135,7 @@ Route::get('/dashboard', function (Request $request) {
         'memberCount' => User::query()->count(),
         'telegramBotUrl' => TelegramLink::url(),
         'bankCard' => $bankCard,
+        'mobileAppDownloadUrl' => Setting::get('mobile_app_download_url'),
     ]);
 })->middleware(['auth', 'verified'])->name('dashboard');
 

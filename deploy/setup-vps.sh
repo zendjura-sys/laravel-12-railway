@@ -378,6 +378,25 @@ if [ ! -L "${APP_DIR}/public/storage" ]; then
     php artisan storage:link
 fi
 
+# GitHub Actions (.github/workflows/mobile-build.yml) публикует свежую
+# сборку в GitHub Release с фиксированным тегом mobile-latest при каждом
+# пуше в mobile/ — тут её забираем на СВОЙ сервер, чтобы кнопка на сайте
+# отдавала файл с собственного домена, а не с github.com. Не критично для
+# самого деплоя (мобильный застосунок — не часть сайта), поэтому сетевой
+# сбой тут не должен ронять весь деплой через set -e.
+log "Забираю свіжу збірку мобільного застосунку"
+mkdir -p "${APP_DIR}/public/downloads"
+MOBILE_APK_URL="https://github.com/zendjura-sys/laravel-12-railway/releases/latest/download/monsory-connect.apk"
+if curl -fsSL "$MOBILE_APK_URL" -o "${APP_DIR}/public/downloads/monsory-connect.apk.tmp"; then
+    mv "${APP_DIR}/public/downloads/monsory-connect.apk.tmp" "${APP_DIR}/public/downloads/monsory-connect.apk"
+    # Не перезаписываем, если адмін уже вручну вказав своє посилання в
+    # Admin → Налаштування → Мобільний застосунок.
+    php artisan tinker --execute="if (!\App\Models\Setting::get('mobile_app_download_url')) { \App\Models\Setting::set('mobile_app_download_url', '/downloads/monsory-connect.apk', 'mobile_app'); }" || true
+else
+    warn "Не вдалося завантажити .apk з GitHub Release — пропускаю (кнопка на сайті лишиться на попередній версії чи не з'явиться, якщо це перший деплой)"
+    rm -f "${APP_DIR}/public/downloads/monsory-connect.apk.tmp"
+fi
+
 log "Права на приложение"
 # Всё, что artisan создал выше (bootstrap/cache/*.php, public/storage и т.п.),
 # ещё принадлежит root — chown должен идти ПОСЛЕДНИМ шагом, иначе следующая

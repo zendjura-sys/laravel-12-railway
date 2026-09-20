@@ -7,6 +7,7 @@ defineProps({
     memberCount: { type: Number, default: 0 },
     telegramBotUrl: { type: String, default: null },
     bankCard: { type: Object, default: null },
+    mobileAppDownloadUrl: { type: String, default: null },
 });
 
 // «Мої звіти» винесено окремо з масиву — банківську картку показуємо
@@ -154,6 +155,22 @@ function fmtDate(iso) {
                     <h3 class="relative font-semibold text-white">Telegram родини</h3>
                     <p class="relative mt-2 text-sm leading-relaxed text-white/50">Оновлення, оголошення та швидкий зв'язок — усе в одному боті.</p>
                     <span class="relative mt-4 inline-block text-xs uppercase tracking-widest text-gold-300/80">Перейти →</span>
+                </a>
+
+                <!-- Посилання (Admin → Налаштування → Мобільний застосунок)
+                     з'являється лише коли деплой-скрипт уже забрав свіжий
+                     .apk на сервер — без нього кнопка пропонувала б
+                     завантажити те, чого ще немає. -->
+                <a
+                    v-if="mobileAppDownloadUrl"
+                    :href="mobileAppDownloadUrl"
+                    v-reveal:400="'scale'"
+                    v-glow class="group glass-panel relative overflow-hidden p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-gold"
+                >
+                    <div class="glass-sheen"></div>
+                    <h3 class="relative font-semibold text-white">Застосунок для Android</h3>
+                    <p class="relative mt-2 text-sm leading-relaxed text-white/50">Банк, рейтинг і кабінет родини — у застосунку на телефоні.</p>
+                    <span class="relative mt-4 inline-block text-xs uppercase tracking-widest text-gold-300/80">Завантажити .apk →</span>
                 </a>
             </div>
 

@@ -16,6 +16,9 @@
 /public/build
 /public/hot
 /public/storage
+# Забирається deploy/setup-vps.sh із GitHub Release при кожному деплої —
+# великий бінарник, якому нема чого робити в репозиторії.
+/public/downloads
 /storage/*.key
 /storage/pail
 /vendor

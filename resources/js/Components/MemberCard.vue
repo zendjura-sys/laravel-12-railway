@@ -75,9 +75,30 @@ async function copyNumber() {
             <p class="font-display text-2xl text-gold-200">{{ fmt(amount) }}</p>
         </div>
 
-        <div class="relative mt-4">
-            <p class="text-[10px] uppercase tracking-widest text-white/40">Учасник</p>
-            <p class="truncate font-medium text-white">{{ name }}</p>
+        <!-- ================= НИЗ: УЧАСНИК + ПЕЧАТКА ================= -->
+        <div class="relative mt-4 flex items-end justify-between gap-3">
+            <div class="min-w-0">
+                <p class="text-[10px] uppercase tracking-widest text-white/40">Учасник</p>
+                <p class="truncate font-medium text-white">{{ name }}</p>
+            </div>
+
+            <!-- Власна печатка Monsory — не чужий товарний знак (як-от
+                 центуріон American Express), а оригінальний медальйон із
+                 тим самим ромбом-M, що й скрізь на сайті, у тій самій
+                 золотій гамі картки. -->
+            <svg viewBox="0 0 64 64" class="h-10 w-10 shrink-0 sm:h-11 sm:w-11" aria-hidden="true">
+                <defs>
+                    <linearGradient id="monsory-seal-gold" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="rgb(var(--gold-200))" />
+                        <stop offset="50%" stop-color="rgb(var(--gold-400))" />
+                        <stop offset="100%" stop-color="rgb(var(--gold-600))" />
+                    </linearGradient>
+                </defs>
+                <circle cx="32" cy="32" r="29.5" fill="none" stroke="url(#monsory-seal-gold)" stroke-width="1" opacity="0.55" />
+                <circle cx="32" cy="32" r="25" fill="none" stroke="url(#monsory-seal-gold)" stroke-width="1.5" stroke-dasharray="0.5 3.6" stroke-linecap="round" opacity="0.8" />
+                <rect x="21" y="21" width="22" height="22" rx="3" transform="rotate(45 32 32)" fill="none" stroke="url(#monsory-seal-gold)" stroke-width="1.75" />
+                <text x="32" y="33" text-anchor="middle" dominant-baseline="central" font-family="Montserrat, sans-serif" font-size="17" font-weight="700" fill="url(#monsory-seal-gold)">M</text>
+            </svg>
         </div>
     </div>
 </template>

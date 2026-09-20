@@ -10,6 +10,7 @@ use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -26,7 +27,24 @@ class MessengerController
 {
     public function index(Request $request): Response
     {
-        $user = $request->user();
+        return Inertia::render('Messenger/Index', [
+            'conversations' => $this->conversationListPayload($request->user()),
+        ]);
+    }
+
+    public function show(Request $request, Conversation $conversation): Response
+    {
+        $payload = $this->conversationDetailPayload($request, $conversation);
+
+        return Inertia::render('Messenger/Show', $payload);
+    }
+
+    /**
+     * Список розмов для мобільного застосунку (Flutter) — той самий вміст,
+     * що й index(), лише як JSON замість Inertia-сторінки.
+     */
+    protected function conversationListPayload(User $user): Collection
+    {
         $family = $this->familyConversation();
 
         $directIds = ConversationParticipant::query()
@@ -47,7 +65,7 @@ class MessengerController
             ->whereIn('conversation_id', $conversations->pluck('id'))
             ->pluck('last_read_message_id', 'conversation_id');
 
-        $list = $conversations->map(function (Conversation $c) use ($user, $reads) {
+        return $conversations->map(function (Conversation $c) use ($user, $reads) {
             $lastMessage = Message::query()
                 ->where('conversation_id', $c->id)
                 ->with('sender:id,name')
@@ -62,7 +80,6 @@ class MessengerController
                 ->count();
 
             $title = 'Загальний чат родини';
-            $subtitle = null;
             if ($c->type === 'direct') {
                 $other = $c->participants->pluck('user')->filter(fn ($u) => $u && $u->id !== $user->id)->first();
                 $title = $other?->name ?? 'Учасник';
@@ -81,13 +98,13 @@ class MessengerController
                 'unread' => $unread,
             ];
         })->sortByDesc(fn ($c) => $c['lastMessage']['createdAt'] ?? null)->values();
-
-        return Inertia::render('Messenger/Index', [
-            'conversations' => $list,
-        ]);
     }
 
-    public function show(Request $request, Conversation $conversation): Response
+    /**
+     * Тред розмови (заголовок + останні 50 повідомлень), уже позначений
+     * прочитаним — спільне для веб-сторінки Show і мобільного API.
+     */
+    protected function conversationDetailPayload(Request $request, Conversation $conversation): array
     {
         $this->ensureAccess($conversation, $request->user());
 
@@ -112,7 +129,7 @@ class MessengerController
             $title = $other?->name ?? 'Учасник';
         }
 
-        return Inertia::render('Messenger/Show', [
+        return [
             'conversation' => [
                 'id' => $conversation->id,
                 'type' => $conversation->type,
@@ -120,7 +137,7 @@ class MessengerController
             ],
             'messages' => $messages->map(fn (Message $m) => $this->formatMessage($m, $request->user()->id)),
             'myId' => $request->user()->id,
-        ]);
+        ];
     }
 
     public function messagesSince(Request $request, Conversation $conversation): JsonResponse
@@ -221,8 +238,17 @@ class MessengerController
 
     public function startDirect(Request $request, User $target): RedirectResponse
     {
-        $user = $request->user();
+        $conversation = $this->resolveDirectConversation($request->user(), $target);
 
+        return redirect()->route('messenger.show', $conversation->id);
+    }
+
+    /**
+     * Знаходить наявну особисту розмову між двома учасниками або створює
+     * нову — спільне для веб-редіректу і JSON-відповіді мобільного API.
+     */
+    protected function resolveDirectConversation(User $user, User $target): Conversation
+    {
         if ($target->id === $user->id || $target->is_shadow) {
             throw ValidationException::withMessages(['target' => 'Неможливо почати чат із цим користувачем.']);
         }
@@ -237,24 +263,25 @@ class MessengerController
             ->whereHas('conversation', fn ($q) => $q->where('type', 'direct'))
             ->value('conversation_id');
 
-        if (! $existingId) {
-            $conversation = Conversation::create(['type' => 'direct']);
-            ConversationParticipant::insert([
-                ['conversation_id' => $conversation->id, 'user_id' => $user->id, 'created_at' => now(), 'updated_at' => now()],
-                ['conversation_id' => $conversation->id, 'user_id' => $target->id, 'created_at' => now(), 'updated_at' => now()],
-            ]);
-            $existingId = $conversation->id;
+        if ($existingId) {
+            return Conversation::findOrFail($existingId);
         }
 
-        return redirect()->route('messenger.show', $existingId);
+        $conversation = Conversation::create(['type' => 'direct']);
+        ConversationParticipant::insert([
+            ['conversation_id' => $conversation->id, 'user_id' => $user->id, 'created_at' => now(), 'updated_at' => now()],
+            ['conversation_id' => $conversation->id, 'user_id' => $target->id, 'created_at' => now(), 'updated_at' => now()],
+        ]);
+
+        return $conversation;
     }
 
-    private function familyConversation(): Conversation
+    protected function familyConversation(): Conversation
     {
         return Conversation::firstOrCreate(['type' => 'family']);
     }
 
-    private function ensureAccess(Conversation $conversation, User $user): void
+    protected function ensureAccess(Conversation $conversation, User $user): void
     {
         if ($conversation->type === 'family') {
             return;
@@ -270,7 +297,7 @@ class MessengerController
         }
     }
 
-    private function formatMessage(Message $m, int $myId): array
+    protected function formatMessage(Message $m, int $myId): array
     {
         return [
             'id' => $m->id,

@@ -58,15 +58,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final bankCard = _data?['bankCard'] as Map<String, dynamic>?;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Кабінет'),
-        actions: [
-          IconButton(
-              icon: const Icon(Icons.logout),
-              onPressed: _logout,
-              tooltip: 'Вийти'),
-        ],
-      ),
+      appBar: AppBar(title: const Text('Кабінет')),
       body: RefreshIndicator(
         onRefresh: _load,
         child: _loading

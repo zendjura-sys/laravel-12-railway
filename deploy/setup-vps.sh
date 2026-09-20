@@ -353,6 +353,9 @@ log "Сею RBAC (право addons.manage + роль admin)"
 php artisan db:seed --class="Database\\Seeders\\AddonPermissionsSeeder" --force
 php artisan db:seed --class="Database\\Seeders\\SystemPermissionsSeeder" --force
 
+log "Сею стартові записи «Що нового» (не чіпає вже відредаговані адміном)"
+php artisan db:seed --class="Database\\Seeders\\ChangelogSeeder" --force
+
 log "Кэширую конфигурацию"
 php artisan config:cache
 # route:cache НЕ используем и никогда не должны: таблица маршрутов здесь

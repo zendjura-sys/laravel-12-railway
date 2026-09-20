@@ -13,5 +13,6 @@ class DatabaseSeeder extends Seeder
     {
         $this->call(AddonPermissionsSeeder::class);
         $this->call(SystemPermissionsSeeder::class);
+        $this->call(ChangelogSeeder::class);
     }
 }

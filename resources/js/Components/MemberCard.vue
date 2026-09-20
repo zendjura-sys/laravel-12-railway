@@ -68,9 +68,11 @@ async function copyNumber() {
 
 <template>
     <!-- Пропорції як у справжньої банківської картки (ISO/IEC 7810 ID-1,
-         85.6×53.98мм ≈ 1.586:1) — ширина тягнеться (max-w-sm), висота
-         рахується від неї через aspect-ratio, а не від вмісту, тому картка
-         завжди виглядає "стандартною", хоч на телефоні, хоч на десктопі.
+         85.6×53.98мм ≈ 1.586:1) — ширина тягнеться (max-w-sm → sm:max-w-md
+         → lg:max-w-lg, залежно від вʼюпорта), висота рахується від неї
+         через aspect-ratio, а не від вмісту. На десктопі, де сусідні
+         панелі (переказ, депозити) набагато ширші за max-w-sm, картка
+         тепер росте разом з ними, а не губиться маленькою поряд.
 
          @container + cqw ЗАМІСТЬ sm:-брейкпоінтів: sm: залежить від
          ширини ВʼЮПОРТА, а сама картка на різних сторінках (тут, у
@@ -81,7 +83,7 @@ async function copyNumber() {
          вужчому варіанті вміст впирався в нижній край. cqw — відсоток
          від ширини САМОЇ картки, тому текст і печатка тепер завжди
          пропорційні їй, де б вона не стояла. -->
-    <div v-reveal v-glow class="glass-panel-gold glass-panel relative mx-auto flex aspect-[85.6/53.98] w-full max-w-sm flex-col overflow-hidden p-[4.5cqw] @container">
+    <div v-reveal v-glow class="glass-panel-gold glass-panel relative mx-auto flex aspect-[85.6/53.98] w-full max-w-sm flex-col overflow-hidden p-[4.5cqw] @container sm:max-w-md lg:max-w-lg">
         <div class="glass-sheen"></div>
 
         <!-- ================= БРЕНД ================= -->

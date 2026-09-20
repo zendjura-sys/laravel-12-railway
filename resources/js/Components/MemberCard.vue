@@ -95,9 +95,11 @@ async function copyNumber() {
                 <span v-if="copied" class="text-[9px] text-emerald-400/80">Скопійовано</span>
             </div>
 
-            <div class="min-w-0">
-                <p class="text-[9px] uppercase tracking-widest text-white/40">Баланс</p>
-                <p class="font-display truncate text-2xl text-gold-200 sm:text-3xl">{{ fmt(amount) }}</p>
+            <!-- Виділений блок — рамка й підсвітка золотом, більший кегль:
+                 баланс головне, на що дивляться на цій картці. -->
+            <div class="min-w-0 rounded-xl border border-gold-400/30 bg-gold-400/[0.07] px-3 py-2 shadow-[0_0_20px_-6px_rgba(212,175,55,0.35)]">
+                <p class="text-[9px] uppercase tracking-widest text-gold-300/60">Баланс</p>
+                <p class="font-display truncate text-3xl font-semibold text-gold-200 sm:text-4xl">{{ fmt(amount) }}</p>
             </div>
         </div>
 

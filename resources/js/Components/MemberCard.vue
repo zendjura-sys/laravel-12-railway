@@ -73,12 +73,20 @@ async function copyNumber() {
             <span v-if="copied" class="text-[9px] text-emerald-400/80">Скопійовано</span>
         </div>
 
-        <!-- ================= НИЗ: БАЛАНС + УЧАСНИК + ПЕЧАТКА ================= -->
+        <!-- ================= БАЛАНС ================= -->
+        <!-- Окремий рядок, рівно посередині між номером і іменем — той
+             самий flex justify-between на картці-контейнері сам розподіляє
+             відступи, а не фіксовані margin. -->
+        <div class="relative min-w-0">
+            <p class="text-[9px] uppercase tracking-widest text-white/40">Баланс</p>
+            <p class="font-display truncate text-2xl text-gold-200 sm:text-3xl">{{ fmt(amount) }}</p>
+        </div>
+
+        <!-- ================= НИЗ: УЧАСНИК + ПЕЧАТКА ================= -->
         <div class="relative flex items-end justify-between gap-3">
             <div class="min-w-0">
-                <p class="text-[9px] uppercase tracking-widest text-white/40">Баланс</p>
-                <p class="font-display truncate text-lg text-gold-200 sm:text-xl">{{ fmt(amount) }}</p>
-                <p class="mt-1 truncate text-xs font-medium text-white/80">{{ name }}</p>
+                <p class="text-[9px] uppercase tracking-widest text-white/40">Учасник</p>
+                <p class="truncate text-sm font-medium text-white/80">{{ name }}</p>
             </div>
 
             <!-- Власна печатка Monsory — не чужий товарний знак (як-от

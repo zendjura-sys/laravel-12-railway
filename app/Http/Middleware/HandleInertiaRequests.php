@@ -73,6 +73,7 @@ class HandleInertiaRequests extends Middleware
             // як спільні джерела), і Schema::hasTable() рятує від помилки,
             // якщо модуль Notifications ще не встановлено взагалі.
             'unreadNotifications' => $this->unreadNotificationsCount($request),
+            'unreadMessages' => $this->unreadMessagesCount($request),
         ];
     }
 
@@ -86,5 +87,44 @@ class HandleInertiaRequests extends Middleware
             ->where('user_id', $request->user()->id)
             ->whereNull('read_at')
             ->count();
+    }
+
+    /**
+     * Так само, як unreadNotificationsCount: рахується тут, бо бейдж видно
+     * з будь-якої сторінки. Розмов на учасника завжди мало (сімейний чат +
+     * жменька особистих), тому цикл по них — не проблема продуктивності.
+     */
+    private function unreadMessagesCount(Request $request): int
+    {
+        if (! $request->user() || ! Schema::hasTable('messages')) {
+            return 0;
+        }
+
+        $userId = $request->user()->id;
+
+        $familyId = DB::table('conversations')->where('type', 'family')->value('id');
+        $directIds = DB::table('conversation_participants')->where('user_id', $userId)->pluck('conversation_id');
+        $conversationIds = $directIds->when($familyId, fn ($c) => $c->push($familyId))->unique();
+
+        if ($conversationIds->isEmpty()) {
+            return 0;
+        }
+
+        $reads = DB::table('conversation_reads')
+            ->where('user_id', $userId)
+            ->whereIn('conversation_id', $conversationIds)
+            ->pluck('last_read_message_id', 'conversation_id');
+
+        $count = 0;
+        foreach ($conversationIds as $conversationId) {
+            $lastRead = $reads[$conversationId] ?? 0;
+            $count += DB::table('messages')
+                ->where('conversation_id', $conversationId)
+                ->where('id', '>', $lastRead)
+                ->where('sender_id', '!=', $userId)
+                ->count();
+        }
+
+        return $count;
     }
 }

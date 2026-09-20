@@ -86,6 +86,19 @@ const showingNavigationDropdown = ref(false);
                                 </span>
                             </NavLink>
                             <NavLink
+                                v-if="route().has('messenger.index')"
+                                :href="route('messenger.index')"
+                                :active="route().current('messenger.*')"
+                            >
+                                Чат
+                                <span
+                                    v-if="$page.props.unreadMessages > 0"
+                                    class="ml-1.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-gold-400 px-1 text-[10px] font-semibold text-obsidian-950"
+                                >
+                                    {{ $page.props.unreadMessages > 99 ? '99+' : $page.props.unreadMessages }}
+                                </span>
+                            </NavLink>
+                            <NavLink
                                 v-if="route().has('bonuses.index')"
                                 :href="route('bonuses.index')"
                                 :active="route().current('bonuses.*')"
@@ -274,6 +287,19 @@ const showingNavigationDropdown = ref(false);
                             class="ml-1.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-gold-400 px-1 text-[10px] font-semibold text-obsidian-950"
                         >
                             {{ $page.props.unreadNotifications > 99 ? '99+' : $page.props.unreadNotifications }}
+                        </span>
+                    </ResponsiveNavLink>
+                    <ResponsiveNavLink
+                        v-if="route().has('messenger.index')"
+                        :href="route('messenger.index')"
+                        :active="route().current('messenger.*')"
+                    >
+                        Чат
+                        <span
+                            v-if="$page.props.unreadMessages > 0"
+                            class="ml-1.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-gold-400 px-1 text-[10px] font-semibold text-obsidian-950"
+                        >
+                            {{ $page.props.unreadMessages > 99 ? '99+' : $page.props.unreadMessages }}
                         </span>
                     </ResponsiveNavLink>
                     <ResponsiveNavLink

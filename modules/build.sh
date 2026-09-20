@@ -31,6 +31,7 @@ declare -A ZIP_NAME=(
     [notifications]='Notifications'
     [bonuses]='Bonuses'
     [telegram]='TelegramBot'
+    [messenger]='Messenger'
 )
 
 command -v zip >/dev/null 2>&1 || { echo "Нужен zip: apt-get install -y zip" >&2; exit 1; }

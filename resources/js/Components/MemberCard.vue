@@ -31,12 +31,15 @@ const balanceText = computed(() => fmt(props.amount));
 // Адаптивний кегль: короткий баланс лишається великим і помітним, а
 // довгий (мільйони з розділювачами) сам зменшується замість того, щоб
 // вилазити за межі картки чи ховатися за truncate/трьома крапками.
+// Кожен щабель — це clamp() у cqw (% від ШИРИНИ САМОЇ КАРТКИ, не
+// вʼюпорта) — той самий трюк, що й в решти тексту на картці, див.
+// коментар біля кореневого div.
 const balanceSizeClass = computed(() => {
     const len = balanceText.value.length;
-    if (len <= 9) return 'text-3xl sm:text-4xl';
-    if (len <= 12) return 'text-2xl sm:text-3xl';
-    if (len <= 15) return 'text-xl sm:text-2xl';
-    return 'text-lg sm:text-xl';
+    if (len <= 9) return 'text-[clamp(1.35rem,8.5cqw,2.1rem)]';
+    if (len <= 12) return 'text-[clamp(1.15rem,7cqw,1.7rem)]';
+    if (len <= 15) return 'text-[clamp(1rem,5.5cqw,1.4rem)]';
+    return 'text-[clamp(0.9rem,4.5cqw,1.15rem)]';
 });
 
 const copied = ref(false);
@@ -67,65 +70,75 @@ async function copyNumber() {
     <!-- Пропорції як у справжньої банківської картки (ISO/IEC 7810 ID-1,
          85.6×53.98мм ≈ 1.586:1) — ширина тягнеться (max-w-sm), висота
          рахується від неї через aspect-ratio, а не від вмісту, тому картка
-         завжди виглядає "стандартною", хоч на телефоні, хоч на десктопі. -->
-    <div v-reveal v-glow class="glass-panel-gold glass-panel relative mx-auto flex aspect-[85.6/53.98] w-full max-w-sm flex-col overflow-hidden p-4 sm:p-5">
+         завжди виглядає "стандартною", хоч на телефоні, хоч на десктопі.
+
+         @container + cqw ЗАМІСТЬ sm:-брейкпоінтів: sm: залежить від
+         ширини ВʼЮПОРТА, а сама картка на різних сторінках (тут, у
+         "Банку" з max-w-3xl-контейнером; на Dashboard — у вужчій
+         grid-клітинці) рендериться РІЗНОЇ ширини в межах того самого
+         вʼюпорта. При sm: увесь текст був однакового розміру в обох
+         місцях, а сама картка — різної висоти (aspect-ratio), тому в
+         вужчому варіанті вміст впирався в нижній край. cqw — відсоток
+         від ширини САМОЇ картки, тому текст і печатка тепер завжди
+         пропорційні їй, де б вона не стояла. -->
+    <div v-reveal v-glow class="glass-panel-gold glass-panel relative mx-auto flex aspect-[85.6/53.98] w-full max-w-sm flex-col overflow-hidden p-[4.5cqw] @container">
         <div class="glass-sheen"></div>
 
         <!-- ================= БРЕНД ================= -->
         <div class="relative flex shrink-0 items-start justify-between">
-            <div class="flex items-center gap-2">
-                <ApplicationLogo mark class="h-7 w-7 text-xs text-gold-300" />
+            <div class="flex items-center gap-[2cqw]">
+                <ApplicationLogo mark class="h-[7.5cqw] w-[7.5cqw] text-[3cqw] text-gold-300" />
                 <div class="leading-tight">
-                    <p class="text-[10px] font-semibold uppercase tracking-[0.22em] text-gold-300/90">Monsory Finance</p>
-                    <p class="text-[8px] uppercase tracking-[0.18em] text-white/35">× American Express</p>
+                    <p class="text-[clamp(0.5rem,2.7cqw,0.7rem)] font-semibold uppercase tracking-[0.22em] text-gold-300/90">Monsory Finance</p>
+                    <p class="text-[clamp(0.4rem,2.1cqw,0.55rem)] uppercase tracking-[0.18em] text-white/35">× American Express</p>
                 </div>
             </div>
-            <span class="font-display text-lg italic tracking-tight text-white/90">VISA</span>
+            <span class="font-display text-[clamp(0.95rem,4.7cqw,1.25rem)] italic tracking-tight text-white/90">VISA</span>
         </div>
 
         <!-- ================= ЦЕНТР: НОМЕР + БАЛАНС ================= -->
-        <!-- Щільно під брендом (mt-3), без flex-1/justify-center — той
-             підхід залишав два порожні "коридори" (над і під блоком).
-             Порожнеча, що лишається до низу картки, іде в один відступ
-             перед нижнім рядком (mt-auto там), а не сюди. -->
-        <div class="relative mt-3 flex flex-col gap-1.5 sm:mt-4">
+        <!-- Щільно під брендом, без flex-1/justify-center — той підхід
+             залишав два порожні "коридори" (над і під блоком). Порожнеча,
+             що лишається до низу картки, іде в один відступ перед нижнім
+             рядком (mt-auto там), а не сюди. -->
+        <div class="relative mt-[2cqw] flex flex-col gap-[1cqw]">
             <!-- Кожна група символів — окремий span, помірний фіксований
                  gap між групами (не justify-between: той розтягував лише
                  4 групи на всю ширину з величезними проміжками). -->
-            <div class="flex items-center gap-2">
-                <div class="flex min-w-0 flex-1 justify-center gap-3 font-mono text-xl font-bold tracking-[0.15em] text-white sm:gap-4 sm:text-2xl">
+            <div class="flex items-center gap-[2cqw]">
+                <div class="flex min-w-0 flex-1 justify-center gap-[3cqw] font-mono text-[clamp(1.1rem,5.3cqw,1.6rem)] font-bold tracking-[0.15em] text-white">
                     <span v-for="(g, i) in numberGroups" :key="i">{{ g }}</span>
                 </div>
                 <button
                     type="button"
-                    class="shrink-0 rounded-full border border-white/15 p-1 text-white/50 transition-colors hover:border-gold-400/40 hover:text-gold-200"
+                    class="shrink-0 rounded-full border border-white/15 p-[1cqw] text-white/50 transition-colors hover:border-gold-400/40 hover:text-gold-200"
                     :aria-label="copied ? 'Скопійовано' : 'Скопіювати номер картки'"
                     @click="copyNumber"
                 >
-                    <Check v-if="copied" class="h-3 w-3 text-emerald-400" />
-                    <Copy v-else class="h-3 w-3" />
+                    <Check v-if="copied" class="h-[3cqw] w-[3cqw] text-emerald-400" />
+                    <Copy v-else class="h-[3cqw] w-[3cqw]" />
                 </button>
-                <span v-if="copied" class="text-[9px] text-emerald-400/80">Скопійовано</span>
+                <span v-if="copied" class="text-[clamp(0.5rem,2.4cqw,0.65rem)] text-emerald-400/80">Скопійовано</span>
             </div>
 
             <div class="min-w-0">
-                <p class="text-[9px] uppercase tracking-widest text-white/40">Баланс</p>
+                <p class="text-[clamp(0.5rem,2.4cqw,0.65rem)] uppercase tracking-widest text-white/40">Баланс</p>
                 <p class="font-display truncate font-semibold text-gold-200" :class="balanceSizeClass">{{ balanceText }}</p>
             </div>
         </div>
 
         <!-- ================= НИЗ: УЧАСНИК + ПЕЧАТКА ================= -->
-        <div class="relative mt-auto flex shrink-0 items-end justify-between gap-3">
+        <div class="relative mt-auto flex shrink-0 items-end justify-between gap-[2cqw]">
             <div class="min-w-0">
-                <p class="text-[9px] uppercase tracking-widest text-white/40">Учасник</p>
-                <p class="truncate text-sm font-medium text-white/80">{{ name }}</p>
+                <p class="text-[clamp(0.5rem,2.4cqw,0.65rem)] uppercase tracking-widest text-white/40">Учасник</p>
+                <p class="truncate text-[clamp(0.75rem,3.7cqw,0.95rem)] font-medium text-white/80">{{ name }}</p>
             </div>
 
             <!-- Власна печатка Monsory — не чужий товарний знак (як-от
                  центуріон American Express), а оригінальний медальйон із
                  тим самим ромбом-M, що й скрізь на сайті, у тій самій
                  золотій гамі картки. -->
-            <svg viewBox="0 0 64 64" class="h-16 w-16 shrink-0 sm:h-20 sm:w-20" aria-hidden="true">
+            <svg viewBox="0 0 64 64" class="h-[13cqw] w-[13cqw] shrink-0" aria-hidden="true">
                 <defs>
                     <linearGradient id="monsory-seal-gold" x1="0%" y1="0%" x2="100%" y2="100%">
                         <stop offset="0%" stop-color="rgb(var(--gold-200))" />

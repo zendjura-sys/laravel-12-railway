@@ -118,6 +118,40 @@ const transactionIcon = {
                 <MemberCard :number="card.number" :number-full="card.numberFull" :name="card.name" :amount="card.balance" />
             </div>
 
+            <!-- ================= ВИПИСКА ПО РАХУНКУ ================= -->
+            <section v-reveal v-glow class="glass-panel mb-8 overflow-hidden">
+                <h2 class="p-6 pb-4 font-display text-lg text-white">Виписка по рахунку</h2>
+                <div
+                    v-for="(t, i) in transactions"
+                    :key="i"
+                    class="border-b border-white/5 px-6 py-4 last:border-0"
+                    :class="{ 'opacity-40': t.reversed }"
+                >
+                    <div class="flex items-start justify-between gap-3">
+                        <span class="text-sm text-white/60">
+                            <span class="mr-1">{{ transactionIcon[t.kind] ?? '•' }}</span>
+                            {{ t.label }}
+                            <span v-if="t.detail" class="text-white/40"> — {{ t.detail }}</span>
+                            <span v-if="t.reversed" class="ml-2 text-[10px] uppercase tracking-wide text-ember-500/70">скасовано</span>
+                        </span>
+                        <span
+                            class="shrink-0 text-lg font-semibold"
+                            :class="{
+                                'text-emerald-400/80': t.sign === '+',
+                                'text-ember-500/80': t.sign === '−',
+                                'text-white/30': t.sign === '·',
+                            }"
+                        >
+                            {{ t.sign !== '·' ? t.sign : '' }}{{ fmt(t.amount) }}
+                        </span>
+                    </div>
+                    <p class="mt-1 text-[11px] text-white/30">{{ fmtDateTime(t.at) }}</p>
+                </div>
+                <div v-if="transactions.length === 0" class="px-6 py-12 text-center text-white/30">
+                    Операцій ще не було
+                </div>
+            </section>
+
             <!-- ================= ПЕРЕКАЗ ================= -->
             <section v-reveal v-glow class="glass-panel mb-8 p-6">
                 <h2 class="mb-1 font-display text-lg text-white">Переказ на картку</h2>
@@ -240,40 +274,6 @@ const transactionIcon = {
                             лишилось {{ fmt(tier.threshold_amount - cumulativeInvestment) }}
                         </span>
                     </div>
-                </div>
-            </section>
-
-            <!-- ================= ВИПИСКА ПО РАХУНКУ ================= -->
-            <section v-reveal:100 v-glow class="glass-panel overflow-hidden">
-                <h2 class="p-6 pb-4 font-display text-lg text-white">Виписка по рахунку</h2>
-                <div
-                    v-for="(t, i) in transactions"
-                    :key="i"
-                    class="border-b border-white/5 px-6 py-4 last:border-0"
-                    :class="{ 'opacity-40': t.reversed }"
-                >
-                    <div class="flex items-start justify-between gap-3">
-                        <span class="text-sm text-white/60">
-                            <span class="mr-1">{{ transactionIcon[t.kind] ?? '•' }}</span>
-                            {{ t.label }}
-                            <span v-if="t.detail" class="text-white/40"> — {{ t.detail }}</span>
-                            <span v-if="t.reversed" class="ml-2 text-[10px] uppercase tracking-wide text-ember-500/70">скасовано</span>
-                        </span>
-                        <span
-                            class="shrink-0 text-lg font-semibold"
-                            :class="{
-                                'text-emerald-400/80': t.sign === '+',
-                                'text-ember-500/80': t.sign === '−',
-                                'text-white/30': t.sign === '·',
-                            }"
-                        >
-                            {{ t.sign !== '·' ? t.sign : '' }}{{ fmt(t.amount) }}
-                        </span>
-                    </div>
-                    <p class="mt-1 text-[11px] text-white/30">{{ fmtDateTime(t.at) }}</p>
-                </div>
-                <div v-if="transactions.length === 0" class="px-6 py-12 text-center text-white/30">
-                    Операцій ще не було
                 </div>
             </section>
 

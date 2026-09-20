@@ -39,54 +39,53 @@ async function copyNumber() {
 </script>
 
 <template>
-    <div v-reveal v-glow class="glass-panel-gold glass-panel relative mx-auto w-full max-w-sm overflow-hidden p-6 sm:p-7">
+    <!-- Пропорції як у справжньої банківської картки (ISO/IEC 7810 ID-1,
+         85.6×53.98мм ≈ 1.586:1) — ширина тягнеться (max-w-sm), висота
+         рахується від неї через aspect-ratio, а не від вмісту, тому картка
+         завжди виглядає "стандартною", хоч на телефоні, хоч на десктопі. -->
+    <div v-reveal v-glow class="glass-panel-gold glass-panel relative mx-auto flex aspect-[85.6/53.98] w-full max-w-sm flex-col justify-between overflow-hidden p-5 sm:p-6">
         <div class="glass-sheen"></div>
 
         <!-- ================= БРЕНД ================= -->
         <div class="relative flex items-start justify-between">
             <div class="flex items-center gap-2">
-                <ApplicationLogo mark class="h-8 w-8 text-sm text-gold-300" />
+                <ApplicationLogo mark class="h-7 w-7 text-xs text-gold-300" />
                 <div class="leading-tight">
-                    <p class="text-[11px] font-semibold uppercase tracking-[0.25em] text-gold-300/90">Monsory Finance</p>
-                    <p class="text-[9px] uppercase tracking-[0.2em] text-white/35">× American Express</p>
+                    <p class="text-[10px] font-semibold uppercase tracking-[0.22em] text-gold-300/90">Monsory Finance</p>
+                    <p class="text-[8px] uppercase tracking-[0.18em] text-white/35">× American Express</p>
                 </div>
             </div>
-            <span class="font-display text-xl italic tracking-tight text-white/90">VISA</span>
+            <span class="font-display text-lg italic tracking-tight text-white/90">VISA</span>
         </div>
 
         <!-- ================= НОМЕР ================= -->
-        <div class="relative mt-7 flex items-center gap-3">
-            <p class="font-mono text-xl tracking-[0.25em] text-white sm:text-2xl">{{ number }}</p>
+        <div class="relative flex items-center gap-2">
+            <p class="font-mono text-base tracking-[0.18em] text-white sm:text-lg">{{ number }}</p>
             <button
                 type="button"
-                class="shrink-0 rounded-full border border-white/15 p-1.5 text-white/50 transition-colors hover:border-gold-400/40 hover:text-gold-200"
+                class="shrink-0 rounded-full border border-white/15 p-1 text-white/50 transition-colors hover:border-gold-400/40 hover:text-gold-200"
                 :aria-label="copied ? 'Скопійовано' : 'Скопіювати номер картки'"
                 @click="copyNumber"
             >
-                <Check v-if="copied" class="h-3.5 w-3.5 text-emerald-400" />
-                <Copy v-else class="h-3.5 w-3.5" />
+                <Check v-if="copied" class="h-3 w-3 text-emerald-400" />
+                <Copy v-else class="h-3 w-3" />
             </button>
-            <span v-if="copied" class="text-[10px] text-emerald-400/80">Скопійовано</span>
+            <span v-if="copied" class="text-[9px] text-emerald-400/80">Скопійовано</span>
         </div>
 
-        <!-- ================= БАЛАНС ================= -->
-        <div class="relative mt-5">
-            <p class="text-[10px] uppercase tracking-widest text-white/40">Баланс</p>
-            <p class="font-display text-2xl text-gold-200">{{ fmt(amount) }}</p>
-        </div>
-
-        <!-- ================= НИЗ: УЧАСНИК + ПЕЧАТКА ================= -->
-        <div class="relative mt-4 flex items-end justify-between gap-3">
+        <!-- ================= НИЗ: БАЛАНС + УЧАСНИК + ПЕЧАТКА ================= -->
+        <div class="relative flex items-end justify-between gap-3">
             <div class="min-w-0">
-                <p class="text-[10px] uppercase tracking-widest text-white/40">Учасник</p>
-                <p class="truncate font-medium text-white">{{ name }}</p>
+                <p class="text-[9px] uppercase tracking-widest text-white/40">Баланс</p>
+                <p class="font-display truncate text-lg text-gold-200 sm:text-xl">{{ fmt(amount) }}</p>
+                <p class="mt-1 truncate text-xs font-medium text-white/80">{{ name }}</p>
             </div>
 
             <!-- Власна печатка Monsory — не чужий товарний знак (як-от
                  центуріон American Express), а оригінальний медальйон із
                  тим самим ромбом-M, що й скрізь на сайті, у тій самій
                  золотій гамі картки. -->
-            <svg viewBox="0 0 64 64" class="h-24 w-24 shrink-0 sm:h-28 sm:w-28" aria-hidden="true">
+            <svg viewBox="0 0 64 64" class="h-16 w-16 shrink-0 sm:h-20 sm:w-20" aria-hidden="true">
                 <defs>
                     <linearGradient id="monsory-seal-gold" x1="0%" y1="0%" x2="100%" y2="100%">
                         <stop offset="0%" stop-color="rgb(var(--gold-200))" />

@@ -80,7 +80,7 @@ async function copyNumber() {
                  gap між групами (не justify-between: той розтягував лише
                  4 групи на всю ширину з величезними проміжками). -->
             <div class="flex items-center gap-2">
-                <div class="flex min-w-0 flex-1 justify-center gap-3 font-display text-2xl font-semibold tracking-[0.03em] text-white sm:gap-4 sm:text-3xl">
+                <div class="flex min-w-0 flex-1 justify-center gap-3 font-mono text-xl font-bold tracking-[0.15em] text-white sm:gap-4 sm:text-2xl">
                     <span v-for="(g, i) in numberGroups" :key="i">{{ g }}</span>
                 </div>
                 <button

@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import '../api_client.dart';
 import '../theme.dart';
+import 'admin_leave_requests_screen.dart';
+import 'admin_reports_screen.dart';
 
-/// Мінімальна нативна адмінка — лише ядро (статистика родини й список
-/// учасників), без жодної аддон-специфічної дії (модерація звітів,
-/// скасування переказів тощо лишаються на сайті). Бекенд (Api\AdminController)
-/// уже гейтить доступ по правах, тут перевірка лише для UI.
+/// Мінімальна нативна адмінка — ядро (статистика родини й список
+/// учасників) плюс модерація з модулів Reports/Member Center, якщо в
+/// користувача є відповідне право — жодних інших аддон-специфічних дій
+/// (скасування переказів тощо лишається на сайті). Бекенд уже гейтить
+/// доступ по правах, тут перевірка лише для показу/приховання плиток.
 class AdminScreen extends StatefulWidget {
   const AdminScreen({super.key});
 
@@ -16,6 +19,9 @@ class AdminScreen extends StatefulWidget {
 class _AdminScreenState extends State<AdminScreen> {
   List<dynamic> _stats = [];
   List<dynamic> _users = [];
+  List<String> _permissions = [];
+  int? _pendingReports;
+  int? _pendingLeaveRequests;
   bool _loading = true;
   String? _error;
   final _searchController = TextEditingController();
@@ -32,13 +38,29 @@ class _AdminScreenState extends State<AdminScreen> {
       _error = null;
     });
     try {
+      final me = await ApiClient.instance.me();
       final stats = await ApiClient.instance.adminStats();
       final users = await ApiClient.instance.adminUsers();
+      final permissions = (me['permissions'] as List?)?.cast<String>() ?? [];
       if (mounted) {
         setState(() {
           _stats = stats;
           _users = users;
+          _permissions = permissions;
         });
+      }
+
+      if (permissions.contains('reports.manage')) {
+        try {
+          final pending = await ApiClient.instance.adminPendingReports();
+          if (mounted) setState(() => _pendingReports = pending.length);
+        } catch (_) {}
+      }
+      if (permissions.contains('members.manage')) {
+        try {
+          final pending = await ApiClient.instance.adminPendingLeaveRequests();
+          if (mounted) setState(() => _pendingLeaveRequests = pending.length);
+        } catch (_) {}
       }
     } on ApiException catch (e) {
       setState(() => _error = e.message);
@@ -86,6 +108,34 @@ class _AdminScreenState extends State<AdminScreen> {
                 : ListView(
                     padding: const EdgeInsets.all(20),
                     children: [
+                      if (_permissions.contains('reports.manage') || _permissions.contains('members.manage')) ...[
+                        Text('Модерація',
+                            style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w500)),
+                        const SizedBox(height: 10),
+                        if (_permissions.contains('reports.manage'))
+                          _ModerationTile(
+                            icon: Icons.assignment_turned_in_outlined,
+                            label: 'Звіти на розгляді',
+                            count: _pendingReports,
+                            onTap: () async {
+                              await Navigator.of(context)
+                                  .push(MaterialPageRoute(builder: (_) => const AdminReportsScreen()));
+                              _load();
+                            },
+                          ),
+                        if (_permissions.contains('members.manage'))
+                          _ModerationTile(
+                            icon: Icons.beach_access_outlined,
+                            label: 'Заявки на відпустку',
+                            count: _pendingLeaveRequests,
+                            onTap: () async {
+                              await Navigator.of(context)
+                                  .push(MaterialPageRoute(builder: (_) => const AdminLeaveRequestsScreen()));
+                              _load();
+                            },
+                          ),
+                        const SizedBox(height: 28),
+                      ],
                       if (_stats.isNotEmpty) ...[
                         Text('Статистика родини',
                             style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w500)),
@@ -162,6 +212,48 @@ class _AdminScreenState extends State<AdminScreen> {
                       }),
                     ],
                   ),
+      ),
+    );
+  }
+}
+
+class _ModerationTile extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final int? count;
+  final VoidCallback onTap;
+
+  const _ModerationTile(
+      {required this.icon, required this.label, required this.count, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: glassPanelDecoration(radius: 14),
+        child: Row(
+          children: [
+            Icon(icon, color: AppColors.gold300, size: 20),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(label, style: const TextStyle(color: Colors.white, fontSize: 14)),
+            ),
+            if (count != null && count! > 0)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(color: AppColors.gold400, borderRadius: BorderRadius.circular(999)),
+                child: Text('$count',
+                    style: const TextStyle(
+                        color: AppColors.obsidian950, fontSize: 11, fontWeight: FontWeight.w600)),
+              ),
+            const SizedBox(width: 6),
+            const Icon(Icons.chevron_right, color: Colors.white24),
+          ],
+        ),
       ),
     );
   }

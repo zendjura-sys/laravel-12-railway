@@ -313,6 +313,68 @@ class ApiClient {
     return data['users'] as List<dynamic>;
   }
 
+  // ---------------- Адмін-модерація (модулі Reports, Member Center) ----------------
+
+  Future<List<dynamic>> adminPendingReports() async {
+    final response = await http.get(_uri('/admin/reports/pending'), headers: await _headers(auth: true));
+    final data = _decode(response) as Map<String, dynamic>;
+    return data['reports'] as List<dynamic>;
+  }
+
+  Future<void> adminApproveReport(int id, {required String grade, String? gradeReason}) async {
+    final response = await http.post(
+      _uri('/admin/reports/$id/approve'),
+      headers: await _headers(auth: true),
+      body: jsonEncode({
+        'grade': grade,
+        if (gradeReason != null && gradeReason.isNotEmpty) 'grade_reason': gradeReason,
+      }),
+    );
+    _decode(response);
+  }
+
+  Future<void> adminRejectReport(int id, {String? note}) async {
+    final response = await http.post(
+      _uri('/admin/reports/$id/reject'),
+      headers: await _headers(auth: true),
+      body: jsonEncode({if (note != null && note.isNotEmpty) 'note': note}),
+    );
+    _decode(response);
+  }
+
+  Future<List<dynamic>> adminPendingLeaveRequests() async {
+    final response = await http.get(_uri('/admin/leave-requests/pending'), headers: await _headers(auth: true));
+    final data = _decode(response) as Map<String, dynamic>;
+    return data['leaveRequests'] as List<dynamic>;
+  }
+
+  Future<void> adminApproveLeave(int id) async {
+    final response = await http.post(_uri('/admin/leave-requests/$id/approve'), headers: await _headers(auth: true));
+    _decode(response);
+  }
+
+  Future<void> adminRejectLeave(int id) async {
+    final response = await http.post(_uri('/admin/leave-requests/$id/reject'), headers: await _headers(auth: true));
+    _decode(response);
+  }
+
+  // ---------------- Сповіщення (модуль Notifications) ----------------
+
+  Future<Map<String, dynamic>> notifications() async {
+    final response = await http.get(_uri('/notifications'), headers: await _headers(auth: true));
+    return _decode(response) as Map<String, dynamic>;
+  }
+
+  Future<void> markNotificationRead(int id) async {
+    final response = await http.post(_uri('/notifications/$id/read'), headers: await _headers(auth: true));
+    _decode(response);
+  }
+
+  Future<void> markAllNotificationsRead() async {
+    final response = await http.post(_uri('/notifications/read-all'), headers: await _headers(auth: true));
+    _decode(response);
+  }
+
   // ---------------- Месенджер (модуль Messenger) ----------------
 
   Future<List<dynamic>> messengerConversations() async {

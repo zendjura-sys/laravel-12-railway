@@ -3,6 +3,7 @@ import '../api_client.dart';
 import '../theme.dart';
 import '../widgets/member_card_widget.dart';
 import 'login_screen.dart';
+import 'notifications_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -13,6 +14,8 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   Map<String, dynamic>? _data;
+  Map<String, dynamic>? _profile;
+  int _unreadNotifications = 0;
   bool _loading = true;
   String? _error;
 
@@ -30,6 +33,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
     try {
       final data = await ApiClient.instance.dashboard();
       if (mounted) setState(() => _data = data);
+
+      // Прогрес і сповіщення — не критичні для решти екрана: якщо
+      // модуль не встановлено чи запит не вдався, кабінет усе одно
+      // показує картку й вітання, просто без цих секцій/бейджа.
+      try {
+        final progress = await ApiClient.instance.progress();
+        if (mounted) setState(() => _profile = progress['profile'] as Map<String, dynamic>?);
+      } catch (_) {}
+      try {
+        final notifications = await ApiClient.instance.notifications();
+        if (mounted) setState(() => _unreadNotifications = notifications['unreadCount'] as int? ?? 0);
+      } catch (_) {}
     } on ApiException catch (e) {
       if (e.statusCode == 401) {
         await _logout();
@@ -52,13 +67,49 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  Future<void> _openNotifications() async {
+    await Navigator.of(context)
+        .push(MaterialPageRoute(builder: (_) => const NotificationsScreen()));
+    _load();
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = _data?['user'] as Map<String, dynamic>?;
     final bankCard = _data?['bankCard'] as Map<String, dynamic>?;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Кабінет')),
+      appBar: AppBar(
+        title: const Text('Кабінет'),
+        actions: [
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.notifications_outlined),
+                onPressed: _openNotifications,
+              ),
+              if (_unreadNotifications > 0)
+                Positioned(
+                  right: 8,
+                  top: 8,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                    decoration: BoxDecoration(
+                        color: AppColors.gold400, borderRadius: BorderRadius.circular(999)),
+                    constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                    child: Text(
+                      _unreadNotifications > 99 ? '99+' : '$_unreadNotifications',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                          color: AppColors.obsidian950, fontSize: 10, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ),
       body: RefreshIndicator(
         onRefresh: _load,
         child: _loading
@@ -99,8 +150,58 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             style: TextStyle(color: Colors.white54),
                           ),
                         ),
+                      if (_profile != null) ...[
+                        const SizedBox(height: 24),
+                        _ProgressStats(profile: _profile!),
+                      ],
                     ],
                   ),
+      ),
+    );
+  }
+}
+
+class _ProgressStats extends StatelessWidget {
+  final Map<String, dynamic> profile;
+
+  const _ProgressStats({required this.profile});
+
+  @override
+  Widget build(BuildContext context) {
+    final tiles = [
+      ('Рівень', '${profile['level'] ?? '—'}'),
+      ('Досвід', '${profile['xp'] ?? 0}'),
+      ('Серія', '${profile['current_streak'] ?? 0}'),
+      ('Контракти', '${profile['contracts_count'] ?? 0}'),
+    ];
+
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: glassPanelDecoration(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Прогрес',
+              style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w500)),
+          const SizedBox(height: 14),
+          Row(
+            children: tiles
+                .map((t) => Expanded(
+                      child: Column(
+                        children: [
+                          Text(t.$2,
+                              style: const TextStyle(
+                                  color: AppColors.gold300, fontSize: 18, fontWeight: FontWeight.w600)),
+                          const SizedBox(height: 2),
+                          Text(t.$1,
+                              style: const TextStyle(color: Colors.white38, fontSize: 11),
+                              textAlign: TextAlign.center),
+                        ],
+                      ),
+                    ))
+                .toList(),
+          ),
+        ],
       ),
     );
   }

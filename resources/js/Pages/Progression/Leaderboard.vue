@@ -101,6 +101,9 @@ function winrate(entry) {
                     <span v-else-if="category === 'bonuses'" class="shrink-0 whitespace-nowrap font-display text-xl text-gold-300">
                         {{ entry.total_amount.toLocaleString('uk-UA') }} ₴
                     </span>
+                    <span v-else-if="category === 'balance'" class="shrink-0 whitespace-nowrap font-display text-xl text-gold-300">
+                        {{ entry.balance.toLocaleString('uk-UA') }} ₴
+                    </span>
                 </div>
                 <div v-if="leaderboard.length === 0" class="px-6 py-12 text-center text-white/30">
                     Поки що порожньо

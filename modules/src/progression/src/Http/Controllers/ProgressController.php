@@ -3,6 +3,7 @@
 namespace Addons\Progression\Http\Controllers;
 
 use Addons\Bonuses\Models\BonusPayout;
+use Addons\Bonuses\Services\BalanceCalculator;
 use Addons\Progression\Models\Achievement;
 use Addons\Progression\Models\ProgressionProfile;
 use Addons\Progression\Models\UserAchievement;
@@ -101,6 +102,10 @@ class ProgressController
             $categories['bonuses'] = 'Премії';
         }
 
+        if (class_exists(BalanceCalculator::class)) {
+            $categories['balance'] = 'Багатії';
+        }
+
         return $categories;
     }
 
@@ -112,9 +117,11 @@ class ProgressController
             $category = 'xp';
         }
 
-        $top = $category === 'bonuses'
-            ? $this->bonusesLeaderboard()
-            : $this->profileLeaderboard($category);
+        $top = match ($category) {
+            'bonuses' => $this->bonusesLeaderboard(),
+            'balance' => $this->balanceLeaderboard(),
+            default => $this->profileLeaderboard($category),
+        };
 
         return Inertia::render('Progression/Leaderboard', [
             'leaderboard' => $top,
@@ -222,6 +229,28 @@ class ProgressController
                 'position' => $row->user?->position_title,
                 'total_amount' => (int) $row->total,
             ])
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Топ-10, не 50 — на відміну від решти категорій, поточний баланс
+     * картки це чутливіші дані (по суті "хто скільки має грошей просто
+     * зараз"), тож не афішуємо весь список, лише лідерів.
+     */
+    private function balanceLeaderboard(): array
+    {
+        return \App\Models\User::query()
+            ->where('is_shadow', false)
+            ->whereNotNull('email_verified_at')
+            ->get(['id', 'name', 'first_name', 'last_name', 'position_key'])
+            ->map(fn ($u) => [
+                'name' => $u->name,
+                'position' => $u->position_title,
+                'balance' => BalanceCalculator::balanceFor($u->id),
+            ])
+            ->sortByDesc('balance')
+            ->take(10)
             ->values()
             ->all();
     }

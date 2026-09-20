@@ -76,11 +76,11 @@ async function copyNumber() {
              Порожнеча, що лишається до низу картки, іде в один відступ
              перед нижнім рядком (mt-auto там), а не сюди. -->
         <div class="relative mt-3 flex flex-col gap-1.5 sm:mt-4">
-            <!-- Кожна група символів — окремий span у flex justify-between:
-                 розтягує номер на всю ширину картки (як на реальних
-                 картках), а не компактним блоком з порожнім місцем праворуч. -->
+            <!-- Кожна група символів — окремий span, помірний фіксований
+                 gap між групами (не justify-between: той розтягував лише
+                 4 групи на всю ширину з величезними проміжками). -->
             <div class="flex items-center gap-2">
-                <div class="flex min-w-0 flex-1 justify-between font-display text-lg font-semibold tracking-[0.03em] text-white sm:text-xl">
+                <div class="flex min-w-0 flex-1 gap-3 font-display text-lg font-semibold tracking-[0.03em] text-white sm:gap-4 sm:text-xl">
                     <span v-for="(g, i) in numberGroups" :key="i">{{ g }}</span>
                 </div>
                 <button

@@ -9,6 +9,7 @@ const props = defineProps({
     payouts: { type: Object, required: true },
     filters: { type: Object, default: () => ({ from: '', to: '', paid: '' }) },
     manualAwards: { type: Array, default: () => [] },
+    transfers: { type: Array, default: () => [] },
 });
 
 const filterForm = ref({ from: props.filters.from, to: props.filters.to, paid: props.filters.paid });
@@ -30,6 +31,10 @@ function describeFailure(e, fallback) {
 
 function fmt(amount) {
     return new Intl.NumberFormat('uk-UA').format(amount ?? 0) + '₴';
+}
+
+function fmtDateTime(d) {
+    return new Date(d).toLocaleString('uk-UA', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
 function fmtDate(d) {
@@ -300,6 +305,26 @@ function removeManualAward(award) {
                     <button class="shrink-0 text-xs text-ember-500/70 hover:text-ember-500" @click="removeManualAward(a)">Видалити</button>
                 </div>
             </div>
+        </section>
+
+        <!-- ================= ПЕРЕКАЗИ МІЖ УЧАСНИКАМИ ================= -->
+        <section class="mb-8 rounded-2xl border border-white/10 bg-white/[0.03] p-6">
+            <h2 class="mb-1 font-display text-lg text-white">Перекази між учасниками</h2>
+            <p class="mb-4 text-sm text-white/40">Лише перегляд — учасники переказують самі, з «Мої премії».</p>
+
+            <div v-if="transfers.length" class="space-y-2">
+                <div v-for="t in transfers" :key="t.id" class="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-white/10 px-4 py-2.5">
+                    <div>
+                        <span class="text-white">{{ t.sender?.name }}</span>
+                        <span class="mx-2 text-white/30">→</span>
+                        <span class="text-white">{{ t.recipient?.name }}</span>
+                        <span class="ml-3 text-sm text-gold-200">{{ fmt(t.amount) }}</span>
+                        <span v-if="t.note" class="ml-2 text-sm text-white/40">— {{ t.note }}</span>
+                    </div>
+                    <span class="shrink-0 text-xs text-white/30">{{ fmtDateTime(t.created_at) }}</span>
+                </div>
+            </div>
+            <p v-else class="text-sm text-white/30">Переказів ще не було.</p>
         </section>
 
         <!-- ================= ІСТОРІЯ ВИПЛАТ ================= -->

@@ -2,6 +2,7 @@
 
 namespace Addons\Bonuses\Http\Controllers\Admin;
 
+use Addons\Bonuses\Models\BankTransfer;
 use Addons\Bonuses\Models\BonusPayout;
 use Addons\Bonuses\Models\BonusSettings;
 use Addons\Bonuses\Models\InvestmentAchievementTier;
@@ -56,6 +57,14 @@ class BonusAdminController
             'filters' => $filters,
             'manualAwards' => ManualBonusAward::query()
                 ->with(['user:id,name', 'awardedBy:id,name'])
+                ->latest()
+                ->limit(30)
+                ->get(),
+            // Лише перегляд: скасування/повернення переказу тут навмисно
+            // немає — той самий принцип, що й у markPaid (одна дія вперед,
+            // без ручного редагування чужого балансу заднім числом).
+            'transfers' => BankTransfer::query()
+                ->with(['sender:id,name', 'recipient:id,name'])
                 ->latest()
                 ->limit(30)
                 ->get(),

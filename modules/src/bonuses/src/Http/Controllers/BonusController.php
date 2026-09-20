@@ -2,13 +2,20 @@
 
 namespace Addons\Bonuses\Http\Controllers;
 
+use Addons\Bonuses\Models\BankTransfer;
 use Addons\Bonuses\Models\BonusPayout;
 use Addons\Bonuses\Models\InvestmentAchievementTier;
 use Addons\Bonuses\Models\ManualBonusAward;
 use Addons\Bonuses\Models\UserInvestmentAchievement;
+use Addons\Bonuses\Services\BalanceCalculator;
 use Addons\Reports\Models\Report;
+use App\Models\User;
 use App\Support\MemberCard;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -45,21 +52,93 @@ class BonusController
             ->latest()
             ->get();
 
-        // Разом — авто-нарахування (усі тижні, незалежно від "виплачено")
-        // + ручні премії; те, що показує картка вгорі сторінки.
-        $totalEarned = (int) BonusPayout::query()->where('user_id', $userId)->sum('total_amount')
-            + (int) $manualAwards->sum('amount');
+        $transfers = BankTransfer::query()
+            ->where('from_user_id', $userId)->orWhere('to_user_id', $userId)
+            ->with(['sender:id,name', 'recipient:id,name'])
+            ->latest()
+            ->limit(20)
+            ->get()
+            ->map(fn (BankTransfer $t) => [
+                'id' => $t->id,
+                'direction' => $t->from_user_id === $userId ? 'out' : 'in',
+                'counterparty' => $t->from_user_id === $userId ? $t->recipient?->name : $t->sender?->name,
+                'amount' => $t->amount,
+                'note' => $t->note,
+                'created_at' => $t->created_at,
+            ]);
 
         return Inertia::render('Bonuses/Index', [
             'payouts' => $payouts,
             'cumulativeInvestment' => $cumulativeInvestment,
             'tiers' => $tiers,
             'manualAwards' => $manualAwards,
+            'transfers' => $transfers,
             'card' => [
                 'number' => MemberCard::masked($request->user()),
+                'numberFull' => MemberCard::number($request->user()),
                 'name' => $request->user()->name,
-                'totalEarned' => $totalEarned,
+                'balance' => BalanceCalculator::balanceFor($userId),
             ],
         ]);
+    }
+
+    /** Пошук отримувача переказу — як і скрізь, без тіньових акаунтів і без себе самого. */
+    public function searchRecipients(Request $request): JsonResponse
+    {
+        $query = trim((string) $request->query('q', ''));
+        if (mb_strlen($query) < 2) {
+            return response()->json(['ok' => true, 'message' => null, 'data' => ['members' => []], 'errors' => null, 'redirect' => null]);
+        }
+
+        $members = User::query()
+            ->where('id', '!=', $request->user()->id)
+            ->where('is_shadow', false)
+            ->where('name', 'like', '%'.$query.'%')
+            ->orderBy('name')
+            ->limit(10)
+            ->get(['id', 'name']);
+
+        return response()->json([
+            'ok' => true,
+            'message' => null,
+            'data' => ['members' => $members],
+            'errors' => null,
+            'redirect' => null,
+        ]);
+    }
+
+    public function storeTransfer(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'recipient_id' => ['required', 'integer', 'exists:users,id'],
+            'amount' => ['required', 'integer', 'min:1'],
+            'note' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $sender = $request->user();
+
+        if ((int) $data['recipient_id'] === $sender->id) {
+            throw ValidationException::withMessages(['recipient_id' => 'Не можна переказати самому собі.']);
+        }
+
+        DB::transaction(function () use ($data, $sender) {
+            // Баланс звіряємо ЗНОВУ тут, усередині транзакції — те, що
+            // показала форма мить тому, могло вже застаріти (ще один
+            // переказ у тому ж вікні).
+            $balance = BalanceCalculator::balanceFor($sender->id);
+
+            if ($data['amount'] > $balance) {
+                throw ValidationException::withMessages(['amount' => 'Недостатньо коштів на балансі.']);
+            }
+
+            BankTransfer::create([
+                'from_user_id' => $sender->id,
+                'to_user_id' => $data['recipient_id'],
+                'amount' => $data['amount'],
+                'note' => $data['note'] ?? null,
+            ]);
+        });
+
+        return back()->with('success', 'Переказ виконано.');
     }
 }

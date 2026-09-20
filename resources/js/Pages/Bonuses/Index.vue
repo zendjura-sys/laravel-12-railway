@@ -1,12 +1,14 @@
 <script setup>
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link, useForm } from '@inertiajs/vue3';
+import { ref, watch } from 'vue';
 import MemberCard from '@/Components/MemberCard.vue';
 
-defineProps({
+const props = defineProps({
     payouts: { type: Object, required: true },
     cumulativeInvestment: { type: Number, default: 0 },
     tiers: { type: Array, default: () => [] },
     manualAwards: { type: Array, default: () => [] },
+    transfers: { type: Array, default: () => [] },
     card: { type: Object, required: true },
 });
 
@@ -16,6 +18,50 @@ function fmt(amount) {
 
 function fmtDate(d) {
     return new Date(d).toLocaleDateString('uk-UA', { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+
+function fmtDateTime(d) {
+    return new Date(d).toLocaleString('uk-UA', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
+/* ---------- переказ ---------- */
+const transferForm = useForm({ recipient_id: null, amount: '', note: '' });
+const recipientQuery = ref('');
+const recipientMatches = ref([]);
+const recipientSelected = ref(null);
+let recipientSearchTimer = null;
+
+watch(recipientQuery, (q) => {
+    recipientSelected.value = null;
+    transferForm.recipient_id = null;
+    clearTimeout(recipientSearchTimer);
+
+    if (q.trim().length < 2) {
+        recipientMatches.value = [];
+        return;
+    }
+    recipientSearchTimer = setTimeout(async () => {
+        const { data } = await window.axios.get(route('bonuses.recipients.search'), { params: { q } });
+        recipientMatches.value = data.data.members;
+    }, 300);
+});
+
+function pickRecipient(member) {
+    recipientSelected.value = member;
+    transferForm.recipient_id = member.id;
+    recipientQuery.value = member.name;
+    recipientMatches.value = [];
+}
+
+function submitTransfer() {
+    transferForm.post(route('bonuses.transfer'), {
+        preserveScroll: true,
+        onSuccess: () => {
+            transferForm.reset();
+            recipientQuery.value = '';
+            recipientSelected.value = null;
+        },
+    });
 }
 </script>
 
@@ -35,8 +81,71 @@ function fmtDate(d) {
         <div class="mx-auto max-w-3xl px-6 py-10">
             <!-- ================= КАРТКА УЧАСНИКА ================= -->
             <div class="mb-8">
-                <MemberCard :number="card.number" :name="card.name" :amount="card.totalEarned" />
+                <MemberCard :number="card.number" :number-full="card.numberFull" :name="card.name" :amount="card.balance" />
             </div>
+
+            <!-- ================= ПЕРЕКАЗ ================= -->
+            <section v-reveal v-glow class="glass-panel mb-8 p-6">
+                <h2 class="mb-1 font-display text-lg text-white">Переказ на картку</h2>
+                <p class="mb-4 text-sm text-white/40">З вашого балансу — {{ fmt(card.balance) }} доступно.</p>
+
+                <form class="space-y-4" @submit.prevent="submitTransfer">
+                    <div class="relative">
+                        <input
+                            v-model="recipientQuery"
+                            type="text"
+                            placeholder="Кому (ім'я учасника)"
+                            class="w-full rounded-lg border border-white/10 bg-obsidian-900 px-3 py-2 text-sm text-white"
+                        />
+                        <div v-if="recipientMatches.length" class="absolute z-10 mt-1 w-full overflow-hidden rounded-lg border border-white/10 bg-obsidian-900 shadow-xl">
+                            <button
+                                v-for="m in recipientMatches"
+                                :key="m.id"
+                                type="button"
+                                class="block w-full px-3 py-2 text-left text-sm text-white hover:bg-white/5"
+                                @click="pickRecipient(m)"
+                            >
+                                {{ m.name }}
+                            </button>
+                        </div>
+                        <p v-if="recipientSelected" class="mt-1 text-xs text-emerald-400/70">Отримувач: {{ recipientSelected.name }}</p>
+                        <p v-if="transferForm.errors.recipient_id" class="mt-1 text-xs text-ember-500">{{ transferForm.errors.recipient_id }}</p>
+                    </div>
+
+                    <div class="grid gap-3 sm:grid-cols-2">
+                        <div>
+                            <input v-model.number="transferForm.amount" type="number" min="1" :max="card.balance" placeholder="Сума, ₴" class="w-full rounded-lg border border-white/10 bg-obsidian-900 px-3 py-2 text-sm text-white" />
+                            <p v-if="transferForm.errors.amount" class="mt-1 text-xs text-ember-500">{{ transferForm.errors.amount }}</p>
+                        </div>
+                        <input v-model="transferForm.note" type="text" placeholder="Повідомлення (необов'язково)" class="w-full rounded-lg border border-white/10 bg-obsidian-900 px-3 py-2 text-sm text-white" />
+                    </div>
+
+                    <button
+                        type="submit"
+                        :disabled="transferForm.processing || !transferForm.recipient_id"
+                        class="rounded-full border border-gold-400/40 px-5 py-2 text-xs font-medium uppercase tracking-widest text-gold-200 hover:border-gold-300 disabled:opacity-40"
+                    >
+                        Переказати
+                    </button>
+                </form>
+            </section>
+
+            <!-- ================= ІСТОРІЯ ПЕРЕКАЗІВ ================= -->
+            <section v-if="transfers.length" v-reveal v-glow class="glass-panel mb-8 overflow-hidden">
+                <h2 class="p-6 pb-4 font-display text-lg text-white">Історія переказів</h2>
+                <div v-for="t in transfers" :key="t.id" class="border-b border-white/5 px-6 py-4 last:border-0">
+                    <div class="flex items-start justify-between gap-3">
+                        <span class="text-sm text-white/50">
+                            {{ t.direction === 'out' ? 'До' : 'Від' }} <span class="text-white/70">{{ t.counterparty }}</span>
+                            <span v-if="t.note"> — {{ t.note }}</span>
+                        </span>
+                        <span class="shrink-0 text-lg font-semibold" :class="t.direction === 'out' ? 'text-ember-500/80' : 'text-emerald-400/80'">
+                            {{ t.direction === 'out' ? '−' : '+' }}{{ fmt(t.amount) }}
+                        </span>
+                    </div>
+                    <p class="mt-1 text-[11px] text-white/30">{{ fmtDateTime(t.created_at) }}</p>
+                </div>
+            </section>
 
             <!-- ================= ІНВЕСТИЦІЙНІ ТІРИ ================= -->
             <section v-if="tiers.length" v-reveal v-glow class="glass-panel mb-8 p-6">

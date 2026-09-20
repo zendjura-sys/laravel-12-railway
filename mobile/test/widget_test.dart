@@ -23,12 +23,20 @@ void main() {
         .setMockMethodCallHandler(channel, null);
   });
 
-  testWidgets('App boots to the login screen when no token is stored',
+  // flutter_test підміняє HttpClient так, що будь-який запит повертає 400
+  // (див. попередження "creates an HttpClient" у виводі test-раннера) — тож
+  // /api/app-config тут завжди "падає" і застосунок стартує з екрана
+  // "немає звʼязку", а не з логіну. Це чесно перевіряє саме цю гілку
+  // _StartupGate; повний happy-path (логін після успішного app-config)
+  // вимагав би мокати сам HttpClient, а не лише secure storage.
+  testWidgets(
+      'App shows a connection-error screen when /api/app-config is unreachable',
       (WidgetTester tester) async {
     await tester.pumpWidget(const MonsoryConnectApp());
     await tester.pumpAndSettle();
 
-    expect(find.text('Connect'), findsOneWidget);
-    expect(find.widgetWithText(ElevatedButton, 'УВІЙТИ'), findsOneWidget);
+    expect(find.text('Немає звʼязку з сервером'), findsOneWidget);
+    expect(
+        find.widgetWithText(TextButton, 'Перевірити ще раз'), findsOneWidget);
   });
 }

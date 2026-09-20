@@ -120,6 +120,14 @@ class ApiClient {
     return _decode(response) as Map<String, dynamic>;
   }
 
+  /// Публічний (без токена) конфіг застосунку — режим обслуговування,
+  /// примусове оновлення, які вкладки показувати. Читається ДО логіну.
+  Future<Map<String, dynamic>> appConfig() async {
+    final response =
+        await http.get(_uri('/app-config'), headers: await _headers());
+    return _decode(response) as Map<String, dynamic>;
+  }
+
   Future<Map<String, dynamic>> dashboard() async {
     final response =
         await http.get(_uri('/dashboard'), headers: await _headers(auth: true));

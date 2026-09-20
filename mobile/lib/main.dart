@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'api_client.dart';
+import 'app_info.dart';
+import 'screens/blocking_screen.dart';
 import 'screens/home_shell.dart';
 import 'screens/login_screen.dart';
 import 'theme.dart';
@@ -22,12 +24,87 @@ class MonsoryConnectApp extends StatelessWidget {
   }
 }
 
-/// Показує кабінет одразу, якщо на пристрої вже є збережений токен, інакше
-/// — екран входу. Токен не перевіряється тут звертанням до сервера — якщо
+/// Перший запит застосунку — GET /api/app-config (без токена, керується з
+/// Admin → Налаштування → Мобільний застосунок на сайті). Якщо все гаразд,
+/// далі — кабінет одразу, якщо на пристрої вже є збережений токен, інакше
+/// екран входу. Токен не перевіряється тут зверненням до сервера — якщо
 /// він прострочений/відкликаний, вкладка "Кабінет" сама зловить 401 на
 /// першому запиті й поверне на логін.
-class _StartupGate extends StatelessWidget {
+class _StartupGate extends StatefulWidget {
   const _StartupGate();
+
+  @override
+  State<_StartupGate> createState() => _StartupGateState();
+}
+
+class _StartupGateState extends State<_StartupGate> {
+  late Future<Map<String, dynamic>> _configFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _configFuture = ApiClient.instance.appConfig();
+  }
+
+  void _retry() {
+    setState(() => _configFuture = ApiClient.instance.appConfig());
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<Map<String, dynamic>>(
+      future: _configFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const Scaffold(
+              body: Center(child: CircularProgressIndicator()));
+        }
+
+        if (snapshot.hasError) {
+          return BlockingScreen(
+            icon: Icons.wifi_off,
+            title: 'Немає звʼязку з сервером',
+            message: 'Перевірте інтернет-зʼєднання й спробуйте ще раз.',
+            onRetry: _retry,
+          );
+        }
+
+        final config = snapshot.data!;
+
+        if (config['enabled'] != true) {
+          return BlockingScreen(
+            icon: Icons.build_circle_outlined,
+            title: 'Технічні роботи',
+            message:
+                (config['maintenanceMessage'] as String?)?.trim().isNotEmpty ==
+                        true
+                    ? config['maintenanceMessage'] as String
+                    : 'Застосунок тимчасово недоступний. Спробуйте пізніше.',
+            onRetry: _retry,
+          );
+        }
+
+        final minBuild = config['minBuild'] as int? ?? 0;
+        if (minBuild > currentBuildNumber) {
+          return BlockingScreen(
+            icon: Icons.system_update,
+            title: 'Оновіть застосунок',
+            message:
+                'Доступна нова версія Monsory Connect — продовжити роботу зі старою більше не вийде.',
+            downloadUrl: config['downloadUrl'] as String?,
+            onRetry: _retry,
+          );
+        }
+
+        return _AfterConfigGate(config: config);
+      },
+    );
+  }
+}
+
+class _AfterConfigGate extends StatelessWidget {
+  final Map<String, dynamic> config;
+  const _AfterConfigGate({required this.config});
 
   @override
   Widget build(BuildContext context) {
@@ -38,7 +115,12 @@ class _StartupGate extends StatelessWidget {
           return const Scaffold(
               body: Center(child: CircularProgressIndicator()));
         }
-        return snapshot.data != null ? const HomeShell() : const LoginScreen();
+        return snapshot.data != null
+            ? HomeShell(
+                bankTabEnabled: config['bankTabEnabled'] != false,
+                leaderboardTabEnabled: config['leaderboardTabEnabled'] != false,
+              )
+            : const LoginScreen();
       },
     );
   }

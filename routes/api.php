@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\AppConfigController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\DashboardController;
 use Illuminate\Support\Facades\Route;
@@ -9,6 +10,7 @@ use Illuminate\Support\Facades\Route;
  * CSRF. Веб і адмінка й далі йдуть через routes/web.php з сесіями, цей
  * файл існує лише для мобільного клієнта.
  */
+Route::get('/app-config', [AppConfigController::class, 'show']);
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/login/two-factor', [AuthController::class, 'loginTwoFactor']);
 

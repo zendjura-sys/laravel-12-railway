@@ -298,7 +298,7 @@ Route::middleware(['auth', 'verified', 'permission:settings.manage'])
     ->group(function () {
         Route::get('/', [SettingsController::class, 'index'])->name('index');
         Route::put('/{group}', [SettingsController::class, 'update'])
-            ->where('group', 'general|telegram|discord|ai|ai_prompts|report_guides')
+            ->where('group', 'general|telegram|discord|api_keys|ai|ai_prompts|report_guides|mobile_app')
             ->name('update');
     });
 

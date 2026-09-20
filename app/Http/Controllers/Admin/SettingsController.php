@@ -14,11 +14,21 @@ class SettingsController extends Controller
     /** @var array<string, array<int, string>> */
     private const FIELDS = [
         'general' => ['site_name', 'site_tagline', 'support_contact'],
-        'telegram' => ['telegram_bot_username', 'telegram_bot_token', 'telegram_webhook_url', 'telegram_bot_url', 'telegram_group_id'],
-        'discord' => ['discord_client_id', 'discord_client_secret', 'discord_redirect_uri', 'discord_bot_token', 'discord_guild_id'],
-        'ai' => [
+        // Самі токени/ключі (секрети) звідси винесено в окрему вкладку
+        // 'api_keys' нижче — тут лишається тільки не-секретна конфігурація
+        // кожної інтеграції.
+        'telegram' => ['telegram_bot_username', 'telegram_webhook_url', 'telegram_bot_url', 'telegram_group_id'],
+        'discord' => ['discord_client_id', 'discord_redirect_uri', 'discord_guild_id'],
+        // Усі токени й ключі сайту в одному місці — замість того, щоб
+        // шукати кожен у своїй тематичній вкладці.
+        'api_keys' => [
+            'telegram_bot_token',
+            'discord_client_secret',
+            'discord_bot_token',
             'mistral_api_key',
             'mistral_proxy_url',
+        ],
+        'ai' => [
             'ai_reports_analysis_enabled',
             'ai_rejection_advice_enabled',
             'ai_grade_advice_enabled',
@@ -43,6 +53,18 @@ class SettingsController extends Controller
             'report_guide_contract',
             'report_guide_investment',
             'report_guide_other',
+        ],
+        // Мобільний застосунок (Flutter): та сама Setting::get()/set(), без
+        // окремої моделі чи таблиці — читається публічним GET /api/app-config
+        // (без авторизації, застосунок має побачити maintenance-режим ще ДО
+        // логіну) і кешується так само, як решта Setting-значень.
+        'mobile_app' => [
+            'mobile_app_enabled',
+            'mobile_app_maintenance_message',
+            'mobile_app_min_build',
+            'mobile_app_bank_enabled',
+            'mobile_app_leaderboard_enabled',
+            'mobile_app_download_url',
         ],
     ];
 
@@ -69,6 +91,21 @@ class SettingsController extends Controller
     private const BOOLEAN_FIELDS = [
         'ai_reports_analysis_enabled', 'ai_rejection_advice_enabled', 'ai_grade_advice_enabled',
         'ai_applications_review_enabled', 'ai_broadcast_assist_enabled', 'ai_event_draft_enabled',
+        'mobile_app_enabled', 'mobile_app_bank_enabled', 'mobile_app_leaderboard_enabled',
+    ];
+
+    /**
+     * Підмножина BOOLEAN_FIELDS, де незаданий стан (адмін ще жодного разу
+     * не зберігав цю вкладку) означає "увімкнено", а не "вимкнено" — на
+     * відміну від решти тумблерів (AI-фічі, опційні за задумом). Інакше
+     * свіжий деплой без жодного дотику до цих налаштувань одразу вимкнув
+     * би застосунок і його вкладки всім. Зберігаються явним '1'/'0'
+     * (ніколи null), щоб відрізнити "не займали" від "явно вимкнули".
+     *
+     * @var array<int, string>
+     */
+    private const DEFAULT_ENABLED_BOOLEAN_FIELDS = [
+        'mobile_app_enabled', 'mobile_app_bank_enabled', 'mobile_app_leaderboard_enabled',
     ];
 
     /**
@@ -83,7 +120,7 @@ class SettingsController extends Controller
      * @var array<int, string>
      */
     private const URL_FIELDS = [
-        'telegram_webhook_url', 'telegram_bot_url', 'discord_redirect_uri',
+        'telegram_webhook_url', 'telegram_bot_url', 'discord_redirect_uri', 'mobile_app_download_url',
     ];
 
     public function index(): Response
@@ -91,9 +128,11 @@ class SettingsController extends Controller
         $values = [];
         foreach (self::FIELDS as $group => $keys) {
             foreach ($keys as $key) {
-                $values[$key] = in_array($key, self::BOOLEAN_FIELDS, true)
-                    ? Setting::get($key) === '1'
-                    : Setting::get($key);
+                $values[$key] = match (true) {
+                    in_array($key, self::DEFAULT_ENABLED_BOOLEAN_FIELDS, true) => Setting::get($key) !== '0',
+                    in_array($key, self::BOOLEAN_FIELDS, true) => Setting::get($key) === '1',
+                    default => Setting::get($key),
+                };
             }
         }
 
@@ -110,6 +149,7 @@ class SettingsController extends Controller
         foreach (self::FIELDS[$group] as $key) {
             $rules[$key] = match (true) {
                 in_array($key, self::BOOLEAN_FIELDS, true) => ['boolean'],
+                $key === 'mobile_app_min_build' => ['nullable', 'integer', 'min:1'],
                 in_array($key, self::URL_FIELDS, true) => ['nullable', 'string', 'max:2000', 'url:http,https'],
                 in_array($key, self::LONG_TEXT_FIELDS, true) => ['nullable', 'string', 'max:5000'],
                 default => ['nullable', 'string', 'max:2000'],
@@ -123,9 +163,11 @@ class SettingsController extends Controller
         ]);
 
         foreach (self::FIELDS[$group] as $key) {
-            $value = in_array($key, self::BOOLEAN_FIELDS, true)
-                ? (($data[$key] ?? false) ? '1' : null)
-                : ($data[$key] ?? null);
+            $value = match (true) {
+                in_array($key, self::DEFAULT_ENABLED_BOOLEAN_FIELDS, true) => ($data[$key] ?? false) ? '1' : '0',
+                in_array($key, self::BOOLEAN_FIELDS, true) => ($data[$key] ?? false) ? '1' : null,
+                default => $data[$key] ?? null,
+            };
 
             Setting::set($key, $value, $group);
         }

@@ -4,11 +4,19 @@ import 'bank_screen.dart';
 import 'dashboard_screen.dart';
 import 'leaderboard_screen.dart';
 
-/// Нижня навігація — три вкладки поки що (Кабінет/Банк/Рейтинг), кожна
-/// сама вантажить свої дані. IndexedStack тримає всі три в памʼяті одразу,
-/// щоб перемикання між вкладками не смикало мережу щоразу заново.
+/// Нижня навігація. Кількість і склад вкладок залежать від app-config
+/// (Admin → Налаштування → Мобільний застосунок на сайті) — "Кабінет"
+/// завжди є, "Банк"/"Рейтинг" можна вимкнути звідти без оновлення
+/// застосунку. IndexedStack тримає ввімкнені вкладки в памʼяті одразу,
+/// щоб перемикання між ними не смикало мережу щоразу заново.
 class HomeShell extends StatefulWidget {
-  const HomeShell({super.key});
+  final bool bankTabEnabled;
+  final bool leaderboardTabEnabled;
+
+  const HomeShell(
+      {super.key,
+      this.bankTabEnabled = true,
+      this.leaderboardTabEnabled = true});
 
   @override
   State<HomeShell> createState() => _HomeShellState();
@@ -17,37 +25,42 @@ class HomeShell extends StatefulWidget {
 class _HomeShellState extends State<HomeShell> {
   int _index = 0;
 
-  static const _screens = [
-    DashboardScreen(),
-    BankScreen(),
-    LeaderboardScreen(),
-  ];
-
   @override
   Widget build(BuildContext context) {
+    final screens = [
+      const DashboardScreen(),
+      if (widget.bankTabEnabled) const BankScreen(),
+      if (widget.leaderboardTabEnabled) const LeaderboardScreen(),
+    ];
+    final destinations = [
+      const NavigationDestination(
+          icon: Icon(Icons.home_outlined),
+          selectedIcon: Icon(Icons.home, color: AppColors.gold300),
+          label: 'Кабінет'),
+      if (widget.bankTabEnabled)
+        const NavigationDestination(
+            icon: Icon(Icons.account_balance_outlined),
+            selectedIcon: Icon(Icons.account_balance, color: AppColors.gold300),
+            label: 'Банк'),
+      if (widget.leaderboardTabEnabled)
+        const NavigationDestination(
+            icon: Icon(Icons.leaderboard_outlined),
+            selectedIcon: Icon(Icons.leaderboard, color: AppColors.gold300),
+            label: 'Рейтинг'),
+    ];
+    final index = _index.clamp(0, screens.length - 1);
+
     return Scaffold(
-      body: IndexedStack(index: _index, children: _screens),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _index,
-        onDestinationSelected: (i) => setState(() => _index = i),
-        backgroundColor: AppColors.obsidian900,
-        indicatorColor: AppColors.gold400.withValues(alpha: 0.12),
-        destinations: const [
-          NavigationDestination(
-              icon: Icon(Icons.home_outlined),
-              selectedIcon: Icon(Icons.home, color: AppColors.gold300),
-              label: 'Кабінет'),
-          NavigationDestination(
-              icon: Icon(Icons.account_balance_outlined),
-              selectedIcon:
-                  Icon(Icons.account_balance, color: AppColors.gold300),
-              label: 'Банк'),
-          NavigationDestination(
-              icon: Icon(Icons.leaderboard_outlined),
-              selectedIcon: Icon(Icons.leaderboard, color: AppColors.gold300),
-              label: 'Рейтинг'),
-        ],
-      ),
+      body: IndexedStack(index: index, children: screens),
+      bottomNavigationBar: destinations.length > 1
+          ? NavigationBar(
+              selectedIndex: index,
+              onDestinationSelected: (i) => setState(() => _index = i),
+              backgroundColor: AppColors.obsidian900,
+              indicatorColor: AppColors.gold400.withValues(alpha: 0.12),
+              destinations: destinations,
+            )
+          : null,
     );
   }
 }

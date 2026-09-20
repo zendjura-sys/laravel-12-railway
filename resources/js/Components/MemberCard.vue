@@ -26,6 +26,19 @@ function fmt(v) {
     return new Intl.NumberFormat('uk-UA').format(v ?? 0) + '₴';
 }
 
+const balanceText = computed(() => fmt(props.amount));
+
+// Адаптивний кегль: короткий баланс лишається великим і помітним, а
+// довгий (мільйони з розділювачами) сам зменшується замість того, щоб
+// вилазити за межі картки чи ховатися за truncate/трьома крапками.
+const balanceSizeClass = computed(() => {
+    const len = balanceText.value.length;
+    if (len <= 9) return 'text-3xl sm:text-4xl';
+    if (len <= 12) return 'text-2xl sm:text-3xl';
+    if (len <= 15) return 'text-xl sm:text-2xl';
+    return 'text-lg sm:text-xl';
+});
+
 const copied = ref(false);
 let copiedTimer = null;
 
@@ -95,11 +108,9 @@ async function copyNumber() {
                 <span v-if="copied" class="text-[9px] text-emerald-400/80">Скопійовано</span>
             </div>
 
-            <!-- Виділений блок — рамка й підсвітка золотом, більший кегль:
-                 баланс головне, на що дивляться на цій картці. -->
-            <div class="min-w-0 rounded-xl border border-gold-400/30 bg-gold-400/[0.07] px-3 py-2 shadow-[0_0_20px_-6px_rgba(212,175,55,0.35)]">
-                <p class="text-[9px] uppercase tracking-widest text-gold-300/60">Баланс</p>
-                <p class="font-display truncate text-3xl font-semibold text-gold-200 sm:text-4xl">{{ fmt(amount) }}</p>
+            <div class="min-w-0">
+                <p class="text-[9px] uppercase tracking-widest text-white/40">Баланс</p>
+                <p class="font-display truncate font-semibold text-gold-200" :class="balanceSizeClass">{{ balanceText }}</p>
             </div>
         </div>
 

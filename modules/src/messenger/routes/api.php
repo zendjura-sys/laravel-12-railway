@@ -15,6 +15,10 @@ Route::prefix('api')->middleware(['auth:sanctum', SubstituteBindings::class])->g
     Route::get('/messenger', [MessengerController::class, 'indexJson']);
     Route::get('/messenger/members/search', [MessengerController::class, 'searchMembers']);
     Route::post('/messenger/direct/{target}', [MessengerController::class, 'startDirectJson']);
+    Route::get('/messenger/stickers', [MessengerController::class, 'stickers']);
+    Route::post('/messenger/stickers', [MessengerController::class, 'storeSticker']);
+    Route::delete('/messenger/stickers/{sticker}', [MessengerController::class, 'destroySticker']);
+    Route::get('/messenger/gifs/search', [MessengerController::class, 'searchGifs']);
     Route::get('/messenger/{conversation}', [MessengerController::class, 'showJson']);
     Route::get('/messenger/{conversation}/messages', [MessengerController::class, 'messagesSince']);
     Route::post('/messenger/{conversation}/messages', [MessengerController::class, 'store']);

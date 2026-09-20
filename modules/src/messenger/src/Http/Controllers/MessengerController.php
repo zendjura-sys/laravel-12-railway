@@ -6,11 +6,16 @@ use Addons\Messenger\Models\Conversation;
 use Addons\Messenger\Models\ConversationParticipant;
 use Addons\Messenger\Models\ConversationRead;
 use Addons\Messenger\Models\Message;
+use Addons\Messenger\Models\Sticker;
+use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -35,6 +40,7 @@ class MessengerController
     public function show(Request $request, Conversation $conversation): Response
     {
         $payload = $this->conversationDetailPayload($request, $conversation);
+        $payload['giphyEnabled'] = (bool) Setting::get('giphy_api_key');
 
         return Inertia::render('Messenger/Show', $payload);
     }
@@ -90,7 +96,7 @@ class MessengerController
                 'type' => $c->type,
                 'title' => $title,
                 'lastMessage' => $lastMessage ? [
-                    'body' => $lastMessage->body,
+                    'body' => $this->previewText($lastMessage),
                     'senderName' => $lastMessage->sender?->name,
                     'isMine' => $lastMessage->sender_id === $user->id,
                     'createdAt' => $lastMessage->created_at,
@@ -170,13 +176,45 @@ class MessengerController
         $this->ensureAccess($conversation, $request->user());
 
         $validated = $request->validate([
-            'body' => ['required', 'string', 'max:4000'],
+            'type' => ['nullable', Rule::in(['text', 'photo', 'gif', 'sticker'])],
+            'body' => ['nullable', 'string', 'max:4000'],
+            'photo' => ['required_if:type,photo', 'nullable', 'image', 'max:8192'],
+            'gif_url' => ['required_if:type,gif', 'nullable', 'url'],
+            'sticker_id' => ['required_if:type,sticker', 'nullable', 'integer'],
         ]);
+
+        $type = $validated['type'] ?? 'text';
+        $body = trim($validated['body'] ?? '');
+        $attachmentPath = null;
+        $attachmentUrl = null;
+
+        if ($type === 'text' && $body === '') {
+            throw ValidationException::withMessages(['body' => 'Повідомлення не може бути порожнім.']);
+        }
+
+        if ($type === 'photo') {
+            $attachmentPath = $request->file('photo')->store('messenger/photos', 'public');
+        }
+
+        if ($type === 'gif') {
+            $attachmentUrl = $validated['gif_url'];
+        }
+
+        if ($type === 'sticker') {
+            $sticker = Sticker::where('user_id', $request->user()->id)->find($validated['sticker_id']);
+            if (! $sticker) {
+                throw ValidationException::withMessages(['sticker_id' => 'Стікер не знайдено.']);
+            }
+            $attachmentPath = $sticker->path;
+        }
 
         $message = Message::create([
             'conversation_id' => $conversation->id,
             'sender_id' => $request->user()->id,
-            'body' => trim($validated['body']),
+            'body' => $body,
+            'type' => $type,
+            'attachment_path' => $attachmentPath,
+            'attachment_url' => $attachmentUrl,
         ]);
         $message->load('sender:id,name,avatar_path');
 
@@ -191,6 +229,91 @@ class MessengerController
             'ok' => true,
             'message' => null,
             'data' => ['message' => $this->formatMessage($message, $request->user()->id)],
+            'errors' => null,
+            'redirect' => null,
+        ]);
+    }
+
+    /** Власна бібліотека стікерів того, хто питає — не спільна для всіх. */
+    public function stickers(Request $request): JsonResponse
+    {
+        $stickers = Sticker::where('user_id', $request->user()->id)->latest()->get();
+
+        return response()->json([
+            'ok' => true,
+            'message' => null,
+            'data' => ['stickers' => $stickers],
+            'errors' => null,
+            'redirect' => null,
+        ]);
+    }
+
+    public function storeSticker(Request $request): JsonResponse
+    {
+        $request->validate([
+            'image' => ['required', 'image', 'max:2048'],
+        ]);
+
+        $path = $request->file('image')->store('stickers', 'public');
+        $sticker = Sticker::create(['user_id' => $request->user()->id, 'path' => $path]);
+
+        return response()->json([
+            'ok' => true,
+            'message' => null,
+            'data' => ['sticker' => $sticker],
+            'errors' => null,
+            'redirect' => null,
+        ]);
+    }
+
+    public function destroySticker(Request $request, Sticker $sticker): JsonResponse
+    {
+        if ($sticker->user_id !== $request->user()->id) {
+            throw new AccessDeniedHttpException;
+        }
+
+        Storage::disk('public')->delete($sticker->path);
+        $sticker->delete();
+
+        return response()->json(['ok' => true, 'message' => null, 'data' => null, 'errors' => null, 'redirect' => null]);
+    }
+
+    /**
+     * Проксі до Giphy — ключ лишається на бекенді (Admin → API-ключі),
+     * ніколи не потрапляє на фронт. Без ключа фіча просто вимкнена
+     * (giphyEnabled: false в конфігу сторінки), сюди запит не дійде.
+     */
+    public function searchGifs(Request $request): JsonResponse
+    {
+        $apiKey = Setting::get('giphy_api_key');
+        if (! $apiKey) {
+            return response()->json(['ok' => true, 'message' => null, 'data' => ['gifs' => []], 'errors' => null, 'redirect' => null]);
+        }
+
+        $query = trim((string) $request->query('q', ''));
+        $endpoint = $query === '' ? 'trending' : 'search';
+
+        $response = Http::timeout(6)->get("https://api.giphy.com/v1/gifs/{$endpoint}", array_filter([
+            'api_key' => $apiKey,
+            'q' => $query === '' ? null : $query,
+            'limit' => 24,
+            'rating' => 'pg-13',
+        ]));
+
+        if (! $response->successful()) {
+            return response()->json(['ok' => true, 'message' => null, 'data' => ['gifs' => []], 'errors' => null, 'redirect' => null]);
+        }
+
+        $gifs = collect($response->json('data', []))->map(fn ($gif) => [
+            'id' => $gif['id'],
+            'previewUrl' => $gif['images']['fixed_width_small']['url'] ?? $gif['images']['fixed_width']['url'] ?? null,
+            'url' => $gif['images']['original']['url'] ?? null,
+        ])->filter(fn ($gif) => $gif['previewUrl'] && $gif['url'])->values();
+
+        return response()->json([
+            'ok' => true,
+            'message' => null,
+            'data' => ['gifs' => $gifs],
             'errors' => null,
             'redirect' => null,
         ]);
@@ -297,11 +420,24 @@ class MessengerController
         }
     }
 
+    /** Короткий підпис для списку розмов — фото/gif/стікер без тексту не мають порожнього рядка замість прев'ю. */
+    protected function previewText(Message $m): string
+    {
+        return match ($m->type) {
+            'photo' => $m->body !== '' ? '📷 '.$m->body : '📷 Фото',
+            'gif' => '🎞 GIF',
+            'sticker' => '🙂 Стікер',
+            default => $m->body,
+        };
+    }
+
     protected function formatMessage(Message $m, int $myId): array
     {
         return [
             'id' => $m->id,
             'body' => $m->body,
+            'type' => $m->type,
+            'attachmentUrl' => $m->attachment_url,
             'senderId' => $m->sender_id,
             'senderName' => $m->sender?->name,
             'isMine' => $m->sender_id === $myId,

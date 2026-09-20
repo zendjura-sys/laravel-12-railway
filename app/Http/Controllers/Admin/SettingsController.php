@@ -27,6 +27,7 @@ class SettingsController extends Controller
             'discord_bot_token',
             'mistral_api_key',
             'mistral_proxy_url',
+            'giphy_api_key',
         ],
         'ai' => [
             'ai_reports_analysis_enabled',

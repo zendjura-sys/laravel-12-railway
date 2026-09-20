@@ -9,6 +9,11 @@ Route::middleware(['web', 'auth'])->prefix('messenger')->name('messenger.')->gro
     Route::get('/', [MessengerController::class, 'index'])->name('index');
     Route::get('/members/search', [MessengerController::class, 'searchMembers'])->name('members.search');
     Route::post('/direct/{target}', [MessengerController::class, 'startDirect'])->name('direct.start');
+    // Літеральні шляхи — перед {conversation}, інакше wildcard перехопить їх.
+    Route::get('/stickers', [MessengerController::class, 'stickers'])->name('stickers.index');
+    Route::post('/stickers', [MessengerController::class, 'storeSticker'])->name('stickers.store');
+    Route::delete('/stickers/{sticker}', [MessengerController::class, 'destroySticker'])->name('stickers.destroy');
+    Route::get('/gifs/search', [MessengerController::class, 'searchGifs'])->name('gifs.search');
     Route::get('/{conversation}', [MessengerController::class, 'show'])->name('show');
     Route::get('/{conversation}/messages', [MessengerController::class, 'messagesSince'])->name('messages');
     Route::post('/{conversation}/messages', [MessengerController::class, 'store'])->name('messages.store');

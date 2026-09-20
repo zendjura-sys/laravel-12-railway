@@ -51,6 +51,12 @@ const TABS = {
                 secret: true,
                 hint: 'Заповнюйте лише якщо "Перевірити підключення" видає помилку — деякі хостинги можуть бути заблоковані на мережевому рівні. Формат: http://user:pass@host:port',
             },
+            {
+                key: 'giphy_api_key',
+                label: 'Giphy API Key (для gif у чаті)',
+                secret: true,
+                hint: 'Безкоштовний ключ на developers.giphy.com. Без ключа кнопка gif у чаті просто прихована.',
+            },
         ],
     },
     ai: {

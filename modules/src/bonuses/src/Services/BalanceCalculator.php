@@ -2,6 +2,7 @@
 
 namespace Addons\Bonuses\Services;
 
+use Addons\Bonuses\Models\BankDeposit;
 use Addons\Bonuses\Models\BankTransfer;
 use Addons\Bonuses\Models\BonusPayout;
 use Addons\Bonuses\Models\ManualBonusAward;
@@ -24,9 +25,14 @@ class BalanceCalculator
         $earned = (int) BonusPayout::query()->where('user_id', $userId)->where('paid', true)->sum('total_amount')
             + (int) ManualBonusAward::query()->where('user_id', $userId)->sum('amount');
 
-        $sent = (int) BankTransfer::query()->where('from_user_id', $userId)->sum('amount');
-        $received = (int) BankTransfer::query()->where('to_user_id', $userId)->sum('amount');
+        $sent = (int) BankTransfer::query()->where('from_user_id', $userId)->whereNull('reversed_at')->sum('amount');
+        $received = (int) BankTransfer::query()->where('to_user_id', $userId)->whereNull('reversed_at')->sum('amount');
 
-        return $earned - $sent + $received;
+        // Активні депозити заморожені (віднімаються), закриті — повертають
+        // principal (+ відсоток, якщо дозріли природно) назад у баланс.
+        $locked = (int) BankDeposit::query()->where('user_id', $userId)->where('status', 'active')->sum('amount');
+        $returned = (int) BankDeposit::query()->where('user_id', $userId)->whereIn('status', ['completed', 'withdrawn'])->sum('payout_amount');
+
+        return $earned - $sent + $received - $locked + $returned;
     }
 }

@@ -10,7 +10,11 @@ class BankTransfer extends Model
 {
     protected $table = 'bank_transfers';
 
-    protected $fillable = ['from_user_id', 'to_user_id', 'amount', 'note'];
+    protected $fillable = ['from_user_id', 'to_user_id', 'amount', 'note', 'reversed_at', 'reversed_by'];
+
+    protected $casts = [
+        'reversed_at' => 'datetime',
+    ];
 
     public function sender(): BelongsTo
     {
@@ -20,5 +24,10 @@ class BankTransfer extends Model
     public function recipient(): BelongsTo
     {
         return $this->belongsTo(User::class, 'to_user_id');
+    }
+
+    public function reversedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'reversed_by');
     }
 }

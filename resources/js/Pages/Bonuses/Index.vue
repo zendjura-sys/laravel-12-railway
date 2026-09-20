@@ -7,8 +7,9 @@ const props = defineProps({
     payouts: { type: Object, required: true },
     cumulativeInvestment: { type: Number, default: 0 },
     tiers: { type: Array, default: () => [] },
-    manualAwards: { type: Array, default: () => [] },
-    transfers: { type: Array, default: () => [] },
+    transactions: { type: Array, default: () => [] },
+    deposits: { type: Array, default: () => [] },
+    depositSettings: { type: Object, required: true },
     card: { type: Object, required: true },
 });
 
@@ -63,10 +64,42 @@ function submitTransfer() {
         },
     });
 }
+
+/* ---------- депозити ---------- */
+const depositForm = useForm({ amount: '' });
+function submitDeposit() {
+    depositForm.post(route('bonuses.deposits.store'), {
+        preserveScroll: true,
+        onSuccess: () => depositForm.reset(),
+    });
+}
+
+const withdrawingDeposit = ref(null);
+function withdrawDeposit(deposit) {
+    if (!confirm(`Зняти депозит достроково? Відсоток (${fmt(deposit.projected_payout - deposit.amount)}) буде втрачено — повернеться лише ${fmt(deposit.amount)}.`)) return;
+    withdrawingDeposit.value = deposit.id;
+    window.axios.post(route('bonuses.deposits.withdraw', deposit.id))
+        .then(() => window.location.reload())
+        .finally(() => { withdrawingDeposit.value = null; });
+}
+
+function depositStatusLabel(d) {
+    if (d.status === 'active') return 'активний';
+    if (d.status === 'completed') return 'дозрів';
+    return 'знято достроково';
+}
+
+const transactionIcon = {
+    payout: '💰',
+    manual_award: '🎁',
+    transfer: '↔',
+    deposit_open: '🔒',
+    deposit_close: '🔓',
+};
 </script>
 
 <template>
-    <Head title="Мої премії" />
+    <Head title="Банк" />
 
     <div class="min-h-screen bg-obsidian-950 font-sans text-white/80">
         <header class="border-b border-white/5 bg-obsidian-900/60 backdrop-blur-md">
@@ -74,7 +107,8 @@ function submitTransfer() {
                 <Link :href="route('dashboard')" class="text-xs uppercase tracking-widest text-white/40 hover:text-gold-300">
                     ← Кабінет
                 </Link>
-                <h1 class="font-display mt-2 text-3xl font-light text-white">Мої премії</h1>
+                <h1 class="font-display mt-2 text-3xl font-light text-white">Банк</h1>
+                <p class="mt-1 text-sm text-white/40">Премії, перекази та депозити родини — все в одному місці.</p>
             </div>
         </header>
 
@@ -130,20 +164,58 @@ function submitTransfer() {
                 </form>
             </section>
 
-            <!-- ================= ІСТОРІЯ ПЕРЕКАЗІВ ================= -->
-            <section v-if="transfers.length" v-reveal v-glow class="glass-panel mb-8 overflow-hidden">
-                <h2 class="p-6 pb-4 font-display text-lg text-white">Історія переказів</h2>
-                <div v-for="t in transfers" :key="t.id" class="border-b border-white/5 px-6 py-4 last:border-0">
-                    <div class="flex items-start justify-between gap-3">
-                        <span class="text-sm text-white/50">
-                            {{ t.direction === 'out' ? 'До' : 'Від' }} <span class="text-white/70">{{ t.counterparty }}</span>
-                            <span v-if="t.note"> — {{ t.note }}</span>
-                        </span>
-                        <span class="shrink-0 text-lg font-semibold" :class="t.direction === 'out' ? 'text-ember-500/80' : 'text-emerald-400/80'">
-                            {{ t.direction === 'out' ? '−' : '+' }}{{ fmt(t.amount) }}
-                        </span>
+            <!-- ================= ДЕПОЗИТИ ================= -->
+            <section v-reveal v-glow class="glass-panel mb-8 p-6">
+                <h2 class="mb-1 font-display text-lg text-white">Депозити</h2>
+                <p v-if="depositSettings.enabled" class="mb-4 text-sm text-white/40">
+                    Заморозьте частину балансу на {{ depositSettings.termDays }} {{ depositSettings.termDays === 1 ? 'день' : 'днів' }} — поверніть з +{{ depositSettings.rate }}%.
+                    Мінімум — {{ fmt(depositSettings.minAmount) }}.
+                </p>
+                <p v-else class="mb-4 text-sm text-white/30">Депозити тимчасово вимкнено адміністрацією.</p>
+
+                <form v-if="depositSettings.enabled" class="flex flex-wrap items-start gap-3" @submit.prevent="submitDeposit">
+                    <div>
+                        <input v-model.number="depositForm.amount" type="number" :min="depositSettings.minAmount" :max="card.balance" placeholder="Сума, ₴" class="rounded-lg border border-white/10 bg-obsidian-900 px-3 py-2 text-sm text-white" />
+                        <p v-if="depositForm.errors.amount" class="mt-1 text-xs text-ember-500">{{ depositForm.errors.amount }}</p>
                     </div>
-                    <p class="mt-1 text-[11px] text-white/30">{{ fmtDateTime(t.created_at) }}</p>
+                    <button
+                        type="submit"
+                        :disabled="depositForm.processing || !depositForm.amount"
+                        class="rounded-full border border-gold-400/40 px-5 py-2 text-xs font-medium uppercase tracking-widest text-gold-200 hover:border-gold-300 disabled:opacity-40"
+                    >
+                        Відкрити депозит
+                    </button>
+                </form>
+
+                <div v-if="deposits.length" class="mt-5 space-y-2">
+                    <div v-for="d in deposits" :key="d.id" class="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-white/10 px-4 py-2.5">
+                        <div>
+                            <span class="font-medium text-white">{{ fmt(d.amount) }}</span>
+                            <span class="ml-2 text-sm text-white/40">+{{ d.interest_rate }}%</span>
+                            <span
+                                class="ml-2 rounded-full px-2 py-0.5 text-[10px] uppercase tracking-wide"
+                                :class="{
+                                    'bg-gold-400/10 text-gold-300': d.status === 'active',
+                                    'bg-emerald-400/10 text-emerald-300': d.status === 'completed',
+                                    'bg-white/5 text-white/40': d.status === 'withdrawn',
+                                }"
+                            >
+                                {{ depositStatusLabel(d) }}
+                            </span>
+                            <p class="mt-1 text-xs text-white/30">
+                                <template v-if="d.status === 'active'">дозріє {{ fmtDateTime(d.matures_at) }} → {{ fmt(d.projected_payout) }}</template>
+                                <template v-else>закрито {{ fmtDateTime(d.closed_at) }} → повернуто {{ fmt(d.payout_amount) }}</template>
+                            </p>
+                        </div>
+                        <button
+                            v-if="d.status === 'active'"
+                            :disabled="withdrawingDeposit === d.id"
+                            class="shrink-0 rounded-full border border-white/15 px-3 py-1 text-xs text-white/50 hover:border-ember-500/40 hover:text-ember-400 disabled:opacity-40"
+                            @click="withdrawDeposit(d)"
+                        >
+                            Зняти достроково
+                        </button>
+                    </div>
                 </div>
             </section>
 
@@ -171,42 +243,37 @@ function submitTransfer() {
                 </div>
             </section>
 
-            <!-- ================= РУЧНІ ПРЕМІЇ ================= -->
-            <section v-if="manualAwards.length" v-reveal v-glow class="glass-panel mb-8 overflow-hidden">
-                <h2 class="p-6 pb-4 font-display text-lg text-white">Ручні премії</h2>
-                <div v-for="a in manualAwards" :key="a.id" class="border-b border-white/5 px-6 py-4 last:border-0">
-                    <div class="flex items-start justify-between gap-3">
-                        <span class="text-sm text-white/50">{{ fmtDate(a.created_at) }}<span v-if="a.note"> — {{ a.note }}</span></span>
-                        <span class="shrink-0 text-lg font-semibold text-gold-200">{{ fmt(a.amount) }}</span>
-                    </div>
-                </div>
-            </section>
-
-            <!-- ================= ІСТОРІЯ НАРАХУВАНЬ ================= -->
+            <!-- ================= ВИПИСКА ПО РАХУНКУ ================= -->
             <section v-reveal:100 v-glow class="glass-panel overflow-hidden">
-                <h2 class="p-6 pb-4 font-display text-lg text-white">Історія нарахувань</h2>
+                <h2 class="p-6 pb-4 font-display text-lg text-white">Виписка по рахунку</h2>
                 <div
-                    v-for="p in payouts.data"
-                    :key="p.id"
+                    v-for="(t, i) in transactions"
+                    :key="i"
                     class="border-b border-white/5 px-6 py-4 last:border-0"
+                    :class="{ 'opacity-40': t.reversed }"
                 >
                     <div class="flex items-start justify-between gap-3">
-                        <span class="text-sm text-white/50">Тиждень від {{ fmtDate(p.week_start) }}</span>
-                        <span class="shrink-0 text-lg font-semibold text-gold-200">{{ fmt(p.total_amount) }}</span>
+                        <span class="text-sm text-white/60">
+                            <span class="mr-1">{{ transactionIcon[t.kind] ?? '•' }}</span>
+                            {{ t.label }}
+                            <span v-if="t.detail" class="text-white/40"> — {{ t.detail }}</span>
+                            <span v-if="t.reversed" class="ml-2 text-[10px] uppercase tracking-wide text-ember-500/70">скасовано</span>
+                        </span>
+                        <span
+                            class="shrink-0 text-lg font-semibold"
+                            :class="{
+                                'text-emerald-400/80': t.sign === '+',
+                                'text-ember-500/80': t.sign === '−',
+                                'text-white/30': t.sign === '·',
+                            }"
+                        >
+                            {{ t.sign !== '·' ? t.sign : '' }}{{ fmt(t.amount) }}
+                        </span>
                     </div>
-                    <div class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-white/40">
-                        <span v-if="p.bizwar_amount > 0">Бізвар: {{ fmt(p.bizwar_amount) }} <template v-if="p.bizwar_winrate !== null">({{ p.bizwar_winrate }}%)</template></span>
-                        <span v-if="p.contract_amount > 0">Контракти: {{ fmt(p.contract_amount) }} (×{{ p.contracts_count }})</span>
-                        <span v-if="p.streak_bonus_amount > 0">Серія перемог: +{{ fmt(p.streak_bonus_amount) }}</span>
-                        <span v-if="p.contracts_count_bonus_amount > 0">К-сть контрактів: +{{ fmt(p.contracts_count_bonus_amount) }}</span>
-                        <span v-if="p.investment_bonus_amount > 0">Інвестиційний тір: +{{ fmt(p.investment_bonus_amount) }}</span>
-                    </div>
-                    <p class="mt-2 text-[11px]" :class="p.paid ? 'text-emerald-400/70' : 'text-white/30'">
-                        {{ p.paid ? '✓ виплачено' : 'ще не виплачено' }}
-                    </p>
+                    <p class="mt-1 text-[11px] text-white/30">{{ fmtDateTime(t.at) }}</p>
                 </div>
-                <div v-if="payouts.data.length === 0" class="px-6 py-12 text-center text-white/30">
-                    Нарахувань ще не було
+                <div v-if="transactions.length === 0" class="px-6 py-12 text-center text-white/30">
+                    Операцій ще не було
                 </div>
             </section>
 

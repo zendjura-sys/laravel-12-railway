@@ -10,6 +10,7 @@ const props = defineProps({
     filters: { type: Object, default: () => ({ from: '', to: '', paid: '' }) },
     manualAwards: { type: Array, default: () => [] },
     transfers: { type: Array, default: () => [] },
+    deposits: { type: Array, default: () => [] },
 });
 
 const filterForm = ref({ from: props.filters.from, to: props.filters.to, paid: props.filters.paid });
@@ -148,12 +149,44 @@ function removeManualAward(award) {
     if (!confirm(`Видалити ручну премію «${award.user?.name}» на ${fmt(award.amount)}?`)) return;
     router.delete(route('admin.bonuses.manual.destroy', award.id), { preserveScroll: true });
 }
+
+/* ------------------------- Налаштування банку ------------------------- */
+
+const bankForm = useForm({
+    transfer_enabled: props.settings.transfer_enabled,
+    transfer_daily_limit: props.settings.transfer_daily_limit,
+    transfer_min_amount: props.settings.transfer_min_amount,
+    deposit_enabled: props.settings.deposit_enabled,
+    deposit_interest_rate: props.settings.deposit_interest_rate,
+    deposit_min_amount: props.settings.deposit_min_amount,
+    deposit_term_days: props.settings.deposit_term_days,
+});
+
+function saveBankSettings() {
+    bankForm.put(route('admin.bonuses.bank-settings.update'), { preserveScroll: true });
+}
+
+/* ------------------------- Перекази: скасування ------------------------- */
+
+const reversingTransfer = ref(null);
+async function reverseTransfer(transfer) {
+    if (!confirm(`Скасувати переказ ${fmt(transfer.amount)} від «${transfer.sender?.name}» до «${transfer.recipient?.name}»? Кошти повернуться на баланс відправника.`)) return;
+    reversingTransfer.value = transfer.id;
+    try {
+        await window.axios.post(route('admin.bonuses.transfers.reverse', transfer.id));
+        transfer.reversed_at = new Date().toISOString();
+    } catch (e) {
+        alert(describeFailure(e, 'Не вдалося скасувати переказ'));
+    } finally {
+        reversingTransfer.value = null;
+    }
+}
 </script>
 
 <template>
-    <Head title="Премії — Monsory Connect" />
+    <Head title="Банк — Monsory Connect" />
 
-    <AdminLayout title="Премії">
+    <AdminLayout title="Банк">
         <div class="mb-6 flex justify-end">
             <button
                 :disabled="running"
@@ -307,24 +340,109 @@ function removeManualAward(award) {
             </div>
         </section>
 
+        <!-- ================= НАЛАШТУВАННЯ БАНКУ ================= -->
+        <section class="mb-8 rounded-2xl border border-white/10 bg-white/[0.03] p-6">
+            <h2 class="mb-4 font-display text-lg text-white">Налаштування банку</h2>
+            <form class="grid gap-5 sm:grid-cols-2" @submit.prevent="saveBankSettings">
+                <div class="sm:col-span-2 flex items-center gap-3 rounded-lg border border-white/10 px-4 py-3">
+                    <input id="transfer_enabled" v-model="bankForm.transfer_enabled" type="checkbox" class="h-4 w-4 rounded border-white/20 bg-obsidian-900" />
+                    <label for="transfer_enabled" class="text-sm text-white">Дозволити перекази між учасниками</label>
+                </div>
+                <div>
+                    <label class="mb-1 block text-xs uppercase tracking-widest text-white/40">Мінімальна сума переказу (₴)</label>
+                    <input v-model.number="bankForm.transfer_min_amount" type="number" min="1" class="w-full rounded-lg border border-white/10 bg-obsidian-900 px-3 py-2 text-white" />
+                </div>
+                <div>
+                    <label class="mb-1 block text-xs uppercase tracking-widest text-white/40">Денний ліміт переказів на учасника (₴)</label>
+                    <input v-model.number="bankForm.transfer_daily_limit" type="number" min="1" placeholder="без ліміту" class="w-full rounded-lg border border-white/10 bg-obsidian-900 px-3 py-2 text-white" />
+                </div>
+
+                <div class="sm:col-span-2 flex items-center gap-3 rounded-lg border border-white/10 px-4 py-3">
+                    <input id="deposit_enabled" v-model="bankForm.deposit_enabled" type="checkbox" class="h-4 w-4 rounded border-white/20 bg-obsidian-900" />
+                    <label for="deposit_enabled" class="text-sm text-white">Дозволити депозити</label>
+                </div>
+                <div>
+                    <label class="mb-1 block text-xs uppercase tracking-widest text-white/40">Відсоток за строк депозиту (%)</label>
+                    <input v-model.number="bankForm.deposit_interest_rate" type="number" min="0" max="100" step="0.1" class="w-full rounded-lg border border-white/10 bg-obsidian-900 px-3 py-2 text-white" />
+                </div>
+                <div>
+                    <label class="mb-1 block text-xs uppercase tracking-widest text-white/40">Строк депозиту (днів)</label>
+                    <input v-model.number="bankForm.deposit_term_days" type="number" min="1" class="w-full rounded-lg border border-white/10 bg-obsidian-900 px-3 py-2 text-white" />
+                </div>
+                <div>
+                    <label class="mb-1 block text-xs uppercase tracking-widest text-white/40">Мінімальна сума депозиту (₴)</label>
+                    <input v-model.number="bankForm.deposit_min_amount" type="number" min="1" class="w-full rounded-lg border border-white/10 bg-obsidian-900 px-3 py-2 text-white" />
+                </div>
+
+                <div class="sm:col-span-2">
+                    <button
+                        type="submit"
+                        :disabled="bankForm.processing"
+                        class="rounded-full bg-gradient-to-r from-gold-500 via-gold-300 to-gold-500 px-6 py-2.5 text-sm font-semibold uppercase tracking-widest text-obsidian-950 shadow-gold transition-transform hover:scale-[1.03] disabled:opacity-40"
+                    >
+                        Зберегти
+                    </button>
+                </div>
+            </form>
+        </section>
+
         <!-- ================= ПЕРЕКАЗИ МІЖ УЧАСНИКАМИ ================= -->
         <section class="mb-8 rounded-2xl border border-white/10 bg-white/[0.03] p-6">
             <h2 class="mb-1 font-display text-lg text-white">Перекази між учасниками</h2>
-            <p class="mb-4 text-sm text-white/40">Лише перегляд — учасники переказують самі, з «Мої премії».</p>
+            <p class="mb-4 text-sm text-white/40">Учасники переказують самі, з «Банку» — тут можна лише скасувати помилковий переказ.</p>
 
             <div v-if="transfers.length" class="space-y-2">
-                <div v-for="t in transfers" :key="t.id" class="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-white/10 px-4 py-2.5">
+                <div v-for="t in transfers" :key="t.id" class="flex flex-wrap items-center justify-between gap-2 rounded-lg border px-4 py-2.5" :class="t.reversed_at ? 'border-white/5 opacity-50' : 'border-white/10'">
                     <div>
                         <span class="text-white">{{ t.sender?.name }}</span>
                         <span class="mx-2 text-white/30">→</span>
                         <span class="text-white">{{ t.recipient?.name }}</span>
                         <span class="ml-3 text-sm text-gold-200">{{ fmt(t.amount) }}</span>
                         <span v-if="t.note" class="ml-2 text-sm text-white/40">— {{ t.note }}</span>
+                        <span v-if="t.reversed_at" class="ml-2 rounded-full bg-ember-500/10 px-2 py-0.5 text-[10px] uppercase tracking-wide text-ember-400">скасовано</span>
                     </div>
-                    <span class="shrink-0 text-xs text-white/30">{{ fmtDateTime(t.created_at) }}</span>
+                    <div class="flex shrink-0 items-center gap-3">
+                        <span class="text-xs text-white/30">{{ fmtDateTime(t.created_at) }}</span>
+                        <button
+                            v-if="!t.reversed_at"
+                            :disabled="reversingTransfer === t.id"
+                            class="rounded-full border border-white/15 px-3 py-1 text-xs text-white/50 hover:border-ember-500/40 hover:text-ember-400 disabled:opacity-40"
+                            @click="reverseTransfer(t)"
+                        >
+                            Скасувати
+                        </button>
+                    </div>
                 </div>
             </div>
             <p v-else class="text-sm text-white/30">Переказів ще не було.</p>
+        </section>
+
+        <!-- ================= ДЕПОЗИТИ ================= -->
+        <section class="mb-8 rounded-2xl border border-white/10 bg-white/[0.03] p-6">
+            <h2 class="mb-1 font-display text-lg text-white">Депозити учасників</h2>
+            <p class="mb-4 text-sm text-white/40">Лише перегляд.</p>
+
+            <div v-if="deposits.length" class="space-y-2">
+                <div v-for="d in deposits" :key="d.id" class="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-white/10 px-4 py-2.5">
+                    <div>
+                        <span class="text-white">{{ d.user?.name }}</span>
+                        <span class="ml-3 text-sm text-gold-200">{{ fmt(d.amount) }}</span>
+                        <span class="ml-2 text-sm text-white/40">+{{ d.interest_rate }}%</span>
+                        <span
+                            class="ml-2 rounded-full px-2 py-0.5 text-[10px] uppercase tracking-wide"
+                            :class="{
+                                'bg-gold-400/10 text-gold-300': d.status === 'active',
+                                'bg-emerald-400/10 text-emerald-300': d.status === 'completed',
+                                'bg-white/5 text-white/40': d.status === 'withdrawn',
+                            }"
+                        >
+                            {{ d.status === 'active' ? 'активний' : (d.status === 'completed' ? 'дозрів' : 'знято достроково') }}
+                        </span>
+                    </div>
+                    <span class="shrink-0 text-xs text-white/30">{{ fmtDateTime(d.created_at) }}</span>
+                </div>
+            </div>
+            <p v-else class="text-sm text-white/30">Депозитів ще не було.</p>
         </section>
 
         <!-- ================= ІСТОРІЯ ВИПЛАТ ================= -->

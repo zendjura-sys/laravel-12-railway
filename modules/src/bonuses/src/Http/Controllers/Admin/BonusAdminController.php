@@ -2,6 +2,7 @@
 
 namespace Addons\Bonuses\Http\Controllers\Admin;
 
+use Addons\Bonuses\Models\BankDeposit;
 use Addons\Bonuses\Models\BankTransfer;
 use Addons\Bonuses\Models\BonusPayout;
 use Addons\Bonuses\Models\BonusSettings;
@@ -9,6 +10,7 @@ use Addons\Bonuses\Models\InvestmentAchievementTier;
 use Addons\Bonuses\Models\ManualBonusAward;
 use Addons\Bonuses\Services\BonusCalculator;
 use Addons\Bonuses\Services\BonusDigest;
+use Addons\Notifications\Services\NotificationService;
 use App\Models\User;
 use App\Support\CsvExport;
 use Illuminate\Http\JsonResponse;
@@ -60,11 +62,16 @@ class BonusAdminController
                 ->latest()
                 ->limit(30)
                 ->get(),
-            // Лише перегляд: скасування/повернення переказу тут навмисно
-            // немає — той самий принцип, що й у markPaid (одна дія вперед,
-            // без ручного редагування чужого балансу заднім числом).
+            // Скасувати можна — reverseTransfer() нижче; сам переказ не
+            // видаляється (аудит-слід лишається), лише позначається
+            // reversed_at і виключається з розрахунку балансу обох сторін.
             'transfers' => BankTransfer::query()
-                ->with(['sender:id,name', 'recipient:id,name'])
+                ->with(['sender:id,name', 'recipient:id,name', 'reversedBy:id,name'])
+                ->latest()
+                ->limit(30)
+                ->get(),
+            'deposits' => BankDeposit::query()
+                ->with('user:id,name')
                 ->latest()
                 ->limit(30)
                 ->get(),
@@ -167,6 +174,63 @@ class BonusAdminController
         BonusSettings::current()->update($data);
 
         return back()->with('success', 'Налаштування премій збережено.');
+    }
+
+    public function updateBankSettings(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'transfer_enabled' => ['required', 'boolean'],
+            'transfer_daily_limit' => ['nullable', 'integer', 'min:1'],
+            'transfer_min_amount' => ['required', 'integer', 'min:1'],
+            'deposit_enabled' => ['required', 'boolean'],
+            'deposit_interest_rate' => ['required', 'numeric', 'min:0', 'max:100'],
+            'deposit_min_amount' => ['required', 'integer', 'min:1'],
+            'deposit_term_days' => ['required', 'integer', 'min:1'],
+        ]);
+
+        BonusSettings::current()->update($data);
+
+        return back()->with('success', 'Налаштування банку збережено.');
+    }
+
+    /**
+     * Скасування переказу: НЕ видалення рядка (аудит-слід лишається
+     * назавжди), лише reversed_at/reversed_by — BalanceCalculator сам
+     * виключає позначені рядки з обох боків (відправник і отримувач).
+     */
+    public function reverseTransfer(BankTransfer $transfer): JsonResponse
+    {
+        if ($transfer->reversed_at !== null) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Цей переказ уже скасовано.',
+                'data' => null,
+                'errors' => null,
+                'redirect' => null,
+            ], 422);
+        }
+
+        $transfer->update([
+            'reversed_at' => now(),
+            'reversed_by' => request()->user()->id,
+        ]);
+
+        if (class_exists(NotificationService::class) && $transfer->sender) {
+            app(NotificationService::class)->notify(
+                $transfer->sender,
+                'bank_transfer_reversed',
+                'Переказ скасовано',
+                "Ваш переказ на {$transfer->amount}₴ до {$transfer->recipient?->name} скасовано адміністрацією — кошти повернуто на баланс.",
+            );
+        }
+
+        return response()->json([
+            'ok' => true,
+            'message' => 'Переказ скасовано, кошти повернуто.',
+            'data' => null,
+            'errors' => null,
+            'redirect' => null,
+        ]);
     }
 
     public function storeTier(Request $request): RedirectResponse

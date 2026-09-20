@@ -2,12 +2,16 @@
 
 namespace Addons\Bonuses\Http\Controllers;
 
+use Addons\Bonuses\Models\BankDeposit;
 use Addons\Bonuses\Models\BankTransfer;
 use Addons\Bonuses\Models\BonusPayout;
+use Addons\Bonuses\Models\BonusSettings;
 use Addons\Bonuses\Models\InvestmentAchievementTier;
 use Addons\Bonuses\Models\ManualBonusAward;
 use Addons\Bonuses\Models\UserInvestmentAchievement;
 use Addons\Bonuses\Services\BalanceCalculator;
+use Addons\Bonuses\Services\DepositService;
+use Addons\Notifications\Services\NotificationService;
 use Addons\Reports\Models\Report;
 use App\Models\User;
 use App\Support\MemberCard;
@@ -24,6 +28,9 @@ class BonusController
     public function index(Request $request): Response
     {
         $userId = $request->user()->id;
+
+        // Ліниве дозрівання — перш ніж рахувати баланс і показувати список.
+        DepositService::settleMaturedFor($userId);
 
         $payouts = BonusPayout::query()
             ->where('user_id', $userId)
@@ -47,32 +54,107 @@ class BonusController
                 'earned' => $earnedTierIds->contains($tier->id),
             ]);
 
-        $manualAwards = ManualBonusAward::query()
-            ->where('user_id', $userId)
-            ->latest()
-            ->get();
+        $manualAwards = ManualBonusAward::query()->where('user_id', $userId)->get();
 
         $transfers = BankTransfer::query()
             ->where('from_user_id', $userId)->orWhere('to_user_id', $userId)
             ->with(['sender:id,name', 'recipient:id,name'])
+            ->get();
+
+        $deposits = BankDeposit::query()
+            ->where('user_id', $userId)
             ->latest()
-            ->limit(20)
             ->get()
-            ->map(fn (BankTransfer $t) => [
-                'id' => $t->id,
-                'direction' => $t->from_user_id === $userId ? 'out' : 'in',
-                'counterparty' => $t->from_user_id === $userId ? $t->recipient?->name : $t->sender?->name,
-                'amount' => $t->amount,
-                'note' => $t->note,
-                'created_at' => $t->created_at,
+            ->map(fn (BankDeposit $d) => [
+                'id' => $d->id,
+                'amount' => $d->amount,
+                'interest_rate' => $d->interest_rate,
+                'status' => $d->status,
+                'matures_at' => $d->matures_at,
+                'payout_amount' => $d->payout_amount,
+                'projected_payout' => $d->projectedPayout(),
+                'created_at' => $d->created_at,
+                'closed_at' => $d->closed_at,
             ]);
+
+        // ---------- Єдина хронологічна стрічка операцій (банківська виписка) ----------
+        $transactions = collect();
+
+        foreach ($payouts as $p) {
+            // На сторінці показуємо лише реально виплачені — невиплачені
+            // ще не є частиною балансу, їм не місце у виписці по рахунку.
+            if (! $p->paid) {
+                continue;
+            }
+            $transactions->push([
+                'kind' => 'payout',
+                'sign' => '+',
+                'amount' => $p->total_amount,
+                'label' => 'Тижнева премія',
+                'detail' => 'Тиждень від '.\Illuminate\Support\Carbon::parse($p->week_start)->format('d.m.Y'),
+                'at' => $p->paid_at ?? $p->created_at,
+            ]);
+        }
+
+        foreach ($manualAwards as $a) {
+            $transactions->push([
+                'kind' => 'manual_award',
+                'sign' => '+',
+                'amount' => $a->amount,
+                'label' => 'Ручна премія',
+                'detail' => $a->note,
+                'at' => $a->created_at,
+            ]);
+        }
+
+        foreach ($transfers as $t) {
+            $out = $t->from_user_id === $userId;
+            $transactions->push([
+                'kind' => 'transfer',
+                'sign' => $t->reversed_at ? '·' : ($out ? '−' : '+'),
+                'amount' => $t->amount,
+                'label' => $out ? 'Переказ до '.($t->recipient?->name ?? '—') : 'Переказ від '.($t->sender?->name ?? '—'),
+                'detail' => $t->note,
+                'reversed' => (bool) $t->reversed_at,
+                'at' => $t->created_at,
+            ]);
+        }
+
+        foreach ($deposits as $d) {
+            $transactions->push([
+                'kind' => 'deposit_open',
+                'sign' => '−',
+                'amount' => $d['amount'],
+                'label' => 'Відкрито депозит',
+                'detail' => "на {$d['interest_rate']}% / {$d['created_at']}",
+                'at' => $d['created_at'],
+            ]);
+            if ($d['status'] !== 'active') {
+                $transactions->push([
+                    'kind' => 'deposit_close',
+                    'sign' => '+',
+                    'amount' => $d['payout_amount'],
+                    'label' => $d['status'] === 'completed' ? 'Депозит дозрів' : 'Дострокове зняття депозиту',
+                    'detail' => null,
+                    'at' => $d['closed_at'],
+                ]);
+            }
+        }
+
+        $transactions = $transactions->sortByDesc('at')->values()->take(60);
 
         return Inertia::render('Bonuses/Index', [
             'payouts' => $payouts,
             'cumulativeInvestment' => $cumulativeInvestment,
             'tiers' => $tiers,
-            'manualAwards' => $manualAwards,
-            'transfers' => $transfers,
+            'transactions' => $transactions,
+            'deposits' => $deposits,
+            'depositSettings' => [
+                'enabled' => (bool) BonusSettings::current()->deposit_enabled,
+                'rate' => (float) BonusSettings::current()->deposit_interest_rate,
+                'minAmount' => (int) BonusSettings::current()->deposit_min_amount,
+                'termDays' => (int) BonusSettings::current()->deposit_term_days,
+            ],
             'card' => [
                 'number' => MemberCard::masked($request->user()),
                 'numberFull' => MemberCard::number($request->user()),
@@ -121,6 +203,31 @@ class BonusController
             throw ValidationException::withMessages(['recipient_id' => 'Не можна переказати самому собі.']);
         }
 
+        DepositService::settleMaturedFor($sender->id);
+
+        $settings = BonusSettings::current();
+
+        if (! $settings->transfer_enabled) {
+            throw ValidationException::withMessages(['amount' => 'Перекази тимчасово вимкнено.']);
+        }
+
+        if ($data['amount'] < $settings->transfer_min_amount) {
+            throw ValidationException::withMessages(['amount' => "Мінімальна сума переказу — {$settings->transfer_min_amount}₴."]);
+        }
+
+        if ($settings->transfer_daily_limit !== null) {
+            $sentToday = (int) BankTransfer::query()
+                ->where('from_user_id', $sender->id)
+                ->whereNull('reversed_at')
+                ->where('created_at', '>=', now()->subDay())
+                ->sum('amount');
+
+            if ($sentToday + $data['amount'] > $settings->transfer_daily_limit) {
+                $left = max(0, $settings->transfer_daily_limit - $sentToday);
+                throw ValidationException::withMessages(['amount' => "Денний ліміт переказів — {$settings->transfer_daily_limit}₴. Лишилось: {$left}₴."]);
+            }
+        }
+
         DB::transaction(function () use ($data, $sender) {
             // Баланс звіряємо ЗНОВУ тут, усередині транзакції — те, що
             // показала форма мить тому, могло вже застаріти (ще один
@@ -139,6 +246,42 @@ class BonusController
             ]);
         });
 
+        if (class_exists(NotificationService::class)) {
+            $recipient = User::find($data['recipient_id']);
+            if ($recipient) {
+                app(NotificationService::class)->notify(
+                    $recipient,
+                    'bank_transfer_received',
+                    'Вам надійшов переказ',
+                    "{$sender->name} переказав(-ла) вам {$data['amount']}₴".($data['note'] ? " — «{$data['note']}»" : '').'.',
+                );
+            }
+        }
+
         return back()->with('success', 'Переказ виконано.');
+    }
+
+    public function storeDeposit(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'amount' => ['required', 'integer', 'min:1'],
+        ]);
+
+        $user = $request->user();
+        DepositService::settleMaturedFor($user->id);
+        DepositService::open($user, $data['amount']);
+
+        return back()->with('success', 'Депозит відкрито.');
+    }
+
+    public function withdrawDeposit(Request $request, BankDeposit $deposit): RedirectResponse
+    {
+        if ($deposit->user_id !== $request->user()->id) {
+            abort(403);
+        }
+
+        DepositService::withdrawEarly($deposit);
+
+        return back()->with('success', 'Депозит знято достроково.');
     }
 }

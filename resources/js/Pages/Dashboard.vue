@@ -1,21 +1,25 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import MemberCard from '@/Components/MemberCard.vue';
 import { Head, Link } from '@inertiajs/vue3';
 
 defineProps({
     memberCount: { type: Number, default: 0 },
     telegramBotUrl: { type: String, default: null },
+    bankCard: { type: Object, default: null },
 });
 
+// «Мої звіти» винесено окремо з масиву — банківську картку показуємо
+// одразу під ним, до решти плиток. Банк тепер має власний віджет
+// замість звичайної текстової плитки в цій сітці.
+const firstCard = { name: 'reports.index', title: 'Мої звіти', text: 'Подайте звіт за бізваром чи контрактом та слідкуйте за статусом розгляду.' };
 const cards = [
-    { name: 'reports.index', title: 'Мої звіти', text: 'Подайте звіт за бізваром чи контрактом та слідкуйте за статусом розгляду.' },
     { name: 'progression.index', title: 'Мій прогрес', text: 'Досвід, рівень, досягнення та історія нарахувань.' },
     { name: 'progression.leaderboard', title: 'Рейтинг родини', text: 'Хто попереду — за активністю, бізваром, контрактами, серією перемог чи преміями.' },
     { name: 'member-center.index', title: 'Кадровий центр', text: 'Ваш статус у родині та заявки на відпустку.' },
     { name: 'family-goals.index', title: 'Цілі родини', text: 'Спільні цілі з прогресом та стрічка активності.' },
     { name: 'family-events.index', title: 'Події родини', text: 'Найближчі зустрічі, вечірки та івенти.' },
     { name: 'notifications.index', title: 'Сповіщення', text: 'Оголошення від адміністрації та особисті сповіщення.' },
-    { name: 'bonuses.index', title: 'Мої премії', text: 'Тижневі нарахування за бізвар, контракти та інвестиції.' },
 ];
 
 function fmtDate(iso) {
@@ -84,12 +88,32 @@ function fmtDate(iso) {
             </div>
 
             <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                <Link
+                    v-if="route().has(firstCard.name)"
+                    :href="route(firstCard.name)"
+                    v-reveal="'scale'"
+                    v-glow class="group glass-panel relative overflow-hidden p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-gold"
+                >
+                    <div class="glass-sheen"></div>
+                    <h3 class="relative font-semibold text-white">{{ firstCard.title }}</h3>
+                    <p class="relative mt-2 text-sm leading-relaxed text-white/50">{{ firstCard.text }}</p>
+                    <span class="relative mt-4 inline-block text-xs uppercase tracking-widest text-gold-300/80">Відкрити →</span>
+                </Link>
+
+                <!-- ================= БАНК ================= -->
+                <div v-if="bankCard" v-reveal="'scale'" :style="{ transitionDelay: '80ms' }" class="flex flex-col items-center">
+                    <MemberCard :number="bankCard.number" :number-full="bankCard.numberFull" :name="bankCard.name" :amount="bankCard.balance" />
+                    <Link v-if="route().has('bonuses.index')" :href="route('bonuses.index')" class="mt-3 text-xs uppercase tracking-widest text-gold-300/80 hover:text-gold-200">
+                        Відкрити банк →
+                    </Link>
+                </div>
+
                 <template v-for="(card, i) in cards" :key="card.name">
                     <Link
                         v-if="route().has(card.name)"
                         :href="route(card.name)"
                         v-reveal="'scale'"
-                        :style="{ transitionDelay: `${i * 80}ms` }"
+                        :style="{ transitionDelay: `${(i + 2) * 80}ms` }"
                         v-glow class="group glass-panel relative overflow-hidden p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-gold"
                     >
                         <div class="glass-sheen"></div>

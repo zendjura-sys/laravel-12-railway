@@ -18,6 +18,19 @@ class BonusSettings extends Model
         'contracts_count_threshold',
         'contracts_count_bonus_amount',
         'min_digest_amount',
+        'transfer_enabled',
+        'transfer_daily_limit',
+        'transfer_min_amount',
+        'deposit_enabled',
+        'deposit_interest_rate',
+        'deposit_min_amount',
+        'deposit_term_days',
+    ];
+
+    protected $casts = [
+        'transfer_enabled' => 'boolean',
+        'deposit_enabled' => 'boolean',
+        'deposit_interest_rate' => 'float',
     ];
 
     /** Один рядок на весь модуль — міграція вже його створює. */

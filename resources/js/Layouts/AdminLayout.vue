@@ -25,7 +25,7 @@ const navGroups = [
             { name: 'admin.family-goals.index', label: 'Цілі родини', can: 'manageGoals', icon: Target },
             { name: 'admin.family-events.index', label: 'Події родини', can: 'manageEvents', icon: CalendarDays },
             { name: 'admin.broadcasts.index', label: 'Розсилки', can: 'manageBroadcasts', icon: Megaphone },
-            { name: 'admin.bonuses.index', label: 'Премії', can: 'manageBonuses', icon: Wallet },
+            { name: 'admin.bonuses.index', label: 'Банк', can: 'manageBonuses', icon: Wallet },
             { name: 'admin.users.index', label: 'Учасники', can: 'manageUsers', icon: Users },
         ],
     },

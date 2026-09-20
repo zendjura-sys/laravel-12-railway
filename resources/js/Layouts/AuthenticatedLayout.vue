@@ -86,6 +86,13 @@ const showingNavigationDropdown = ref(false);
                                 </span>
                             </NavLink>
                             <NavLink
+                                v-if="route().has('bonuses.index')"
+                                :href="route('bonuses.index')"
+                                :active="route().current('bonuses.*')"
+                            >
+                                Банк
+                            </NavLink>
+                            <NavLink
                                 :href="route('guide')"
                                 :active="route().current('guide')"
                             >
@@ -268,6 +275,13 @@ const showingNavigationDropdown = ref(false);
                         >
                             {{ $page.props.unreadNotifications > 99 ? '99+' : $page.props.unreadNotifications }}
                         </span>
+                    </ResponsiveNavLink>
+                    <ResponsiveNavLink
+                        v-if="route().has('bonuses.index')"
+                        :href="route('bonuses.index')"
+                        :active="route().current('bonuses.*')"
+                    >
+                        Банк
                     </ResponsiveNavLink>
                     <ResponsiveNavLink
                         :href="route('guide')"

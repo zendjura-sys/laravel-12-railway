@@ -28,6 +28,7 @@ use App\Models\User;
 use App\Support\DesignSettings;
 use App\Support\FamilyContent;
 use App\Support\FamilyStats;
+use App\Support\MemberCard;
 use App\Support\TelegramLink;
 use App\Support\UnionDomain;
 use Illuminate\Http\Request;
@@ -115,9 +116,24 @@ Route::get('/dashboard', function (Request $request) {
         return app(UnionCabinetController::class)->index($request);
     }
 
+    // Банк — модуль Bonuses, ядро про нього знати не мусить: та сама
+    // "опційна залежність" через class_exists(), що й у самих модулях
+    // одне до одного (наприклад Bonuses -> Notifications). Немає модуля —
+    // просто немає картки, без помилки.
+    $bankCard = null;
+    if (class_exists(\Addons\Bonuses\Services\BalanceCalculator::class)) {
+        $bankCard = [
+            'number' => MemberCard::masked($request->user()),
+            'numberFull' => MemberCard::number($request->user()),
+            'name' => $request->user()->name,
+            'balance' => \Addons\Bonuses\Services\BalanceCalculator::balanceFor($request->user()->id),
+        ];
+    }
+
     return Inertia::render('Dashboard', [
         'memberCount' => User::query()->count(),
         'telegramBotUrl' => TelegramLink::url(),
+        'bankCard' => $bankCard,
     ]);
 })->middleware(['auth', 'verified'])->name('dashboard');
 

@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import ApplicationLogo from '@/Components/ApplicationLogo.vue';
 import { Copy, Check } from '@lucide/vue';
 
@@ -8,6 +8,18 @@ const props = defineProps({
     numberFull: { type: String, required: true }, // повний номер — лише для копіювання, ніде не показується
     name: { type: String, required: true },
     amount: { type: Number, default: 0 },
+});
+
+// Групуємо по 4 символи класичним "**** **** **** 1234" виглядом, рахуючи
+// ЗПРАВА, щоб останні 4 реальні цифри завжди були цілою групою (а не
+// розрізаною напів-зірочками, напів-цифрами) — довжина рядка тут 14, не
+// 16, тому перша група коротша за решту.
+const numberGroups = computed(() => {
+    const groups = [];
+    for (let end = props.number.length; end > 0; end -= 4) {
+        groups.unshift(props.number.slice(Math.max(0, end - 4), end));
+    }
+    return groups;
 });
 
 function fmt(v) {
@@ -59,8 +71,13 @@ async function copyNumber() {
         </div>
 
         <!-- ================= НОМЕР ================= -->
+        <!-- Кожен символ — окремий span у flex justify-between: розтягує
+             номер на всю ширину картки (як на реальних картках), а не
+             компактним блоком з порожнім місцем праворуч. -->
         <div class="relative flex items-center gap-2">
-            <p class="font-mono text-base tracking-[0.18em] text-white sm:text-lg">{{ number }}</p>
+            <div class="flex min-w-0 flex-1 justify-between font-mono text-base tracking-[0.08em] text-white sm:text-lg">
+                <span v-for="(g, i) in numberGroups" :key="i">{{ g }}</span>
+            </div>
             <button
                 type="button"
                 class="shrink-0 rounded-full border border-white/15 p-1 text-white/50 transition-colors hover:border-gold-400/40 hover:text-gold-200"

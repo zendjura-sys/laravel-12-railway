@@ -86,7 +86,7 @@ async function copyNumber() {
                  центуріон American Express), а оригінальний медальйон із
                  тим самим ромбом-M, що й скрізь на сайті, у тій самій
                  золотій гамі картки. -->
-            <svg viewBox="0 0 64 64" class="h-16 w-16 shrink-0 sm:h-[4.5rem] sm:w-[4.5rem]" aria-hidden="true">
+            <svg viewBox="0 0 64 64" class="h-24 w-24 shrink-0 sm:h-28 sm:w-28" aria-hidden="true">
                 <defs>
                     <linearGradient id="monsory-seal-gold" x1="0%" y1="0%" x2="100%" y2="100%">
                         <stop offset="0%" stop-color="rgb(var(--gold-200))" />

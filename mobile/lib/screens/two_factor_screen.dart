@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../api_client.dart';
-import 'dashboard_screen.dart';
+import 'home_shell.dart';
 
 class TwoFactorScreen extends StatefulWidget {
   final String challengeToken;
@@ -33,7 +33,7 @@ class _TwoFactorScreenState extends State<TwoFactorScreen> {
       );
       if (!mounted) return;
       Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const DashboardScreen()),
+        MaterialPageRoute(builder: (_) => const HomeShell()),
         (route) => false,
       );
     } on ApiException catch (e) {

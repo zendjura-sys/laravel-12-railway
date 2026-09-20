@@ -125,4 +125,77 @@ class ApiClient {
         await http.get(_uri('/dashboard'), headers: await _headers(auth: true));
     return _decode(response) as Map<String, dynamic>;
   }
+
+  // ---------------- Банк (модуль Bonuses) ----------------
+
+  Future<Map<String, dynamic>> bank() async {
+    final response =
+        await http.get(_uri('/bank'), headers: await _headers(auth: true));
+    return _decode(response) as Map<String, dynamic>;
+  }
+
+  Future<List<dynamic>> searchRecipients(String query) async {
+    final response = await http.get(
+      _uri('/bank/recipients/search').replace(queryParameters: {'q': query}),
+      headers: await _headers(auth: true),
+    );
+    final data = _decode(response) as Map<String, dynamic>;
+    return data['members'] as List<dynamic>;
+  }
+
+  Future<void> transfer(
+      {required int recipientId, required int amount, String? note}) async {
+    final response = await http.post(
+      _uri('/bank/transfer'),
+      headers: await _headers(auth: true),
+      body: jsonEncode({
+        'recipient_id': recipientId,
+        'amount': amount,
+        if (note != null && note.isNotEmpty) 'note': note
+      }),
+    );
+    _decode(response);
+  }
+
+  Future<void> openDeposit(int amount) async {
+    final response = await http.post(
+      _uri('/bank/deposits'),
+      headers: await _headers(auth: true),
+      body: jsonEncode({'amount': amount}),
+    );
+    _decode(response);
+  }
+
+  Future<void> withdrawDeposit(int depositId) async {
+    final response = await http.post(
+      _uri('/bank/deposits/$depositId/withdraw'),
+      headers: await _headers(auth: true),
+    );
+    _decode(response);
+  }
+
+  Future<void> requestCash(int amount) async {
+    final response = await http.post(
+      _uri('/bank/cash-requests'),
+      headers: await _headers(auth: true),
+      body: jsonEncode({'amount': amount}),
+    );
+    _decode(response);
+  }
+
+  // ---------------- Прогрес і рейтинг (модуль Progression) ----------------
+
+  Future<Map<String, dynamic>> progress() async {
+    final response =
+        await http.get(_uri('/progress'), headers: await _headers(auth: true));
+    return _decode(response) as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> leaderboard({String? category}) async {
+    final uri = category != null
+        ? _uri('/leaderboard').replace(queryParameters: {'category': category})
+        : _uri('/leaderboard');
+    final response = await http.get(uri, headers: await _headers(auth: true));
+    return _decode(response) as Map<String, dynamic>;
+  }
 }

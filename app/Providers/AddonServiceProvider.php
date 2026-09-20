@@ -37,5 +37,9 @@ class AddonServiceProvider extends ServiceProvider
 
         $autoloader->loadEntrypoint('web');
         $autoloader->loadEntrypoint('admin');
+        // api — токен-ендпоінти для мобільного застосунку (Sanctum), той
+        // самий require-механізм, що й web/admin: модуль сам оголошує свої
+        // Route::middleware(['auth:sanctum'])->group(...).
+        $autoloader->loadEntrypoint('api');
     }
 }

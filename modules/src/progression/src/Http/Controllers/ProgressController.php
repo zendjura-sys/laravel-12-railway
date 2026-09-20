@@ -15,7 +15,7 @@ use Inertia\Response;
 
 class ProgressController
 {
-    public function __construct(private readonly ProgressionService $service)
+    public function __construct(protected readonly ProgressionService $service)
     {
     }
 
@@ -69,7 +69,7 @@ class ProgressController
      * @param  \Illuminate\Support\Collection<int, XpLedgerEntry>  $battleLog
      * @return array<int, array{t: string, xp: int}>
      */
-    private function xpTrend($battleLog, int $currentXp): array
+    protected function xpTrend($battleLog, int $currentXp): array
     {
         $asc = $battleLog->sortBy('created_at')->values();
         $running = $currentXp - $asc->sum('amount');
@@ -89,7 +89,7 @@ class ProgressController
      *
      * @return array<string,string>
      */
-    private function categories(): array
+    protected function categories(): array
     {
         $categories = [
             'xp' => 'Активність',
@@ -188,7 +188,7 @@ class ProgressController
     }
 
     /** @return array<int,array<string,mixed>> */
-    private function profileLeaderboard(string $category): array
+    protected function profileLeaderboard(string $category): array
     {
         $query = ProgressionProfile::with('user:id,name,first_name,last_name,position_key');
 
@@ -214,7 +214,7 @@ class ProgressController
     }
 
     /** Сума всіх тижневих виплат за весь час — не лише поточний тиждень. */
-    private function bonusesLeaderboard(): array
+    protected function bonusesLeaderboard(): array
     {
         return BonusPayout::query()
             ->select('user_id')
@@ -238,7 +238,7 @@ class ProgressController
      * картки це чутливіші дані (по суті "хто скільки має грошей просто
      * зараз"), тож не афішуємо весь список, лише лідерів.
      */
-    private function balanceLeaderboard(): array
+    protected function balanceLeaderboard(): array
     {
         return \App\Models\User::query()
             ->where('is_shadow', false)

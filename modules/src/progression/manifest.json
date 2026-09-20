@@ -2,7 +2,7 @@
     "type": "module",
     "slug": "progression-statistics",
     "name": "Progression & Statistics",
-    "version": "1.8.0",
+    "version": "1.9.0",
     "summary": "Досвід, рівні, ранги, досягнення й рейтинг родини.",
     "highlights": [
         "Досвід нараховується автоматично за затверджені звіти (бізвар, контракти, інвестиції)",
@@ -16,6 +16,7 @@
     "entrypoints": {
         "web": "routes/web.php",
         "admin": "routes/admin.php",
+        "api": "routes/api.php",
         "events": "routes/events.php"
     },
     "migrations": "migrations",

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'api_client.dart';
-import 'screens/dashboard_screen.dart';
+import 'screens/home_shell.dart';
 import 'screens/login_screen.dart';
 import 'theme.dart';
 
@@ -24,7 +24,7 @@ class MonsoryConnectApp extends StatelessWidget {
 
 /// Показує кабінет одразу, якщо на пристрої вже є збережений токен, інакше
 /// — екран входу. Токен не перевіряється тут звертанням до сервера — якщо
-/// він прострочений/відкликаний, DashboardScreen сам зловить 401 на
+/// він прострочений/відкликаний, вкладка "Кабінет" сама зловить 401 на
 /// першому запиті й поверне на логін.
 class _StartupGate extends StatelessWidget {
   const _StartupGate();
@@ -38,9 +38,7 @@ class _StartupGate extends StatelessWidget {
           return const Scaffold(
               body: Center(child: CircularProgressIndicator()));
         }
-        return snapshot.data != null
-            ? const DashboardScreen()
-            : const LoginScreen();
+        return snapshot.data != null ? const HomeShell() : const LoginScreen();
       },
     );
   }

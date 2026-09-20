@@ -2,7 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import '../api_client.dart';
 import '../theme.dart';
-import 'dashboard_screen.dart';
+import 'home_shell.dart';
 import 'two_factor_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -20,7 +20,8 @@ class _LoginScreenState extends State<LoginScreen> {
   String? _error;
 
   Future<void> _submit() async {
-    if (_emailController.text.trim().isEmpty || _passwordController.text.isEmpty) {
+    if (_emailController.text.trim().isEmpty ||
+        _passwordController.text.isEmpty) {
       return;
     }
 
@@ -51,7 +52,7 @@ class _LoginScreenState extends State<LoginScreen> {
         );
       } else {
         Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => const DashboardScreen()),
+          MaterialPageRoute(builder: (_) => const HomeShell()),
           (route) => false,
         );
       }

@@ -8,6 +8,9 @@ on:
       - '.github/workflows/mobile-build.yml'
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -31,8 +34,26 @@ jobs:
       - name: Build release APK
         run: flutter build apk --release --dart-define=API_BASE_URL=https://monsory.net
 
+      - name: Rename APK for a stable filename
+        run: cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/monsory-connect.apk
+
       - uses: actions/upload-artifact@v4
         with:
           name: monsory-connect-apk
           path: mobile/build/app/outputs/flutter-apk/app-release.apk
           retention-days: 30
+
+      # Публікуємо в GitHub Release з фіксованим тегом "mobile-latest" —
+      # кожна успішна збірка перезаписує той самий реліз, тож посилання на
+      # .apk (.../releases/latest/download/monsory-connect.apk) лишається
+      # незмінним і доступним БЕЗ логіну в GitHub, на відміну від Actions
+      # Artifacts вище (ті — для налагодження конкретного прогону).
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: mobile-latest
+          name: Monsory Connect (Android)
+          body: |
+            Автоматична збірка з коміту ${{ github.sha }} (${{ github.ref_name }}).
+            Завантажте monsory-connect.apk нижче й встановіть на Android (потрібно дозволити встановлення з невідомих джерел).
+          make_latest: true
+          files: mobile/build/app/outputs/flutter-apk/monsory-connect.apk

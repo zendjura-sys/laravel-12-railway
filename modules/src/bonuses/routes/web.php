@@ -9,4 +9,5 @@ Route::middleware(['web', 'auth'])->group(function () {
     Route::post('/bonuses/transfer', [BonusController::class, 'storeTransfer'])->name('bonuses.transfer');
     Route::post('/bonuses/deposits', [BonusController::class, 'storeDeposit'])->name('bonuses.deposits.store');
     Route::post('/bonuses/deposits/{deposit}/withdraw', [BonusController::class, 'withdrawDeposit'])->name('bonuses.deposits.withdraw');
+    Route::post('/bonuses/cash-requests', [BonusController::class, 'storeCashRequest'])->name('bonuses.cash-requests.store');
 });

@@ -6,6 +6,7 @@ use Addons\Bonuses\Models\BankDeposit;
 use Addons\Bonuses\Models\BankTransfer;
 use Addons\Bonuses\Models\BonusPayout;
 use Addons\Bonuses\Models\BonusSettings;
+use Addons\Bonuses\Models\CashRequest;
 use Addons\Bonuses\Models\InvestmentAchievementTier;
 use Addons\Bonuses\Models\ManualBonusAward;
 use Addons\Bonuses\Models\UserInvestmentAchievement;
@@ -77,6 +78,18 @@ class BonusController
                 'closed_at' => $d->closed_at,
             ]);
 
+        $cashRequests = CashRequest::query()
+            ->where('user_id', $userId)
+            ->latest()
+            ->get()
+            ->map(fn (CashRequest $r) => [
+                'id' => $r->id,
+                'amount' => $r->amount,
+                'status' => $r->status,
+                'created_at' => $r->created_at,
+                'resolved_at' => $r->resolved_at,
+            ]);
+
         // ---------- Єдина хронологічна стрічка операцій (банківська виписка) ----------
         $transactions = collect();
 
@@ -141,6 +154,22 @@ class BonusController
             }
         }
 
+        foreach ($cashRequests as $r) {
+            $transactions->push([
+                'kind' => 'cash_request',
+                'sign' => $r['status'] === 'cancelled' ? '·' : '−',
+                'amount' => $r['amount'],
+                'label' => 'Запит на видачу готівки',
+                'detail' => match ($r['status']) {
+                    'pending' => 'очікує підтвердження керівництва',
+                    'completed' => 'видано на руки',
+                    default => null,
+                },
+                'reversed' => $r['status'] === 'cancelled',
+                'at' => $r['resolved_at'] ?? $r['created_at'],
+            ]);
+        }
+
         $transactions = $transactions->sortByDesc('at')->values()->take(60);
 
         return Inertia::render('Bonuses/Index', [
@@ -149,6 +178,7 @@ class BonusController
             'tiers' => $tiers,
             'transactions' => $transactions,
             'deposits' => $deposits,
+            'cashRequests' => $cashRequests,
             'depositSettings' => [
                 'enabled' => (bool) BonusSettings::current()->deposit_enabled,
                 'rate' => (float) BonusSettings::current()->deposit_interest_rate,
@@ -283,5 +313,49 @@ class BonusController
         DepositService::withdrawEarly($deposit);
 
         return back()->with('success', 'Депозит знято достроково.');
+    }
+
+    /**
+     * Запит на видачу готівки "на руки" — сайт лише фіксує запит і одразу
+     * заморожує суму (як депозит), сама передача грошей відбувається поза
+     * сайтом, між учасником і керівництвом. Сповіщення йде всім, хто має
+     * bonuses.manage — той самий контур, що й адмінка Банку.
+     */
+    public function storeCashRequest(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'amount' => ['required', 'integer', 'min:1'],
+        ]);
+
+        $user = $request->user();
+        DepositService::settleMaturedFor($user->id);
+
+        DB::transaction(function () use ($data, $user) {
+            $balance = BalanceCalculator::balanceFor($user->id);
+
+            if ($data['amount'] > $balance) {
+                throw ValidationException::withMessages(['amount' => 'Недостатньо коштів на балансі.']);
+            }
+
+            CashRequest::create([
+                'user_id' => $user->id,
+                'amount' => $data['amount'],
+                'status' => 'pending',
+            ]);
+        });
+
+        if (class_exists(NotificationService::class)) {
+            $leadership = User::permission('bonuses.manage')->get();
+            foreach ($leadership as $lead) {
+                app(NotificationService::class)->notify(
+                    $lead,
+                    'bank_cash_requested',
+                    'Запит на видачу готівки',
+                    "{$user->name} запросив(-ла) видачу {$data['amount']}₴ готівкою на руки — узгодьте передачу й підтвердіть у адмінці Банку.",
+                );
+            }
+        }
+
+        return back()->with('success', 'Запит надіслано. Замовам і лідеру прийшло сповіщення.');
     }
 }

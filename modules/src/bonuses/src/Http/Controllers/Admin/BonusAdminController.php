@@ -6,6 +6,7 @@ use Addons\Bonuses\Models\BankDeposit;
 use Addons\Bonuses\Models\BankTransfer;
 use Addons\Bonuses\Models\BonusPayout;
 use Addons\Bonuses\Models\BonusSettings;
+use Addons\Bonuses\Models\CashRequest;
 use Addons\Bonuses\Models\InvestmentAchievementTier;
 use Addons\Bonuses\Models\ManualBonusAward;
 use Addons\Bonuses\Services\BonusCalculator;
@@ -72,6 +73,11 @@ class BonusAdminController
                 ->get(),
             'deposits' => BankDeposit::query()
                 ->with('user:id,name')
+                ->latest()
+                ->limit(30)
+                ->get(),
+            'cashRequests' => CashRequest::query()
+                ->with(['user:id,name', 'resolvedBy:id,name'])
                 ->latest()
                 ->limit(30)
                 ->get(),
@@ -227,6 +233,80 @@ class BonusAdminController
         return response()->json([
             'ok' => true,
             'message' => 'Переказ скасовано, кошти повернуто.',
+            'data' => null,
+            'errors' => null,
+            'redirect' => null,
+        ]);
+    }
+
+    /** Кошти вже "пішли" з балансу при запиті — тут лише підтверджуємо, що готівку фактично передали на руки. */
+    public function completeCashRequest(CashRequest $cashRequest): JsonResponse
+    {
+        if ($cashRequest->status !== 'pending') {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Цей запит уже опрацьовано.',
+                'data' => null,
+                'errors' => null,
+                'redirect' => null,
+            ], 422);
+        }
+
+        $cashRequest->update([
+            'status' => 'completed',
+            'resolved_by' => request()->user()->id,
+            'resolved_at' => now(),
+        ]);
+
+        if (class_exists(NotificationService::class) && $cashRequest->user) {
+            app(NotificationService::class)->notify(
+                $cashRequest->user,
+                'bank_cash_completed',
+                'Готівку видано',
+                "Ваш запит на {$cashRequest->amount}₴ підтверджено — готівку видано на руки.",
+            );
+        }
+
+        return response()->json([
+            'ok' => true,
+            'message' => 'Позначено виданим.',
+            'data' => null,
+            'errors' => null,
+            'redirect' => null,
+        ]);
+    }
+
+    /** Скасування: НЕ видалення (аудит-слід лишається), кошти повертаються на баланс учасника. */
+    public function cancelCashRequest(CashRequest $cashRequest): JsonResponse
+    {
+        if ($cashRequest->status !== 'pending') {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Цей запит уже опрацьовано.',
+                'data' => null,
+                'errors' => null,
+                'redirect' => null,
+            ], 422);
+        }
+
+        $cashRequest->update([
+            'status' => 'cancelled',
+            'resolved_by' => request()->user()->id,
+            'resolved_at' => now(),
+        ]);
+
+        if (class_exists(NotificationService::class) && $cashRequest->user) {
+            app(NotificationService::class)->notify(
+                $cashRequest->user,
+                'bank_cash_cancelled',
+                'Запит на готівку скасовано',
+                "Ваш запит на {$cashRequest->amount}₴ скасовано — кошти повернуто на баланс.",
+            );
+        }
+
+        return response()->json([
+            'ok' => true,
+            'message' => 'Запит скасовано, кошти повернуто.',
             'data' => null,
             'errors' => null,
             'redirect' => null,

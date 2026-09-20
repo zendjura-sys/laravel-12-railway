@@ -11,6 +11,7 @@ const props = defineProps({
     manualAwards: { type: Array, default: () => [] },
     transfers: { type: Array, default: () => [] },
     deposits: { type: Array, default: () => [] },
+    cashRequests: { type: Array, default: () => [] },
 });
 
 const filterForm = ref({ from: props.filters.from, to: props.filters.to, paid: props.filters.paid });
@@ -179,6 +180,35 @@ async function reverseTransfer(transfer) {
         alert(describeFailure(e, 'Не вдалося скасувати переказ'));
     } finally {
         reversingTransfer.value = null;
+    }
+}
+
+/* ------------------------- Запити на готівку ------------------------- */
+
+const resolvingCashRequest = ref(null);
+async function completeCashRequest(r) {
+    if (!confirm(`Підтвердити, що ${fmt(r.amount)} видано на руки учаснику «${r.user?.name}»?`)) return;
+    resolvingCashRequest.value = r.id;
+    try {
+        await window.axios.post(route('admin.bonuses.cash-requests.complete', r.id));
+        r.status = 'completed';
+    } catch (e) {
+        alert(describeFailure(e, 'Не вдалося підтвердити видачу'));
+    } finally {
+        resolvingCashRequest.value = null;
+    }
+}
+
+async function cancelCashRequest(r) {
+    if (!confirm(`Скасувати запит на ${fmt(r.amount)} від «${r.user?.name}»? Кошти повернуться на його баланс.`)) return;
+    resolvingCashRequest.value = r.id;
+    try {
+        await window.axios.post(route('admin.bonuses.cash-requests.cancel', r.id));
+        r.status = 'cancelled';
+    } catch (e) {
+        alert(describeFailure(e, 'Не вдалося скасувати запит'));
+    } finally {
+        resolvingCashRequest.value = null;
     }
 }
 </script>
@@ -384,6 +414,57 @@ async function reverseTransfer(transfer) {
                     </button>
                 </div>
             </form>
+        </section>
+
+        <!-- ================= ЗАПИТИ НА ГОТІВКУ ================= -->
+        <section class="mb-8 rounded-2xl border border-white/10 bg-white/[0.03] p-6">
+            <h2 class="mb-1 font-display text-lg text-white">Запити на видачу готівки</h2>
+            <p class="mb-4 text-sm text-white/40">Учасник хоче отримати кошти на руки — узгодьте передачу і підтвердіть тут.</p>
+
+            <div v-if="cashRequests.length" class="space-y-2">
+                <div
+                    v-for="r in cashRequests"
+                    :key="r.id"
+                    class="flex flex-wrap items-center justify-between gap-2 rounded-lg border px-4 py-2.5"
+                    :class="r.status === 'pending' ? 'border-gold-400/30 bg-gold-400/[0.04]' : 'border-white/10 opacity-60'"
+                >
+                    <div>
+                        <span class="text-white">{{ r.user?.name }}</span>
+                        <span class="ml-3 text-sm text-gold-200">{{ fmt(r.amount) }}</span>
+                        <span
+                            class="ml-2 rounded-full px-2 py-0.5 text-[10px] uppercase tracking-wide"
+                            :class="{
+                                'bg-gold-400/10 text-gold-300': r.status === 'pending',
+                                'bg-emerald-400/10 text-emerald-300': r.status === 'completed',
+                                'bg-white/5 text-white/40': r.status === 'cancelled',
+                            }"
+                        >
+                            {{ r.status === 'pending' ? 'очікує' : (r.status === 'completed' ? 'видано' : 'скасовано') }}
+                        </span>
+                        <p class="mt-1 text-xs text-white/30">
+                            {{ fmtDateTime(r.created_at) }}
+                            <template v-if="r.resolved_by">· опрацював {{ r.resolved_by?.name }}</template>
+                        </p>
+                    </div>
+                    <div v-if="r.status === 'pending'" class="flex shrink-0 items-center gap-2">
+                        <button
+                            :disabled="resolvingCashRequest === r.id"
+                            class="rounded-full border border-emerald-400/30 px-3 py-1 text-xs text-emerald-300 hover:border-emerald-400/60 disabled:opacity-40"
+                            @click="completeCashRequest(r)"
+                        >
+                            Видано
+                        </button>
+                        <button
+                            :disabled="resolvingCashRequest === r.id"
+                            class="rounded-full border border-white/15 px-3 py-1 text-xs text-white/50 hover:border-ember-500/40 hover:text-ember-400 disabled:opacity-40"
+                            @click="cancelCashRequest(r)"
+                        >
+                            Скасувати
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <p v-else class="text-sm text-white/30">Запитів ще не було.</p>
         </section>
 
         <!-- ================= ПЕРЕКАЗИ МІЖ УЧАСНИКАМИ ================= -->

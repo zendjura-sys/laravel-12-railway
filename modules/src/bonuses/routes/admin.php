@@ -12,6 +12,8 @@ Route::middleware(['web', 'auth', 'verified', 'permission:bonuses.manage'])
         Route::put('/settings', [BonusAdminController::class, 'updateSettings'])->name('settings.update');
         Route::put('/bank-settings', [BonusAdminController::class, 'updateBankSettings'])->name('bank-settings.update');
         Route::post('/transfers/{transfer}/reverse', [BonusAdminController::class, 'reverseTransfer'])->name('transfers.reverse');
+        Route::post('/cash-requests/{cashRequest}/complete', [BonusAdminController::class, 'completeCashRequest'])->name('cash-requests.complete');
+        Route::post('/cash-requests/{cashRequest}/cancel', [BonusAdminController::class, 'cancelCashRequest'])->name('cash-requests.cancel');
         Route::post('/tiers', [BonusAdminController::class, 'storeTier'])->name('tiers.store');
         Route::delete('/tiers/{tier}', [BonusAdminController::class, 'destroyTier'])->name('tiers.destroy');
         Route::post('/payouts/{payout}/mark-paid', [BonusAdminController::class, 'markPaid'])->name('payouts.mark-paid');

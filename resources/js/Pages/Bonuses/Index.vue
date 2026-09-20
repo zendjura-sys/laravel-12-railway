@@ -9,6 +9,7 @@ const props = defineProps({
     tiers: { type: Array, default: () => [] },
     transactions: { type: Array, default: () => [] },
     deposits: { type: Array, default: () => [] },
+    cashRequests: { type: Array, default: () => [] },
     depositSettings: { type: Object, required: true },
     card: { type: Object, required: true },
 });
@@ -89,12 +90,29 @@ function depositStatusLabel(d) {
     return 'знято достроково';
 }
 
+/* ---------- готівка на руки ---------- */
+const cashForm = useForm({ amount: '' });
+function submitCashRequest() {
+    if (!confirm(`Запросити видачу ${fmt(cashForm.amount)} готівкою на руки? Сума одразу заморозиться на балансі, а замовам і лідеру прийде сповіщення.`)) return;
+    cashForm.post(route('bonuses.cash-requests.store'), {
+        preserveScroll: true,
+        onSuccess: () => cashForm.reset(),
+    });
+}
+
+function cashStatusLabel(r) {
+    if (r.status === 'pending') return 'очікує';
+    if (r.status === 'completed') return 'видано';
+    return 'скасовано';
+}
+
 const transactionIcon = {
     payout: '💰',
     manual_award: '🎁',
     transfer: '↔',
     deposit_open: '🔒',
     deposit_close: '🔓',
+    cash_request: '🤝',
 };
 </script>
 
@@ -249,6 +267,47 @@ const transactionIcon = {
                         >
                             Зняти достроково
                         </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ================= ГОТІВКА НА РУКИ ================= -->
+            <section v-reveal v-glow class="glass-panel mb-8 p-6">
+                <h2 class="mb-1 font-display text-lg text-white">Отримати готівку на руки</h2>
+                <p class="mb-4 text-sm text-white/40">
+                    Сума одразу заморозиться на балансі, а замовам і лідеру прийде сповіщення — узгодьте з ними передачу.
+                </p>
+
+                <form class="flex flex-wrap items-start gap-3" @submit.prevent="submitCashRequest">
+                    <div>
+                        <input v-model.number="cashForm.amount" type="number" min="1" :max="card.balance" placeholder="Сума, ₴" class="rounded-lg border border-white/10 bg-obsidian-900 px-3 py-2 text-sm text-white" />
+                        <p v-if="cashForm.errors.amount" class="mt-1 text-xs text-ember-500">{{ cashForm.errors.amount }}</p>
+                    </div>
+                    <button
+                        type="submit"
+                        :disabled="cashForm.processing || !cashForm.amount"
+                        class="rounded-full border border-gold-400/40 px-5 py-2 text-xs font-medium uppercase tracking-widest text-gold-200 hover:border-gold-300 disabled:opacity-40"
+                    >
+                        Запросити готівку
+                    </button>
+                </form>
+
+                <div v-if="cashRequests.length" class="mt-5 space-y-2">
+                    <div v-for="r in cashRequests" :key="r.id" class="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-white/10 px-4 py-2.5">
+                        <div>
+                            <span class="font-medium text-white">{{ fmt(r.amount) }}</span>
+                            <span
+                                class="ml-2 rounded-full px-2 py-0.5 text-[10px] uppercase tracking-wide"
+                                :class="{
+                                    'bg-gold-400/10 text-gold-300': r.status === 'pending',
+                                    'bg-emerald-400/10 text-emerald-300': r.status === 'completed',
+                                    'bg-white/5 text-white/40': r.status === 'cancelled',
+                                }"
+                            >
+                                {{ cashStatusLabel(r) }}
+                            </span>
+                            <p class="mt-1 text-xs text-white/30">{{ fmtDateTime(r.created_at) }}</p>
+                        </div>
                     </div>
                 </div>
             </section>

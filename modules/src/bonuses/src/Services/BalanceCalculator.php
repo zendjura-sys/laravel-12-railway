@@ -5,6 +5,7 @@ namespace Addons\Bonuses\Services;
 use Addons\Bonuses\Models\BankDeposit;
 use Addons\Bonuses\Models\BankTransfer;
 use Addons\Bonuses\Models\BonusPayout;
+use Addons\Bonuses\Models\CashRequest;
 use Addons\Bonuses\Models\ManualBonusAward;
 
 /**
@@ -33,6 +34,11 @@ class BalanceCalculator
         $locked = (int) BankDeposit::query()->where('user_id', $userId)->where('status', 'active')->sum('amount');
         $returned = (int) BankDeposit::query()->where('user_id', $userId)->whereIn('status', ['completed', 'withdrawn'])->sum('payout_amount');
 
-        return $earned - $sent + $received - $locked + $returned;
+        // Запити на готівку "на руки": pending і completed однаково
+        // забирають кошти з балансу (гроші вже обіцяні/видані), лише
+        // cancelled повертає — той самий принцип, що й у депозитів.
+        $cashedOut = (int) CashRequest::query()->where('user_id', $userId)->whereIn('status', ['pending', 'completed'])->sum('amount');
+
+        return $earned - $sent + $received - $locked + $returned - $cashedOut;
     }
 }

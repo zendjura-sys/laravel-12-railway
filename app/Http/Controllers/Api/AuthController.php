@@ -3,15 +3,20 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\UnionBlacklistedPlayer;
 use App\Models\User;
+use App\Support\FamilyContent;
 use App\Support\TwoFactorAuthentication;
 use Illuminate\Auth\Events\Lockout;
+use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rules;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -97,6 +102,48 @@ class AuthController extends Controller
         }
 
         Cache::forget('mobile-2fa:'.$data['challenge_token']);
+
+        return response()->json($this->issueToken($user, $data['device_name']));
+    }
+
+    /**
+     * Реєстрація "за себе" з застосунку — без союзних полів (union.monsory.net
+     * не має мобільного застосунку) і без покрокового підтвердження
+     * тіньового акаунту, що є на сайті (Auth/Register.vue): якщо ім'я
+     * збігається з тіньовим акаунтом, просто просимо завершити реєстрацію
+     * на сайті, де є той екран підтвердження.
+     */
+    public function register(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'first_name' => ['required', 'string', 'max:120'],
+            'last_name' => ['nullable', 'string', 'max:120'],
+            'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
+            'password' => ['required', 'confirmed', Rules\Password::defaults()],
+            'device_name' => ['required', 'string', 'max:255'],
+        ]);
+
+        $fullName = trim($data['first_name'].' '.($data['last_name'] ?? ''));
+
+        if (UnionBlacklistedPlayer::isBlacklisted($data['first_name'], $data['last_name'] ?? null)) {
+            throw ValidationException::withMessages(['first_name' => 'Цей гравець у чорному списку союзу — реєстрація недоступна.']);
+        }
+
+        if (User::query()->where('is_shadow', true)->where('name', $fullName)->exists()) {
+            throw ValidationException::withMessages([
+                'first_name' => 'За це ім\'я вже подавали звіт раніше. Завершіть реєстрацію на сайті monsory.net — там є підтвердження, що це саме ви.',
+            ]);
+        }
+
+        $user = User::create([
+            'first_name' => $data['first_name'],
+            'last_name' => $data['last_name'] ?? null,
+            'email' => $data['email'],
+            'password' => Hash::make($data['password']),
+            'position_key' => FamilyContent::positionKeys()[0] ?? null,
+        ]);
+
+        event(new Registered($user));
 
         return response()->json($this->issueToken($user, $data['device_name']));
     }

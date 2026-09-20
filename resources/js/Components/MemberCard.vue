@@ -55,11 +55,11 @@ async function copyNumber() {
          85.6×53.98мм ≈ 1.586:1) — ширина тягнеться (max-w-sm), висота
          рахується від неї через aspect-ratio, а не від вмісту, тому картка
          завжди виглядає "стандартною", хоч на телефоні, хоч на десктопі. -->
-    <div v-reveal v-glow class="glass-panel-gold glass-panel relative mx-auto flex aspect-[85.6/53.98] w-full max-w-sm flex-col justify-between overflow-hidden p-5 sm:p-6">
+    <div v-reveal v-glow class="glass-panel-gold glass-panel relative mx-auto flex aspect-[85.6/53.98] w-full max-w-sm flex-col overflow-hidden p-4 sm:p-5">
         <div class="glass-sheen"></div>
 
         <!-- ================= БРЕНД ================= -->
-        <div class="relative flex items-start justify-between">
+        <div class="relative flex shrink-0 items-start justify-between">
             <div class="flex items-center gap-2">
                 <ApplicationLogo mark class="h-7 w-7 text-xs text-gold-300" />
                 <div class="leading-tight">
@@ -70,37 +70,39 @@ async function copyNumber() {
             <span class="font-display text-lg italic tracking-tight text-white/90">VISA</span>
         </div>
 
-        <!-- ================= НОМЕР ================= -->
-        <!-- Кожен символ — окремий span у flex justify-between: розтягує
-             номер на всю ширину картки (як на реальних картках), а не
-             компактним блоком з порожнім місцем праворуч. -->
-        <div class="relative flex items-center gap-2">
-            <div class="flex min-w-0 flex-1 justify-between font-mono text-base tracking-[0.08em] text-white sm:text-lg">
-                <span v-for="(g, i) in numberGroups" :key="i">{{ g }}</span>
+        <!-- ================= ЦЕНТР: НОМЕР + БАЛАНС ================= -->
+        <!-- Щільно під брендом (mt-3), без flex-1/justify-center — той
+             підхід залишав два порожні "коридори" (над і під блоком).
+             Порожнеча, що лишається до низу картки, іде в один відступ
+             перед нижнім рядком (mt-auto там), а не сюди. -->
+        <div class="relative mt-3 flex flex-col gap-1.5 sm:mt-4">
+            <!-- Кожна група символів — окремий span у flex justify-between:
+                 розтягує номер на всю ширину картки (як на реальних
+                 картках), а не компактним блоком з порожнім місцем праворуч. -->
+            <div class="flex items-center gap-2">
+                <div class="flex min-w-0 flex-1 justify-between font-display text-lg font-semibold tracking-[0.03em] text-white sm:text-xl">
+                    <span v-for="(g, i) in numberGroups" :key="i">{{ g }}</span>
+                </div>
+                <button
+                    type="button"
+                    class="shrink-0 rounded-full border border-white/15 p-1 text-white/50 transition-colors hover:border-gold-400/40 hover:text-gold-200"
+                    :aria-label="copied ? 'Скопійовано' : 'Скопіювати номер картки'"
+                    @click="copyNumber"
+                >
+                    <Check v-if="copied" class="h-3 w-3 text-emerald-400" />
+                    <Copy v-else class="h-3 w-3" />
+                </button>
+                <span v-if="copied" class="text-[9px] text-emerald-400/80">Скопійовано</span>
             </div>
-            <button
-                type="button"
-                class="shrink-0 rounded-full border border-white/15 p-1 text-white/50 transition-colors hover:border-gold-400/40 hover:text-gold-200"
-                :aria-label="copied ? 'Скопійовано' : 'Скопіювати номер картки'"
-                @click="copyNumber"
-            >
-                <Check v-if="copied" class="h-3 w-3 text-emerald-400" />
-                <Copy v-else class="h-3 w-3" />
-            </button>
-            <span v-if="copied" class="text-[9px] text-emerald-400/80">Скопійовано</span>
-        </div>
 
-        <!-- ================= БАЛАНС ================= -->
-        <!-- Окремий рядок, рівно посередині між номером і іменем — той
-             самий flex justify-between на картці-контейнері сам розподіляє
-             відступи, а не фіксовані margin. -->
-        <div class="relative min-w-0">
-            <p class="text-[9px] uppercase tracking-widest text-white/40">Баланс</p>
-            <p class="font-display truncate text-2xl text-gold-200 sm:text-3xl">{{ fmt(amount) }}</p>
+            <div class="min-w-0">
+                <p class="text-[9px] uppercase tracking-widest text-white/40">Баланс</p>
+                <p class="font-display truncate text-2xl text-gold-200 sm:text-3xl">{{ fmt(amount) }}</p>
+            </div>
         </div>
 
         <!-- ================= НИЗ: УЧАСНИК + ПЕЧАТКА ================= -->
-        <div class="relative flex items-end justify-between gap-3">
+        <div class="relative mt-auto flex shrink-0 items-end justify-between gap-3">
             <div class="min-w-0">
                 <p class="text-[9px] uppercase tracking-widest text-white/40">Учасник</p>
                 <p class="truncate text-sm font-medium text-white/80">{{ name }}</p>

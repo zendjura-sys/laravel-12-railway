@@ -31,11 +31,23 @@ jobs:
 
       - run: flutter test
 
+      # run_number росте на +1 з кожним прогоном цього workflow — просте й
+      # гарантовано зростаюче джерело "номера збірки", без ручного стеження
+      # за версією в pubspec.yaml. Пишеться і в сам застосунок (--build-number,
+      # dart-define), і поруч у реліз (build.txt), щоб деплой на сервері міг
+      # прочитати "яка збірка щойно вийшла" й виставити м'яку пропозицію
+      # оновитись (mobile_app_latest_build) без участі адміна.
       - name: Build release APK
-        run: flutter build apk --release --dart-define=API_BASE_URL=https://monsory.net
+        run: |
+          flutter build apk --release \
+            --build-number=${{ github.run_number }} \
+            --dart-define=API_BASE_URL=https://monsory.net \
+            --dart-define=BUILD_NUMBER=${{ github.run_number }}
 
       - name: Rename APK for a stable filename
-        run: cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/monsory-connect.apk
+        run: |
+          cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/monsory-connect.apk
+          echo -n "${{ github.run_number }}" > build/app/outputs/flutter-apk/build.txt
 
       - uses: actions/upload-artifact@v4
         with:
@@ -53,7 +65,9 @@ jobs:
           tag_name: mobile-latest
           name: Monsory Connect (Android)
           body: |
-            Автоматична збірка з коміту ${{ github.sha }} (${{ github.ref_name }}).
+            Автоматична збірка #${{ github.run_number }} з коміту ${{ github.sha }} (${{ github.ref_name }}).
             Завантажте monsory-connect.apk нижче й встановіть на Android (потрібно дозволити встановлення з невідомих джерел).
           make_latest: true
-          files: mobile/build/app/outputs/flutter-apk/monsory-connect.apk
+          files: |
+            mobile/build/app/outputs/flutter-apk/monsory-connect.apk
+            mobile/build/app/outputs/flutter-apk/build.txt

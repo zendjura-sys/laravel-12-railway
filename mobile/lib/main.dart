@@ -120,6 +120,9 @@ class _AfterConfigGate extends StatelessWidget {
                 bankTabEnabled: config['bankTabEnabled'] != false,
                 leaderboardTabEnabled: config['leaderboardTabEnabled'] != false,
                 reportsTabEnabled: config['reportsTabEnabled'] != false,
+                latestBuild: config['latestBuild'] as int? ?? 0,
+                updateMessage: config['updateMessage'] as String?,
+                downloadUrl: config['downloadUrl'] as String?,
               )
             : const LoginScreen();
       },

@@ -392,6 +392,23 @@ if curl -fsSL "$MOBILE_APK_URL" -o "${APP_DIR}/public/downloads/monsory-connect.
     # Не перезаписываем, если адмін уже вручну вказав своє посилання в
     # Admin → Налаштування → Мобільний застосунок.
     php artisan tinker --execute="if (!\App\Models\Setting::get('mobile_app_download_url')) { \App\Models\Setting::set('mobile_app_download_url', '/downloads/monsory-connect.apk', 'mobile_app'); }" || true
+
+    # build.txt (github.run_number, той самий номер, що зашитий у щойно
+    # зібраний застосунок через --dart-define=BUILD_NUMBER) — ЗАВЖДИ
+    # перезаписуємо: на відміну від посилання вище, тут нема "адмін вказав
+    # вручну" сценарію, це виключно факт "яку збірку щойно випустили".
+    # За цим числом застосунок сам вирішує, чи показати м'яку пропозицію
+    # оновитись — сайт нічого спеціально не "вмикає".
+    MOBILE_BUILD_URL="https://github.com/zendjura-sys/laravel-12-railway/releases/latest/download/build.txt"
+    # tr -cd лишає тільки цифри перед тим, як число потрапить у рядок PHP-коду —
+    # build.txt приходить з GitHub, довіряти йому як чистому числу без
+    # перевірки не варто.
+    MOBILE_LATEST_BUILD="$(curl -fsSL "$MOBILE_BUILD_URL" 2>/dev/null | tr -cd '0-9')"
+    if [ -n "$MOBILE_LATEST_BUILD" ]; then
+        php artisan tinker --execute="\App\Models\Setting::set('mobile_app_latest_build', '${MOBILE_LATEST_BUILD}', 'mobile_app');" || true
+    else
+        warn "Не вдалося прочитати номер збірки застосунку (build.txt) — пропоную оновлення лишиться на попередньому значенні"
+    fi
 else
     warn "Не вдалося завантажити .apk з GitHub Release — пропускаю (кнопка на сайті лишиться на попередній версії чи не з'явиться, якщо це перший деплой)"
     rm -f "${APP_DIR}/public/downloads/monsory-connect.apk.tmp"

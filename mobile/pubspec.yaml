@@ -51,6 +51,17 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^5.0.0
+  flutter_launcher_icons: ^0.14.3
+
+# Джерело — сам SVG-знак сайту (ApplicationLogo.vue: ромб + "M", без
+# жодного заднього прямокутника), відрендерений у прозорий PNG. Без
+# заливки за задумом — фон має бути прозорим, лончер показує знак просто
+# на робочому столі, а не на суцільній плашці.
+flutter_launcher_icons:
+  android: true
+  image_path: "assets/icon/icon.png"
+  adaptive_icon_background: "#00000000"
+  adaptive_icon_foreground: "assets/icon/icon-foreground.png"
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

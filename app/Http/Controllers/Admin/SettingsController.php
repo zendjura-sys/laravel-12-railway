@@ -62,6 +62,8 @@ class SettingsController extends Controller
             'mobile_app_enabled',
             'mobile_app_maintenance_message',
             'mobile_app_min_build',
+            'mobile_app_latest_build',
+            'mobile_app_update_message',
             'mobile_app_bank_enabled',
             'mobile_app_leaderboard_enabled',
             'mobile_app_reports_enabled',
@@ -150,7 +152,7 @@ class SettingsController extends Controller
         foreach (self::FIELDS[$group] as $key) {
             $rules[$key] = match (true) {
                 in_array($key, self::BOOLEAN_FIELDS, true) => ['boolean'],
-                $key === 'mobile_app_min_build' => ['nullable', 'integer', 'min:1'],
+                in_array($key, ['mobile_app_min_build', 'mobile_app_latest_build'], true) => ['nullable', 'integer', 'min:1'],
                 in_array($key, self::URL_FIELDS, true) => ['nullable', 'string', 'max:2000', 'url:http,https'],
                 in_array($key, self::LONG_TEXT_FIELDS, true) => ['nullable', 'string', 'max:5000'],
                 default => ['nullable', 'string', 'max:2000'],

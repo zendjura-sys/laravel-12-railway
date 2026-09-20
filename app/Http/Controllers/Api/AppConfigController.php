@@ -20,6 +20,11 @@ class AppConfigController extends Controller
             'enabled' => Setting::get('mobile_app_enabled') !== '0',
             'maintenanceMessage' => Setting::get('mobile_app_maintenance_message'),
             'minBuild' => (int) (Setting::get('mobile_app_min_build') ?? 0),
+            // На відміну від minBuild (жорсткий блок — старіше не пускає
+            // далі логіну), це м'яке "є новіша версія" — застосунок
+            // працює як завжди, просто раз пропонує оновитись.
+            'latestBuild' => (int) (Setting::get('mobile_app_latest_build') ?? 0),
+            'updateMessage' => Setting::get('mobile_app_update_message'),
             'bankTabEnabled' => Setting::get('mobile_app_bank_enabled') !== '0',
             'leaderboardTabEnabled' => Setting::get('mobile_app_leaderboard_enabled') !== '0',
             'reportsTabEnabled' => Setting::get('mobile_app_reports_enabled') !== '0',

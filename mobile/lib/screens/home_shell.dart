@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme.dart';
+import '../update_prompt.dart';
 import 'bank_screen.dart';
 import 'dashboard_screen.dart';
 import 'leaderboard_screen.dart';
@@ -14,12 +15,18 @@ class HomeShell extends StatefulWidget {
   final bool bankTabEnabled;
   final bool leaderboardTabEnabled;
   final bool reportsTabEnabled;
+  final int latestBuild;
+  final String? updateMessage;
+  final String? downloadUrl;
 
   const HomeShell({
     super.key,
     this.bankTabEnabled = true,
     this.leaderboardTabEnabled = true,
     this.reportsTabEnabled = true,
+    this.latestBuild = 0,
+    this.updateMessage,
+    this.downloadUrl,
   });
 
   @override
@@ -28,6 +35,22 @@ class HomeShell extends StatefulWidget {
 
 class _HomeShellState extends State<HomeShell> {
   int _index = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    // Після першого кадру — Dialog потребує вже змонтований Navigator над
+    // собою, а показувати запит на оновлення поверх ще порожнього екрана
+    // недоречно.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      maybeShowUpdatePrompt(
+        context,
+        latestBuild: widget.latestBuild,
+        message: widget.updateMessage,
+        downloadUrl: widget.downloadUrl,
+      );
+    });
+  }
 
   @override
   Widget build(BuildContext context) {

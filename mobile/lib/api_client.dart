@@ -135,6 +135,15 @@ class ApiClient {
     return data;
   }
 
+  Future<void> forgotPassword(String email) async {
+    final response = await http.post(
+      _uri('/forgot-password'),
+      headers: await _headers(),
+      body: jsonEncode({'email': email}),
+    );
+    _decode(response);
+  }
+
   Future<void> logout() async {
     try {
       final response =

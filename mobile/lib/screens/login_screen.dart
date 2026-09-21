@@ -20,6 +20,48 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _obscure = true;
   String? _error;
 
+  Future<void> _forgotPassword() async {
+    final controller = TextEditingController(text: _emailController.text.trim());
+    final email = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Забули пароль?'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Надішлемо посилання для скидання пароля на пошту — відкриється в браузері.',
+                style: TextStyle(color: Colors.white54, fontSize: 13)),
+            const SizedBox(height: 12),
+            TextField(
+              controller: controller,
+              autofocus: true,
+              keyboardType: TextInputType.emailAddress,
+              decoration: const InputDecoration(labelText: 'Email'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Скасувати')),
+          TextButton(
+              onPressed: () => Navigator.of(ctx).pop(controller.text.trim()),
+              child: const Text('Надіслати')),
+        ],
+      ),
+    );
+    if (email == null || email.isEmpty || !mounted) return;
+
+    try {
+      await ApiClient.instance.forgotPassword(email);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Якщо email зареєстровано — лист із посиланням уже в дорозі.')));
+      }
+    } on ApiException catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+    }
+  }
+
   Future<void> _submit() async {
     if (_emailController.text.trim().isEmpty ||
         _passwordController.text.isEmpty) {
@@ -119,6 +161,13 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                   onSubmitted: (_) => _submit(),
+                ),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: _loading ? null : _forgotPassword,
+                    child: const Text('Забули пароль?'),
+                  ),
                 ),
                 if (_error != null) ...[
                   const SizedBox(height: 12),

@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Route;
  */
 Route::get('/app-config', [AppConfigController::class, 'show']);
 Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:6,1');
+Route::post('/forgot-password', [AuthController::class, 'forgotPassword'])->middleware('throttle:6,1');
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/login/two-factor', [AuthController::class, 'loginTwoFactor']);
 

@@ -14,6 +14,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules;
@@ -146,6 +147,26 @@ class AuthController extends Controller
         event(new Registered($user));
 
         return response()->json($this->issueToken($user, $data['device_name']));
+    }
+
+    /**
+     * "Забули пароль?" із застосунку — той самий Password::sendResetLink(),
+     * що й на сайті (PasswordResetLinkController), лише JSON замість
+     * редіректу. Лист із посиланням відкривається в браузері — сама зміна
+     * пароля лишається на сайті (там уже є форма з токеном), у застосунку
+     * просто просимо лист і повертаємо на логін.
+     */
+    public function forgotPassword(Request $request): JsonResponse
+    {
+        $data = $request->validate(['email' => ['required', 'string', 'email']]);
+
+        $status = Password::sendResetLink($data);
+
+        if ($status !== Password::RESET_LINK_SENT) {
+            throw ValidationException::withMessages(['email' => [trans($status)]]);
+        }
+
+        return response()->json(['message' => trans($status)]);
     }
 
     public function logout(Request $request): JsonResponse

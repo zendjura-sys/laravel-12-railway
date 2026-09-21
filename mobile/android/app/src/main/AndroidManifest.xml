@@ -2,6 +2,10 @@
     <uses-permission android:name="android.permission.INTERNET"/>
     <!-- image_picker: зйомка фото-доказу до звіту прямо з камери. -->
     <uses-permission android:name="android.permission.CAMERA"/>
+    <!-- Самооновлення: встановити завантажений apk без переходу в Play
+         Store (тут його й немає) — при першому запуску Android сам
+         запропонує дозволити встановлення з цього джерела. -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>
     <application
         android:label="Monsory Connect"
         android:name="${applicationName}"

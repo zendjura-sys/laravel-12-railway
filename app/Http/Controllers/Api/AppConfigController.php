@@ -29,7 +29,12 @@ class AppConfigController extends Controller
             'bankTabEnabled' => Setting::get('mobile_app_bank_enabled') !== '0',
             'leaderboardTabEnabled' => Setting::get('mobile_app_leaderboard_enabled') !== '0',
             'reportsTabEnabled' => Setting::get('mobile_app_reports_enabled') !== '0',
-            'downloadUrl' => Setting::get('mobile_app_download_url'),
+            // Адмін може вписати як повний URL (https://...), так і
+            // відносний шлях (/downloads/monsory-connect.apk, як ставить
+            // deploy/setup-vps.sh) — телефон не має поняття "поточний
+            // домен", тому відносний шлях тут же перетворюємо на повний,
+            // інакше Uri.parse() у застосунку не матиме хоста для запиту.
+            'downloadUrl' => $this->absoluteDownloadUrl(Setting::get('mobile_app_download_url')),
             // Палітра керується з сайту (Admin → Дизайн → Оформлення) —
             // застосунок фарбує свою gold-гаму цими ж відтінками, тому
             // зміна бренд-кольору на сайті одразу видно й у застосунку,
@@ -43,5 +48,18 @@ class AppConfigController extends Controller
                 ? null
                 : DesignSettings::accentShades(),
         ]);
+    }
+
+    private function absoluteDownloadUrl(?string $url): ?string
+    {
+        if ($url === null || $url === '') {
+            return null;
+        }
+
+        if (str_starts_with($url, 'http://') || str_starts_with($url, 'https://')) {
+            return $url;
+        }
+
+        return url($url);
     }
 }

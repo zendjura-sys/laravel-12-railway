@@ -19,6 +19,9 @@ class TelegramClient
 {
     private ?string $token;
 
+    /** Відповідь останнього call() — для діагностики, коли метод повертає лише bool/null/id. */
+    private ?array $lastResponse = null;
+
     public function __construct()
     {
         $this->token = Setting::get('telegram_bot_token') ?: null;
@@ -27,6 +30,30 @@ class TelegramClient
     public function isConfigured(): bool
     {
         return (bool) $this->token;
+    }
+
+    /** Текст помилки останнього виклику (Telegram description) — null, якщо він був успішним. */
+    public function lastErrorMessage(): ?string
+    {
+        if (($this->lastResponse['ok'] ?? false) === true) {
+            return null;
+        }
+
+        return $this->lastResponse['description'] ?? null;
+    }
+
+    /**
+     * Помилка, після якої ретраїти той самий чат безглуздо: бот
+     * заблокований чи акаунт/чат більше не існує. 403 — заблокований бот
+     * чи деактивований користувач; 400 "chat not found" — чат видалено
+     * або учасник ще жодного разу не писав боту напряму.
+     */
+    public function lastErrorIsPermanent(): bool
+    {
+        $code = $this->lastResponse['error_code'] ?? null;
+        $description = $this->lastResponse['description'] ?? '';
+
+        return $code === 403 || ($code === 400 && str_contains($description, 'chat not found'));
     }
 
     /**
@@ -219,7 +246,7 @@ class TelegramClient
     private function call(string $method, array $payload): array
     {
         if (! $this->isConfigured()) {
-            return ['ok' => false, 'description' => 'Bot Token не вказано.'];
+            return $this->lastResponse = ['ok' => false, 'description' => 'Bot Token не вказано.'];
         }
 
         try {
@@ -233,18 +260,18 @@ class TelegramClient
             $json = $response->json();
 
             if (! is_array($json)) {
-                return ['ok' => false, 'description' => 'Некоректна відповідь Telegram.'];
+                return $this->lastResponse = ['ok' => false, 'description' => 'Некоректна відповідь Telegram.'];
             }
 
             if (($json['ok'] ?? false) !== true) {
                 Log::warning('telegram: '.$method.' failed', ['description' => $json['description'] ?? null]);
             }
 
-            return $json;
+            return $this->lastResponse = $json;
         } catch (\Throwable $e) {
             Log::warning('telegram: '.$method.' threw', ['error' => $e->getMessage()]);
 
-            return ['ok' => false, 'description' => $e->getMessage()];
+            return $this->lastResponse = ['ok' => false, 'description' => $e->getMessage()];
         }
     }
 }

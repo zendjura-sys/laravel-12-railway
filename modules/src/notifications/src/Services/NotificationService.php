@@ -82,6 +82,14 @@ class NotificationService
         $emoji = self::TYPE_EMOJI[$type] ?? '🔔';
         $text = MessageFormat::card($emoji, $title, $body ? e($body) : null);
         $keyboard = $telegramButton ? ['inline_keyboard' => [[$telegramButton]]] : null;
-        $client->sendMessage((string) $link->chat_id, $text, $keyboard);
+        $messageId = $client->sendMessage((string) $link->chat_id, $text, $keyboard);
+
+        // Той самий випадок, що й у SendBroadcastTelegramMessage: бот
+        // заблокований чи чат видалено — знімаємо прив'язку одразу, а не
+        // мовчки повторюємо ту саму невдачу на кожному наступному
+        // особистому сповіщенні цього учасника.
+        if ($messageId === null && $client->lastErrorIsPermanent()) {
+            $link->update(['linked_at' => null, 'chat_id' => null]);
+        }
     }
 }

@@ -10,6 +10,8 @@ use Addons\Messenger\Models\Sticker;
 use Addons\Messenger\Models\UserIdentityKey;
 use App\Models\Setting;
 use App\Models\User;
+use App\Support\MobilePushSender;
+use App\Support\WebPushSender;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -254,6 +256,8 @@ class MessengerController
             ['last_read_message_id' => $message->id],
         );
 
+        $this->notifyNewMessage($conversation, $message, $request->user());
+
         return response()->json([
             'ok' => true,
             'message' => null,
@@ -472,6 +476,52 @@ class MessengerController
         if (! $isParticipant) {
             throw new AccessDeniedHttpException;
         }
+    }
+
+    /**
+     * Push у мобільний застосунок і в браузер про нове повідомлення —
+     * раніше цього не було зовсім (чат покладався лише на бейдж
+     * непрочитаного й опитування відкритої сторінки), тому користувач
+     * дізнавався про нове повідомлення, лише сам відкривши месенджер.
+     * Обидва відправники мовчки no-op, якщо канал не налаштовано
+     * (немає VAPID-ключів / службового акаунта Firebase) — так само,
+     * як у решті застосунку.
+     */
+    protected function notifyNewMessage(Conversation $conversation, Message $message, User $sender): void
+    {
+        $recipientIds = $this->pushRecipientIds($conversation, $sender->id);
+        if ($recipientIds->isEmpty()) {
+            return;
+        }
+
+        $title = match ($conversation->type) {
+            'family' => $sender->name.' · Родина',
+            'deputies' => $sender->name.' · Заступники',
+            default => $sender->name,
+        };
+        $body = $this->previewText($message);
+        $url = '/messenger/'.$conversation->id;
+
+        (new MobilePushSender())->sendToUserIds($recipientIds, $title, $body, $url);
+
+        $recipients = User::query()->whereIn('id', $recipientIds)->get(['id']);
+        $webPush = new WebPushSender();
+        foreach ($recipients as $recipient) {
+            $webPush->sendToUser($recipient, $title, $body, $url);
+        }
+    }
+
+    /** @return Collection<int,int> */
+    protected function pushRecipientIds(Conversation $conversation, int $senderId): Collection
+    {
+        return match ($conversation->type) {
+            'family' => User::query()->where('is_shadow', false)->where('id', '!=', $senderId)->pluck('id'),
+            'deputies' => User::query()->where('position_key', 'deputy-director')->where('id', '!=', $senderId)->pluck('id'),
+            default => ConversationParticipant::query()
+                ->where('conversation_id', $conversation->id)
+                ->where('user_id', '!=', $senderId)
+                ->pluck('user_id'),
+        };
     }
 
     /** Короткий підпис для списку розмов — фото/gif/стікер без тексту не мають порожнього рядка замість прев'ю. */

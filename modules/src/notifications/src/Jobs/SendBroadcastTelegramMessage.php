@@ -66,7 +66,25 @@ class SendBroadcastTelegramMessage implements ShouldQueue
         $messageId = $client->sendMessage((string) $link->chat_id, $text);
 
         if ($messageId === null) {
-            throw new RuntimeException("Не вдалося надіслати broadcast #{$broadcast->id} користувачу {$delivery->user_id}");
+            // 403 (бот заблокований / акаунт деактивовано) чи 400 "chat not
+            // found" — ретраїти той самий чат безглуздо, він не стане
+            // валіднішим за 3 спроби. Знімаємо прив'язку одразу: без цього
+            // КОЖНА наступна розсилка так само тихо падала б для цього
+            // учасника, накопичуючи однакові failed jobs, поки хтось не
+            // помітить і не розбереться вручну.
+            if ($client->lastErrorIsPermanent()) {
+                $link->update(['linked_at' => null, 'chat_id' => null]);
+                $delivery->update([
+                    'status' => 'failed',
+                    'last_error' => $client->lastErrorMessage() ?? 'Telegram відхилив повідомлення — бот заблокований або чат видалено.',
+                ]);
+
+                return;
+            }
+
+            throw new RuntimeException(
+                $client->lastErrorMessage() ?? "Не вдалося надіслати broadcast #{$broadcast->id} користувачу {$delivery->user_id}"
+            );
         }
 
         $delivery->update(['status' => 'sent', 'sent_at' => now(), 'last_error' => null]);

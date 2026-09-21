@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../main.dart' show navigatorKey;
+import '../services/e2ee.dart';
 import '../services/push_notifications.dart';
 import '../theme.dart';
 import '../update_prompt.dart';
@@ -54,6 +55,7 @@ class _HomeShellState extends State<HomeShell> {
       );
     });
     PushNotifications.instance.init(navigatorKey);
+    E2eeService.instance.ensureReady();
   }
 
   @override

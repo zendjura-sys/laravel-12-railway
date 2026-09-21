@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../api_client.dart';
+import '../../services/e2ee.dart';
 import '../../theme.dart';
 import 'emoji_data.dart';
 
@@ -18,6 +19,7 @@ class ConversationScreen extends StatefulWidget {
 class _ConversationScreenState extends State<ConversationScreen> {
   String _title = '';
   String _type = 'direct';
+  int? _otherUserId;
   List<dynamic> _messages = [];
   bool _loading = true;
   bool _sending = false;
@@ -58,11 +60,13 @@ class _ConversationScreenState extends State<ConversationScreen> {
     try {
       final data = await ApiClient.instance.messengerConversation(widget.conversationId);
       final conversation = data['conversation'] as Map<String, dynamic>;
+      _otherUserId = conversation['otherUserId'] as int?;
+      final messages = await _decryptIncoming(data['messages'] as List<dynamic>);
       if (mounted) {
         setState(() {
           _title = conversation['title'] as String;
           _type = conversation['type'] as String;
-          _messages = data['messages'] as List<dynamic>;
+          _messages = messages;
         });
       }
       _scrollToBottom();
@@ -79,12 +83,34 @@ class _ConversationScreenState extends State<ConversationScreen> {
     try {
       final fresh = await ApiClient.instance.messengerMessagesSince(widget.conversationId, _lastId);
       if (fresh.isNotEmpty && mounted) {
-        setState(() => _messages = [..._messages, ...fresh]);
+        final decrypted = await _decryptIncoming(fresh);
+        setState(() => _messages = [..._messages, ...decrypted]);
         _scrollToBottom();
       }
     } catch (_) {
       // Тиха невдача опитування — спробуємо ще раз наступним тіком.
     }
+  }
+
+  /// Наскрізне шифрування (Фаза 1) — лише direct-розмови (_otherUserId
+  /// не null). Повідомлення типу text_e2ee розшифровуються тут, ОДИН РАЗ,
+  /// до потрапляння в _messages — далі весь рендер (включно з
+  /// _MessageBubble) працює з уже звичайним текстом і нічого не знає
+  /// про шифрування.
+  Future<List<dynamic>> _decryptIncoming(List<dynamic> raw) async {
+    if (_otherUserId == null) return raw;
+
+    final result = <dynamic>[];
+    for (final item in raw) {
+      final m = item as Map<String, dynamic>;
+      if (m['type'] != 'text_e2ee') {
+        result.add(m);
+        continue;
+      }
+      final plain = await E2eeService.instance.decryptFrom(_otherUserId!, m['body'] as String);
+      result.add({...m, 'body': plain ?? '🔒 Не вдалося розшифрувати повідомлення'});
+    }
+    return result;
   }
 
   void _scrollToBottom() {
@@ -105,9 +131,22 @@ class _ConversationScreenState extends State<ConversationScreen> {
 
     setState(() => _sending = true);
     try {
-      final message = await ApiClient.instance.sendMessengerText(widget.conversationId, body);
+      // encryptFor() повертає null, якщо співрозмовник ще не опублікував
+      // публічний ключ (старіша версія застосунку тощо) — тоді просто
+      // надсилаємо нешифрованим, як і раніше, замість блокувати відправку.
+      final encrypted = _type == 'direct' && _otherUserId != null
+          ? await E2eeService.instance.encryptFor(_otherUserId!, body)
+          : null;
+      final message = encrypted != null
+          ? await ApiClient.instance.sendMessengerEncryptedText(widget.conversationId, encrypted)
+          : await ApiClient.instance.sendMessengerText(widget.conversationId, body);
+      // Той самий шлях, що й вхідні: сервер повертає рівно те, що
+      // надіслали (шифротекст), і власне повідомлення розшифровується тим
+      // самим спільним ключем (ECDH статика-статика симетрична для обох
+      // напрямків), тож не потрібен окремий "я вже знаю відкритий текст" шлях.
+      final decrypted = await _decryptIncoming([message]);
       setState(() {
-        _messages = [..._messages, message];
+        _messages = [..._messages, ...decrypted];
         _draftController.clear();
       });
       _scrollToBottom();
@@ -234,7 +273,21 @@ class _ConversationScreenState extends State<ConversationScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(_title)),
+      appBar: AppBar(
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Flexible(child: Text(_title, overflow: TextOverflow.ellipsis)),
+            if (_type == 'direct') ...[
+              const SizedBox(width: 8),
+              Tooltip(
+                message: 'Наскрізне шифрування',
+                child: Icon(Icons.lock_outline, size: 16, color: AppColors.gold300.withValues(alpha: 0.7)),
+              ),
+            ],
+          ],
+        ),
+      ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null

@@ -14,6 +14,11 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('api')->middleware(['auth:sanctum', SubstituteBindings::class])->group(function () {
     Route::get('/messenger', [MessengerController::class, 'indexJson']);
     Route::get('/messenger/members/search', [MessengerController::class, 'searchMembers']);
+    // Наскрізне шифрування (Фаза 1: direct-розмови) — обмін публічними
+    // X25519-ключами. /identity-key публікує СВІЙ ключ, /users/{user}/…
+    // читає ЧУЖИЙ.
+    Route::post('/messenger/identity-key', [MessengerController::class, 'publishIdentityKey']);
+    Route::get('/messenger/users/{user}/identity-key', [MessengerController::class, 'identityKey']);
     Route::post('/messenger/direct/{target}', [MessengerController::class, 'startDirectJson']);
     Route::get('/messenger/stickers', [MessengerController::class, 'stickers']);
     Route::post('/messenger/stickers', [MessengerController::class, 'storeSticker']);

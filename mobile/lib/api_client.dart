@@ -556,6 +556,35 @@ class ApiClient {
     return (data['data'] as Map<String, dynamic>)['message'] as Map<String, dynamic>;
   }
 
+  /// body тут — уже зашифрований блок (E2eeService.encryptFor), не текст.
+  Future<Map<String, dynamic>> sendMessengerEncryptedText(int conversationId, String encryptedBody) async {
+    final response = await http.post(
+      _uri('/messenger/$conversationId/messages'),
+      headers: await _headers(auth: true),
+      body: jsonEncode({'type': 'text_e2ee', 'body': encryptedBody}),
+    );
+    final data = _decode(response) as Map<String, dynamic>;
+    return (data['data'] as Map<String, dynamic>)['message'] as Map<String, dynamic>;
+  }
+
+  /// Публікує власний публічний X25519-ключ (наскрізне шифрування).
+  Future<void> publishIdentityKey(String publicKeyBase64) async {
+    final response = await http.post(
+      _uri('/messenger/identity-key'),
+      headers: await _headers(auth: true),
+      body: jsonEncode({'public_key': publicKeyBase64}),
+    );
+    _decode(response);
+  }
+
+  /// null — користувач ще не опублікував ключ (старіша версія застосунку
+  /// чи жодного разу не заходив у месенджер).
+  Future<String?> fetchIdentityKey(int userId) async {
+    final response = await http.get(_uri('/messenger/users/$userId/identity-key'), headers: await _headers(auth: true));
+    final data = _decode(response) as Map<String, dynamic>;
+    return (data['data'] as Map<String, dynamic>)['publicKey'] as String?;
+  }
+
   Future<Map<String, dynamic>> sendMessengerGif(int conversationId, String gifUrl) async {
     final response = await http.post(
       _uri('/messenger/$conversationId/messages'),

@@ -7,6 +7,7 @@ use Addons\Messenger\Models\ConversationParticipant;
 use Addons\Messenger\Models\ConversationRead;
 use Addons\Messenger\Models\Message;
 use Addons\Messenger\Models\Sticker;
+use Addons\Messenger\Models\UserIdentityKey;
 use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
@@ -91,9 +92,13 @@ class MessengerController
                 ->where('sender_id', '!=', $user->id)
                 ->count();
 
+            $otherUser = $c->type === 'direct'
+                ? $c->participants->pluck('user')->filter(fn ($u) => $u && $u->id !== $user->id)->first()
+                : null;
+
             $title = match ($c->type) {
                 'deputies' => 'Заступники',
-                'direct' => $c->participants->pluck('user')->filter(fn ($u) => $u && $u->id !== $user->id)->first()?->name ?? 'Учасник',
+                'direct' => $otherUser?->name ?? 'Учасник',
                 default => 'Загальний чат родини',
             };
 
@@ -101,6 +106,10 @@ class MessengerController
                 'id' => $c->id,
                 'type' => $c->type,
                 'title' => $title,
+                // Потрібен мобільному клієнту для наскрізного шифрування
+                // (Фаза 1: лише direct) — щоб отримати публічний ключ
+                // співрозмовника й вивести спільний секрет через ECDH.
+                'otherUserId' => $otherUser?->id,
                 'lastMessage' => $lastMessage ? [
                     'body' => $this->previewText($lastMessage),
                     'senderName' => $lastMessage->sender?->name,
@@ -131,13 +140,17 @@ class MessengerController
 
         $this->markRead($request, $conversation);
 
-        $title = match ($conversation->type) {
-            'deputies' => 'Заступники',
-            'direct' => (ConversationParticipant::query()
+        $otherUser = $conversation->type === 'direct'
+            ? ConversationParticipant::query()
                 ->where('conversation_id', $conversation->id)
                 ->where('user_id', '!=', $request->user()->id)
                 ->with('user:id,name,avatar_path')
-                ->first()?->user)?->name ?? 'Учасник',
+                ->first()?->user
+            : null;
+
+        $title = match ($conversation->type) {
+            'deputies' => 'Заступники',
+            'direct' => $otherUser?->name ?? 'Учасник',
             default => 'Загальний чат родини',
         };
 
@@ -146,6 +159,7 @@ class MessengerController
                 'id' => $conversation->id,
                 'type' => $conversation->type,
                 'title' => $title,
+                'otherUserId' => $otherUser?->id,
             ],
             'messages' => $messages->map(fn (Message $m) => $this->formatMessage($m, $request->user()->id)),
             'myId' => $request->user()->id,
@@ -182,7 +196,7 @@ class MessengerController
         $this->ensureAccess($conversation, $request->user());
 
         $validated = $request->validate([
-            'type' => ['nullable', Rule::in(['text', 'photo', 'gif', 'sticker'])],
+            'type' => ['nullable', Rule::in(['text', 'text_e2ee', 'photo', 'gif', 'sticker'])],
             'body' => ['nullable', 'string', 'max:4000'],
             'photo' => ['required_if:type,photo', 'nullable', 'image', 'max:8192'],
             'gif_url' => ['required_if:type,gif', 'nullable', 'url'],
@@ -194,8 +208,17 @@ class MessengerController
         $attachmentPath = null;
         $attachmentUrl = null;
 
-        if ($type === 'text' && $body === '') {
+        if (in_array($type, ['text', 'text_e2ee'], true) && $body === '') {
             throw ValidationException::withMessages(['body' => 'Повідомлення не може бути порожнім.']);
+        }
+
+        // Наскрізне шифрування (Фаза 1) — лише особисті розмови. Сервер
+        // все одно не вміє й не пробує розшифрувати text_e2ee (body —
+        // ціле зашифроване повідомлення для клієнта), тому це не про
+        // безпеку, а про те, щоб такий тип не потрапляв туди, де його
+        // ніхто не зможе розшифрувати (сімейний чат, чат заступників).
+        if ($type === 'text_e2ee' && $conversation->type !== 'direct') {
+            throw ValidationException::withMessages(['type' => 'Шифрування доступне лише в особистих розмовах.']);
         }
 
         if ($type === 'photo') {
@@ -458,8 +481,51 @@ class MessengerController
             'photo' => $m->body !== '' ? '📷 '.$m->body : '📷 Фото',
             'gif' => '🎞 GIF',
             'sticker' => '🙂 Стікер',
+            // body тут — зашифрований блок, не текст; показувати його як
+            // прев'ю не можна (і незрозуміло людині, і сервер сам не вміє
+            // його прочитати, щоб перевірити).
+            'text_e2ee' => '🔒 Зашифроване повідомлення',
             default => $m->body,
         };
+    }
+
+    /**
+     * Публікує/оновлює власний публічний X25519-ключ — викликається
+     * мобільним клієнтом один раз при першому запуску (чи після
+     * перевстановлення, коли генерується нова пара ключів). updateOrCreate,
+     * не create: новий пристрій/перевстановлення просто заміняє ключ,
+     * старі зашифровані повідомлення після цього нечитабельні — це
+     * свідомо прийнятий компроміс Фази 1 (без окремого бекапу ключів).
+     */
+    public function publishIdentityKey(Request $request): JsonResponse
+    {
+        $data = $request->validate(['public_key' => ['required', 'string', 'max:255']]);
+
+        UserIdentityKey::updateOrCreate(
+            ['user_id' => $request->user()->id],
+            ['public_key' => $data['public_key']],
+        );
+
+        return response()->json(['ok' => true, 'message' => null, 'data' => null, 'errors' => null, 'redirect' => null]);
+    }
+
+    /**
+     * Публічний ключ будь-якого зареєстрованого учасника — потрібен ДО
+     * початку листування (щоб вивести спільний секрет через ECDH), тому
+     * доступ не гейтиться участю в розмові з цим користувачем, так само
+     * як searchMembers() вище.
+     */
+    public function identityKey(Request $request, User $user): JsonResponse
+    {
+        $publicKey = UserIdentityKey::query()->where('user_id', $user->id)->value('public_key');
+
+        return response()->json([
+            'ok' => true,
+            'message' => null,
+            'data' => ['publicKey' => $publicKey],
+            'errors' => null,
+            'redirect' => null,
+        ]);
     }
 
     protected function formatMessage(Message $m, int $myId): array

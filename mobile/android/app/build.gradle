@@ -5,6 +5,18 @@ plugins {
     id "dev.flutter.flutter-gradle-plugin"
 }
 
+// Стабільний підпис релізу — обов'язковий, інакше кожна збірка (локальна
+// чи CI, де дебаг-keystore щоразу генерується наново на чистій машині)
+// має СВІЙ сертифікат, і Android відмовляється ставити оновлення поверх
+// старого (INSTALL_FAILED_UPDATE_INCOMPATIBLE — саме "конфліктує з іншим
+// пакетом"). key.properties в git не потрапляє (.gitignore); локально
+// його не буде — тоді просто збираємось під дебаг-ключем, як і раніше.
+def keystoreProperties = new Properties()
+def keystorePropertiesFile = rootProject.file('key.properties')
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+
 android {
     namespace = "net.monsory.monsory_connect"
     compileSdk = flutter.compileSdkVersion
@@ -30,11 +42,23 @@ android {
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        if (keystorePropertiesFile.exists()) {
+            release {
+                keyAlias = keystoreProperties['keyAlias']
+                keyPassword = keystoreProperties['keyPassword']
+                storeFile = file(keystoreProperties['storeFile'])
+                storePassword = keystoreProperties['storePassword']
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.debug
+            // Є key.properties (CI чи локально з ключем) — підписуємо
+            // стабільним релізним ключем. Немає — падаємо назад на дебаг,
+            // щоб `flutter run --release` й далі працював без налаштування.
+            signingConfig = keystorePropertiesFile.exists() ? signingConfigs.release : signingConfigs.debug
         }
     }
 }

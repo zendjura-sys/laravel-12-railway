@@ -31,6 +31,23 @@ jobs:
 
       - run: flutter test
 
+      # Стабільний підпис релізу — без цього кроку кожна збірка йде під
+      # випадковим дебаг-ключем чистого runner'а, і Android відмовляється
+      # ставити нову версію поверх старої ("конфліктує з іншим пакетом").
+      # Секрет ANDROID_KEYSTORE_BASE64 відсутній (форк, інший репозиторій
+      # без секретів) — крок просто нічого не пише, і build.gradle сам
+      # падає назад на дебаг-підпис.
+      - name: Decode release keystore
+        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+        run: |
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > android/app/upload-keystore.jks
+          cat > android/key.properties <<EOF
+          storePassword=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          keyPassword=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}
+          storeFile=upload-keystore.jks
+          EOF
+
       # run_number росте на +1 з кожним прогоном цього workflow — просте й
       # гарантовано зростаюче джерело "номера збірки", без ручного стеження
       # за версією в pubspec.yaml. Пишеться і в сам застосунок (--build-number,

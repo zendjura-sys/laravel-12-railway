@@ -61,7 +61,7 @@ class _HomeShellState extends State<HomeShell> {
   @override
   Widget build(BuildContext context) {
     final screens = [
-      const DashboardScreen(),
+      DashboardScreen(reportsEnabled: widget.reportsTabEnabled),
       if (widget.bankTabEnabled) const BankScreen(),
       MenuScreen(
           reportsEnabled: widget.reportsTabEnabled,

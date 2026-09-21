@@ -6,10 +6,14 @@ import '../widgets/fade_slide_in.dart';
 import '../widgets/member_card_widget.dart';
 import 'login_screen.dart';
 import 'member_profile_screen.dart';
+import 'messenger/conversations_screen.dart';
 import 'notifications_screen.dart';
+import 'reports_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
-  const DashboardScreen({super.key});
+  final bool reportsEnabled;
+
+  const DashboardScreen({super.key, this.reportsEnabled = true});
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
@@ -178,8 +182,62 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         const SizedBox(height: 24),
                         FadeSlideIn(index: 1, child: _ProgressStats(profile: _profile!)),
                       ],
+                      const SizedBox(height: 24),
+                      FadeSlideIn(
+                        index: 2,
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: _QuickActionButton(
+                                icon: Icons.forum_outlined,
+                                label: 'Чат',
+                                onTap: () => Navigator.of(context).push(
+                                    MaterialPageRoute(builder: (_) => const ConversationsScreen())),
+                              ),
+                            ),
+                            if (widget.reportsEnabled) ...[
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: _QuickActionButton(
+                                  icon: Icons.assignment_outlined,
+                                  label: 'Звіти',
+                                  onTap: () => Navigator.of(context)
+                                      .push(MaterialPageRoute(builder: (_) => const ReportsScreen())),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
                     ],
                   ),
+      ),
+    );
+  }
+}
+
+class _QuickActionButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  const _QuickActionButton({required this.icon, required this.label, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(16),
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        decoration: glassPanelDecoration(),
+        child: Column(
+          children: [
+            Icon(icon, color: AppColors.gold300),
+            const SizedBox(height: 6),
+            Text(label, style: const TextStyle(color: Colors.white70, fontSize: 13)),
+          ],
+        ),
       ),
     );
   }

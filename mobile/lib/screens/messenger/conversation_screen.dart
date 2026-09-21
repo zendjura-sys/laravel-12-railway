@@ -15,6 +15,7 @@ import '../../api_client.dart';
 import '../../services/e2ee.dart';
 import '../../theme.dart';
 import '../member_profile_screen.dart';
+import '../photo_viewer_screen.dart';
 import 'emoji_data.dart';
 
 class ConversationScreen extends StatefulWidget {
@@ -42,6 +43,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
   Map<String, dynamic>? _replyingTo;
   final _voiceRecorder = AudioRecorder();
   bool _recording = false;
+  bool _recordingLocked = false;
   Timer? _recordTimer;
   Duration _recordElapsed = Duration.zero;
 
@@ -390,6 +392,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
     await _voiceRecorder.start(const RecordConfig(), path: path);
     setState(() {
       _recording = true;
+      _recordingLocked = false;
       _recordElapsed = Duration.zero;
     });
     _recordTimer = Timer.periodic(const Duration(seconds: 1), (_) {
@@ -401,7 +404,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
     _recordTimer?.cancel();
     final path = await _voiceRecorder.stop();
     final duration = _recordElapsed.inSeconds;
-    if (mounted) setState(() => _recording = false);
+    if (mounted) setState(() { _recording = false; _recordingLocked = false; });
     // Зарано відпущений палець — менше секунди — швидше скасувати, ніж
     // надсилати порожній чи майже порожній звук.
     if (path == null || duration < 1) return;
@@ -421,7 +424,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
   Future<void> _cancelRecording() async {
     _recordTimer?.cancel();
     await _voiceRecorder.cancel();
-    if (mounted) setState(() => _recording = false);
+    if (mounted) setState(() { _recording = false; _recordingLocked = false; });
   }
 
   void _showEmojiPicker() {
@@ -492,64 +495,98 @@ class _ConversationScreenState extends State<ConversationScreen> {
     return '$m:$s';
   }
 
+  /// Один Row для звичайного вводу й запису голосового — навмисно НЕ два
+  /// окремі віджети, між якими перемикались за _recording (як було раніше).
+  /// Той підхід ламав запис: onLongPressStart ставив _recording=true,
+  /// setState одразу підміняв усе піддерево композера на інший віджет —
+  /// і GestureDetector, що тримав активний жест "довге натискання", просто
+  /// знищувався разом зі своїм розпізнавачем. Палець фізично лишався на
+  /// екрані, але слухати onLongPressEnd для нього вже було нікому: запис
+  /// тривав нескінченно, відпускання нічого не надсилало. Тепер кнопка
+  /// мікрофона/відправки — один і той самий GestureDetector на тому самому
+  /// місці Row завжди (стабільний Key), змінюється лише його вміст.
   Widget _buildComposerRow() {
     final hasContent = _draftController.text.trim().isNotEmpty || _photo != null;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
-        // Фото/gif/стікер переїхали в один пікер вкладень (_showAttachmentSheet)
-        // разом із файлом/геопозицією/контактом — п'ять окремих кнопок тут
-        // лишали текстовому полю замало місця й воно стискалось у вузьку
-        // колонку з переносом слова "Повідомлення" по буквах.
-        IconButton(icon: const Icon(Icons.attach_file), onPressed: _showAttachmentSheet),
-        IconButton(icon: const Icon(Icons.emoji_emotions_outlined), onPressed: _showEmojiPicker),
-        Expanded(
-          child: TextField(
-            controller: _draftController,
-            minLines: 1,
-            maxLines: 4,
-            decoration: InputDecoration(
-              hintText: _photo != null ? 'Підпис до фото…' : 'Повідомлення…',
+        if (_recording) ...[
+          IconButton(
+            icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+            onPressed: _cancelRecording,
+          ),
+          Icon(Icons.fiber_manual_record, color: Colors.redAccent.withValues(alpha: 0.8), size: 14),
+          const SizedBox(width: 8),
+          Text('Запис… ${_formatDuration(_recordElapsed.inSeconds)}', style: const TextStyle(color: Colors.white70)),
+          const Spacer(),
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: Text(
+              _recordingLocked ? 'Натисніть, щоб надіслати' : 'Проведіть вгору, щоб зафіксувати',
+              style: TextStyle(color: Colors.white.withValues(alpha: 0.3), fontSize: 11),
             ),
           ),
-        ),
-        if (_sending)
-          const Padding(
-            padding: EdgeInsets.all(12),
-            child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)),
-          )
-        else if (hasContent)
-          IconButton(icon: Icon(Icons.send, color: AppColors.gold300), onPressed: _sendText)
-        else
-          // Утримання — запис (Telegram-подібний жест); просто тап нічого
-          // не робить, щоб випадковий дотик не почав запис і не заплутав.
-          GestureDetector(
-            onLongPressStart: (_) => _startRecording(),
-            onLongPressEnd: (_) => _stopRecordingAndSend(),
-            child: SizedBox(
-              width: 48,
-              height: 48,
-              child: Icon(Icons.mic_none, color: AppColors.gold300),
+        ] else ...[
+          // Фото/gif/стікер переїхали в один пікер вкладень (_showAttachmentSheet)
+          // разом із файлом/геопозицією/контактом — п'ять окремих кнопок тут
+          // лишали текстовому полю замало місця й воно стискалось у вузьку
+          // колонку з переносом слова "Повідомлення" по буквах.
+          IconButton(icon: const Icon(Icons.attach_file), onPressed: _showAttachmentSheet),
+          IconButton(icon: const Icon(Icons.emoji_emotions_outlined), onPressed: _showEmojiPicker),
+          Expanded(
+            child: TextField(
+              controller: _draftController,
+              minLines: 1,
+              maxLines: 4,
+              decoration: InputDecoration(
+                hintText: _photo != null ? 'Підпис до фото…' : 'Повідомлення…',
+              ),
             ),
           ),
+        ],
+        _buildTrailingAction(key: const ValueKey('composer-trailing-action'), hasContent: hasContent),
       ],
     );
   }
 
-  Widget _buildRecordingRow() {
-    return Row(
-      children: [
-        IconButton(
-          icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
-          onPressed: _cancelRecording,
-        ),
-        Icon(Icons.fiber_manual_record, color: Colors.redAccent.withValues(alpha: 0.8), size: 14),
-        const SizedBox(width: 8),
-        Text('Запис… ${_formatDuration(_recordElapsed.inSeconds)}', style: const TextStyle(color: Colors.white70)),
-        const Spacer(),
-        Text('Відпустіть, щоб надіслати', style: TextStyle(color: Colors.white.withValues(alpha: 0.3), fontSize: 11)),
-        const SizedBox(width: 8),
-      ],
+  Widget _buildTrailingAction({required Key key, required bool hasContent}) {
+    if (_sending) {
+      return Padding(
+        key: key,
+        padding: const EdgeInsets.all(12),
+        child: const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)),
+      );
+    }
+    // Запис зафіксовано (проведено вгору) — палець уже відпущено, запис
+    // триває сам, тут звичайна кнопка "надіслати" замість утримання.
+    if (_recording && _recordingLocked) {
+      return IconButton(
+        key: key,
+        icon: Icon(Icons.send, color: AppColors.gold300),
+        onPressed: _stopRecordingAndSend,
+      );
+    }
+    if (hasContent && !_recording) {
+      return IconButton(key: key, icon: Icon(Icons.send, color: AppColors.gold300), onPressed: _sendText);
+    }
+    // Утримання — запис (Telegram-подібний жест), проведення пальцем вгору
+    // без відпускання — фіксація запису (не треба тримати весь час).
+    return GestureDetector(
+      key: key,
+      onLongPressStart: (_) => _startRecording(),
+      onLongPressMoveUpdate: (details) {
+        if (_recording && !_recordingLocked && details.offsetFromOrigin.dy < -60) {
+          setState(() => _recordingLocked = true);
+        }
+      },
+      onLongPressEnd: (_) {
+        if (!_recordingLocked) _stopRecordingAndSend();
+      },
+      child: SizedBox(
+        width: 48,
+        height: 48,
+        child: Icon(_recording ? Icons.mic : Icons.mic_none, color: AppColors.gold300),
+      ),
     );
   }
 
@@ -696,7 +733,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
                       top: false,
                       child: Padding(
                         padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
-                        child: _recording ? _buildRecordingRow() : _buildComposerRow(),
+                        child: _buildComposerRow(),
                       ),
                     ),
                   ],
@@ -750,7 +787,13 @@ class _MessageBubble extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            Image.network(attachmentUrl ?? '', fit: BoxFit.cover),
+            GestureDetector(
+              onTap: attachmentUrl == null
+                  ? null
+                  : () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => PhotoViewerScreen(photos: [attachmentUrl]))),
+              child: Image.network(attachmentUrl ?? '', fit: BoxFit.cover),
+            ),
             if (body.isNotEmpty)
               Container(
                 color: isMine ? AppColors.gold400.withValues(alpha: 0.9) : Colors.white.withValues(alpha: 0.05),

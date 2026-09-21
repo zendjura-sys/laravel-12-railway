@@ -45,6 +45,16 @@ dependencies:
   firebase_core: 3.15.2
   firebase_messaging: 15.2.10
   cryptography: ^2.7.0
+  geolocator: ^14.0.2
+  file_picker: ^11.0.3
+  record: ^6.2.1
+  audioplayers: ^6.6.0
+
+dependency_overrides:
+  # geolocator_android 5.x використовує Color.toARGB32(), якого немає в
+  # нашому запінченому Flutter 3.27.1 (додано лише в новіших SDK) —
+  # тримаємо останню версію без цього виклику, доки не оновимо Flutter.
+  geolocator_android: 4.6.2
 
 dev_dependencies:
   flutter_test:

@@ -632,6 +632,55 @@ class ApiClient {
     return (data['data'] as Map<String, dynamic>)['message'] as Map<String, dynamic>;
   }
 
+  Future<Map<String, dynamic>> sendMessengerContact(int conversationId, int contactUserId) async {
+    final response = await http.post(
+      _uri('/messenger/$conversationId/messages'),
+      headers: await _headers(auth: true),
+      body: jsonEncode({'type': 'contact', 'contact_user_id': contactUserId}),
+    );
+    final data = _decode(response) as Map<String, dynamic>;
+    return (data['data'] as Map<String, dynamic>)['message'] as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> sendMessengerLocation(int conversationId, double latitude, double longitude) async {
+    final response = await http.post(
+      _uri('/messenger/$conversationId/messages'),
+      headers: await _headers(auth: true),
+      body: jsonEncode({'type': 'location', 'latitude': latitude, 'longitude': longitude}),
+    );
+    final data = _decode(response) as Map<String, dynamic>;
+    return (data['data'] as Map<String, dynamic>)['message'] as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> sendMessengerFile(int conversationId, String filePath, String fileName) async {
+    final token = await this.token;
+    final request = http.MultipartRequest('POST', _uri('/messenger/$conversationId/messages'))
+      ..headers['Accept'] = 'application/json'
+      ..headers['Authorization'] = 'Bearer $token'
+      ..fields['type'] = 'file';
+    request.files.add(await http.MultipartFile.fromPath('file', filePath, filename: fileName));
+
+    final streamed = await request.send();
+    final response = await http.Response.fromStream(streamed);
+    final data = _decode(response) as Map<String, dynamic>;
+    return (data['data'] as Map<String, dynamic>)['message'] as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> sendMessengerVoice(int conversationId, String filePath, int durationSeconds) async {
+    final token = await this.token;
+    final request = http.MultipartRequest('POST', _uri('/messenger/$conversationId/messages'))
+      ..headers['Accept'] = 'application/json'
+      ..headers['Authorization'] = 'Bearer $token'
+      ..fields['type'] = 'voice'
+      ..fields['voice_duration'] = '$durationSeconds';
+    request.files.add(await http.MultipartFile.fromPath('voice', filePath));
+
+    final streamed = await request.send();
+    final response = await http.Response.fromStream(streamed);
+    final data = _decode(response) as Map<String, dynamic>;
+    return (data['data'] as Map<String, dynamic>)['message'] as Map<String, dynamic>;
+  }
+
   Future<List<dynamic>> searchMessengerMembers(String query) async {
     final response = await http.get(
       _uri('/messenger/members/search').replace(queryParameters: {'q': query}),

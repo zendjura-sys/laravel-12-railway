@@ -219,11 +219,17 @@ class MessengerController
         $this->ensureAccess($conversation, $request->user());
 
         $validated = $request->validate([
-            'type' => ['nullable', Rule::in(['text', 'text_e2ee', 'photo', 'gif', 'sticker'])],
+            'type' => ['nullable', Rule::in(['text', 'text_e2ee', 'photo', 'gif', 'sticker', 'contact', 'location', 'file', 'voice'])],
             'body' => ['nullable', 'string', 'max:4000'],
             'photo' => ['required_if:type,photo', 'nullable', 'image', 'max:8192'],
             'gif_url' => ['required_if:type,gif', 'nullable', 'url'],
             'sticker_id' => ['required_if:type,sticker', 'nullable', 'integer'],
+            'contact_user_id' => ['required_if:type,contact', 'nullable', 'integer'],
+            'latitude' => ['required_if:type,location', 'nullable', 'numeric', 'between:-90,90'],
+            'longitude' => ['required_if:type,location', 'nullable', 'numeric', 'between:-180,180'],
+            'file' => ['required_if:type,file', 'nullable', 'file', 'max:20480'],
+            'voice' => ['required_if:type,voice', 'nullable', 'file', 'max:8192'],
+            'voice_duration' => ['required_if:type,voice', 'nullable', 'integer', 'min:0'],
             'reply_to_message_id' => ['nullable', 'integer'],
         ]);
 
@@ -270,6 +276,29 @@ class MessengerController
                 throw ValidationException::withMessages(['sticker_id' => 'Стікер не знайдено.']);
             }
             $attachmentPath = $sticker->path;
+        }
+
+        if ($type === 'contact') {
+            $contact = User::query()->where('id', $validated['contact_user_id'])->where('is_shadow', false)->first();
+            if (! $contact) {
+                throw ValidationException::withMessages(['contact_user_id' => 'Учасника не знайдено.']);
+            }
+            $body = json_encode(['userId' => $contact->id]);
+        }
+
+        if ($type === 'location') {
+            $body = json_encode(['lat' => (float) $validated['latitude'], 'lng' => (float) $validated['longitude']]);
+        }
+
+        if ($type === 'file') {
+            $file = $request->file('file');
+            $attachmentPath = $file->store('messenger/files', 'public');
+            $body = json_encode(['name' => $file->getClientOriginalName(), 'size' => $file->getSize()]);
+        }
+
+        if ($type === 'voice') {
+            $attachmentPath = $request->file('voice')->store('messenger/voice', 'public');
+            $body = json_encode(['duration' => (int) $validated['voice_duration']]);
         }
 
         $message = Message::create([
@@ -569,6 +598,10 @@ class MessengerController
             // прев'ю не можна (і незрозуміло людині, і сервер сам не вміє
             // його прочитати, щоб перевірити).
             'text_e2ee' => '🔒 Зашифроване повідомлення',
+            'contact' => '👤 Контакт',
+            'location' => '📍 Геопозиція',
+            'file' => '📎 '.((json_decode($m->body, true) ?? [])['name'] ?? 'Файл'),
+            'voice' => '🎤 Голосове повідомлення',
             default => $m->body,
         };
     }
@@ -614,11 +647,27 @@ class MessengerController
 
     protected function formatMessage(Message $m, int $myId): array
     {
+        $contact = null;
+        if ($m->type === 'contact') {
+            $contactUserId = (json_decode($m->body, true) ?? [])['userId'] ?? null;
+            $contactUser = $contactUserId ? User::query()->find($contactUserId) : null;
+            $contact = $contactUser ? [
+                'id' => $contactUser->id,
+                'name' => $contactUser->name,
+                'position' => $contactUser->position_title,
+                'avatarUrl' => $contactUser->avatar_path ? Storage::url($contactUser->avatar_path) : null,
+            ] : null;
+        }
+
         return [
             'id' => $m->id,
             'body' => $m->body,
             'type' => $m->type,
             'attachmentUrl' => $m->attachment_url,
+            // Лише для type=contact — готовий профіль замість того, щоб
+            // клієнт робив окремий запит на GET /users/{id} для кожної
+            // картки контакту в стрічці.
+            'contact' => $contact,
             'senderId' => $m->sender_id,
             'senderName' => $m->sender?->name,
             'senderPosition' => $m->sender?->position_title,

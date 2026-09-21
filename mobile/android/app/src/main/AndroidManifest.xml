@@ -6,6 +6,12 @@
          Store (тут його й немає) — при першому запуску Android сам
          запропонує дозволити встановлення з цього джерела. -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>
+    <!-- Месенджер: голосові повідомлення (record) і геопозиція
+         (geolocator) в чаті — обидва просять дозвіл у рантаймі самі,
+         декларація тут лише вмикає системний запит. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO"/>
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
     <application
         android:label="Monsory Connect"
         android:name="${applicationName}"

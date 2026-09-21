@@ -1,7 +1,16 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
+import 'package:audioplayers/audioplayers.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
+import 'package:open_filex/open_filex.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:record/record.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../api_client.dart';
 import '../../services/e2ee.dart';
 import '../../theme.dart';
@@ -31,6 +40,10 @@ class _ConversationScreenState extends State<ConversationScreen> {
   XFile? _photo;
   Timer? _pollTimer;
   Map<String, dynamic>? _replyingTo;
+  final _voiceRecorder = AudioRecorder();
+  bool _recording = false;
+  Timer? _recordTimer;
+  Duration _recordElapsed = Duration.zero;
 
   @override
   void initState() {
@@ -47,6 +60,8 @@ class _ConversationScreenState extends State<ConversationScreen> {
   @override
   void dispose() {
     _pollTimer?.cancel();
+    _recordTimer?.cancel();
+    _voiceRecorder.dispose();
     _draftController.removeListener(_onDraftChanged);
     _draftController.dispose();
     _scrollController.dispose();
@@ -229,6 +244,165 @@ class _ConversationScreenState extends State<ConversationScreen> {
     }
   }
 
+  Future<void> _showAttachmentSheet() async {
+    final choice = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: AppColors.obsidian900,
+      builder: (_) => SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.insert_drive_file_outlined),
+              title: const Text('Файл'),
+              onTap: () => Navigator.of(context).pop('file'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.location_on_outlined),
+              title: const Text('Геопозиція'),
+              onTap: () => Navigator.of(context).pop('location'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.person_outline),
+              title: const Text('Контакт'),
+              onTap: () => Navigator.of(context).pop('contact'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (!mounted || choice == null) return;
+    switch (choice) {
+      case 'file':
+        await _sendFile();
+      case 'location':
+        await _sendLocation();
+      case 'contact':
+        await _pickContact();
+    }
+  }
+
+  Future<void> _sendFile() async {
+    final result = await FilePicker.pickFiles();
+    final file = result?.files.single;
+    if (file == null || file.path == null) return;
+
+    setState(() => _sending = true);
+    try {
+      final message = await ApiClient.instance.sendMessengerFile(widget.conversationId, file.path!, file.name);
+      setState(() => _messages = [..._messages, message]);
+      _scrollToBottom();
+    } on ApiException catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
+  }
+
+  Future<bool> _ensureLocationPermission() async {
+    var permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+    }
+    if (permission == LocationPermission.deniedForever || permission == LocationPermission.denied) {
+      return false;
+    }
+    return Geolocator.isLocationServiceEnabled();
+  }
+
+  Future<void> _sendLocation() async {
+    setState(() => _sending = true);
+    try {
+      if (!await _ensureLocationPermission()) {
+        if (mounted) {
+          ScaffoldMessenger.of(context)
+              .showSnackBar(const SnackBar(content: Text('Немає дозволу на геопозицію.')));
+        }
+        return;
+      }
+      final position =
+          await Geolocator.getCurrentPosition(locationSettings: const LocationSettings(accuracy: LocationAccuracy.medium));
+      final message =
+          await ApiClient.instance.sendMessengerLocation(widget.conversationId, position.latitude, position.longitude);
+      if (mounted) setState(() => _messages = [..._messages, message]);
+      _scrollToBottom();
+    } on ApiException catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Не вдалося визначити геопозицію.')));
+      }
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
+  }
+
+  Future<void> _pickContact() async {
+    final selected = await showModalBottomSheet<Map<String, dynamic>>(
+      context: context,
+      backgroundColor: AppColors.obsidian900,
+      isScrollControlled: true,
+      builder: (_) => const _ContactPickerSheet(),
+    );
+    if (!mounted || selected == null) return;
+
+    setState(() => _sending = true);
+    try {
+      final message = await ApiClient.instance.sendMessengerContact(widget.conversationId, selected['id'] as int);
+      setState(() => _messages = [..._messages, message]);
+      _scrollToBottom();
+    } on ApiException catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
+  }
+
+  Future<void> _startRecording() async {
+    if (!await _voiceRecorder.hasPermission()) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Немає дозволу на мікрофон.')));
+      }
+      return;
+    }
+    final dir = await getTemporaryDirectory();
+    final path = '${dir.path}/voice_${DateTime.now().millisecondsSinceEpoch}.m4a';
+    await _voiceRecorder.start(const RecordConfig(), path: path);
+    setState(() {
+      _recording = true;
+      _recordElapsed = Duration.zero;
+    });
+    _recordTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() => _recordElapsed += const Duration(seconds: 1));
+    });
+  }
+
+  Future<void> _stopRecordingAndSend() async {
+    _recordTimer?.cancel();
+    final path = await _voiceRecorder.stop();
+    final duration = _recordElapsed.inSeconds;
+    if (mounted) setState(() => _recording = false);
+    // Зарано відпущений палець — менше секунди — швидше скасувати, ніж
+    // надсилати порожній чи майже порожній звук.
+    if (path == null || duration < 1) return;
+
+    setState(() => _sending = true);
+    try {
+      final message = await ApiClient.instance.sendMessengerVoice(widget.conversationId, path, duration);
+      setState(() => _messages = [..._messages, message]);
+      _scrollToBottom();
+    } on ApiException catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
+  }
+
+  Future<void> _cancelRecording() async {
+    _recordTimer?.cancel();
+    await _voiceRecorder.cancel();
+    if (mounted) setState(() => _recording = false);
+  }
+
   void _showEmojiPicker() {
     showModalBottomSheet(
       context: context,
@@ -289,6 +463,73 @@ class _ConversationScreenState extends State<ConversationScreen> {
   String _formatTime(String iso) {
     final dt = DateTime.parse(iso).toLocal();
     return '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+  }
+
+  String _formatDuration(int totalSeconds) {
+    final m = (totalSeconds ~/ 60).toString().padLeft(2, '0');
+    final s = (totalSeconds % 60).toString().padLeft(2, '0');
+    return '$m:$s';
+  }
+
+  Widget _buildComposerRow() {
+    final hasContent = _draftController.text.trim().isNotEmpty || _photo != null;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        IconButton(icon: const Icon(Icons.attach_file), onPressed: _showAttachmentSheet),
+        IconButton(icon: const Icon(Icons.image_outlined), onPressed: _pickPhoto),
+        IconButton(icon: const Icon(Icons.emoji_emotions_outlined), onPressed: _showEmojiPicker),
+        IconButton(
+            icon: const Text('GIF', style: TextStyle(fontWeight: FontWeight.bold)), onPressed: _showGifPicker),
+        IconButton(icon: const Icon(Icons.sticky_note_2_outlined), onPressed: _showStickerPicker),
+        Expanded(
+          child: TextField(
+            controller: _draftController,
+            minLines: 1,
+            maxLines: 4,
+            decoration: InputDecoration(
+              hintText: _photo != null ? 'Підпис до фото…' : 'Повідомлення…',
+            ),
+          ),
+        ),
+        if (_sending)
+          const Padding(
+            padding: EdgeInsets.all(12),
+            child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)),
+          )
+        else if (hasContent)
+          IconButton(icon: Icon(Icons.send, color: AppColors.gold300), onPressed: _sendText)
+        else
+          // Утримання — запис (Telegram-подібний жест); просто тап нічого
+          // не робить, щоб випадковий дотик не почав запис і не заплутав.
+          GestureDetector(
+            onLongPressStart: (_) => _startRecording(),
+            onLongPressEnd: (_) => _stopRecordingAndSend(),
+            child: SizedBox(
+              width: 48,
+              height: 48,
+              child: Icon(Icons.mic_none, color: AppColors.gold300),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildRecordingRow() {
+    return Row(
+      children: [
+        IconButton(
+          icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+          onPressed: _cancelRecording,
+        ),
+        Icon(Icons.fiber_manual_record, color: Colors.redAccent.withValues(alpha: 0.8), size: 14),
+        const SizedBox(width: 8),
+        Text('Запис… ${_formatDuration(_recordElapsed.inSeconds)}', style: const TextStyle(color: Colors.white70)),
+        const Spacer(),
+        Text('Відпустіть, щоб надіслати', style: TextStyle(color: Colors.white.withValues(alpha: 0.3), fontSize: 11)),
+        const SizedBox(width: 8),
+      ],
+    );
   }
 
   @override
@@ -434,41 +675,22 @@ class _ConversationScreenState extends State<ConversationScreen> {
                       top: false,
                       child: Padding(
                         padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            IconButton(icon: const Icon(Icons.image_outlined), onPressed: _pickPhoto),
-                            IconButton(icon: const Icon(Icons.emoji_emotions_outlined), onPressed: _showEmojiPicker),
-                            IconButton(
-                                icon: const Text('GIF', style: TextStyle(fontWeight: FontWeight.bold)),
-                                onPressed: _showGifPicker),
-                            IconButton(icon: const Icon(Icons.sticky_note_2_outlined), onPressed: _showStickerPicker),
-                            Expanded(
-                              child: TextField(
-                                controller: _draftController,
-                                minLines: 1,
-                                maxLines: 4,
-                                decoration: InputDecoration(
-                                  hintText: _photo != null ? 'Підпис до фото…' : 'Повідомлення…',
-                                ),
-                              ),
-                            ),
-                            IconButton(
-                              icon: _sending
-                                  ? const SizedBox(
-                                      width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                                  : Icon(Icons.send, color: AppColors.gold300),
-                              onPressed: (_sending || (_draftController.text.trim().isEmpty && _photo == null))
-                                  ? null
-                                  : _sendText,
-                            ),
-                          ],
-                        ),
+                        child: _recording ? _buildRecordingRow() : _buildComposerRow(),
                       ),
                     ),
                   ],
                 ),
     );
+  }
+}
+
+Map<String, dynamic> _decodeMessageBody(String raw) {
+  if (raw.isEmpty) return const {};
+  try {
+    final decoded = jsonDecode(raw);
+    return decoded is Map<String, dynamic> ? decoded : const {};
+  } catch (_) {
+    return const {};
   }
 }
 
@@ -516,6 +738,30 @@ class _MessageBubble extends StatelessWidget {
               ),
           ],
         ),
+      );
+    } else if (type == 'contact') {
+      content = _ContactCard(contact: message['contact'] as Map<String, dynamic>?, isMine: isMine);
+    } else if (type == 'location') {
+      final loc = _decodeMessageBody(body);
+      content = _LocationCard(
+        lat: (loc['lat'] as num?)?.toDouble(),
+        lng: (loc['lng'] as num?)?.toDouble(),
+        isMine: isMine,
+      );
+    } else if (type == 'file') {
+      final meta = _decodeMessageBody(body);
+      content = _FileCard(
+        name: meta['name'] as String? ?? 'Файл',
+        size: meta['size'] as int?,
+        url: attachmentUrl,
+        isMine: isMine,
+      );
+    } else if (type == 'voice') {
+      final meta = _decodeMessageBody(body);
+      content = _VoicePlayer(
+        url: attachmentUrl,
+        duration: meta['duration'] as int? ?? 0,
+        isMine: isMine,
       );
     } else {
       content = Container(
@@ -621,6 +867,366 @@ class _MessageBubble extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _ContactCard extends StatelessWidget {
+  final Map<String, dynamic>? contact;
+  final bool isMine;
+
+  const _ContactCard({required this.contact, required this.isMine});
+
+  @override
+  Widget build(BuildContext context) {
+    final fg = isMine ? AppColors.obsidian950 : Colors.white;
+    final sub = isMine ? AppColors.obsidian950.withValues(alpha: 0.6) : Colors.white54;
+    final avatarUrl = contact?['avatarUrl'] as String?;
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(16),
+      onTap: contact == null
+          ? null
+          : () => Navigator.of(context).push(MaterialPageRoute(
+              builder: (_) => MemberProfileScreen(userId: contact!['id'] as int))),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: isMine ? AppColors.gold400.withValues(alpha: 0.9) : Colors.white.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(16),
+          border: isMine ? null : Border.all(color: Colors.white10),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircleAvatar(
+              radius: 20,
+              backgroundColor: Colors.white24,
+              backgroundImage: avatarUrl != null ? NetworkImage(avatarUrl) : null,
+              child: avatarUrl == null ? Icon(Icons.person, color: fg) : null,
+            ),
+            const SizedBox(width: 10),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(contact?['name'] as String? ?? 'Учасника видалено',
+                    style: TextStyle(color: fg, fontWeight: FontWeight.w600)),
+                if ((contact?['position'] as String?)?.isNotEmpty == true)
+                  Text(contact!['position'] as String, style: TextStyle(color: sub, fontSize: 12)),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _LocationCard extends StatelessWidget {
+  final double? lat;
+  final double? lng;
+  final bool isMine;
+
+  const _LocationCard({required this.lat, required this.lng, required this.isMine});
+
+  Future<void> _open() async {
+    if (lat == null || lng == null) return;
+    final uri = Uri.parse('https://www.google.com/maps/search/?api=1&query=$lat,$lng');
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final fg = isMine ? AppColors.obsidian950 : Colors.white;
+    final sub = isMine ? AppColors.obsidian950.withValues(alpha: 0.6) : Colors.white54;
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(16),
+      onTap: lat == null || lng == null ? null : _open,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: isMine ? AppColors.gold400.withValues(alpha: 0.9) : Colors.white.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(16),
+          border: isMine ? null : Border.all(color: Colors.white10),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.location_on, color: fg),
+            const SizedBox(width: 8),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('Геопозиція', style: TextStyle(color: fg, fontWeight: FontWeight.w600)),
+                if (lat != null && lng != null)
+                  Text('${lat!.toStringAsFixed(5)}, ${lng!.toStringAsFixed(5)}',
+                      style: TextStyle(color: sub, fontSize: 12)),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _FileCard extends StatefulWidget {
+  final String name;
+  final int? size;
+  final String? url;
+  final bool isMine;
+
+  const _FileCard({required this.name, required this.size, required this.url, required this.isMine});
+
+  @override
+  State<_FileCard> createState() => _FileCardState();
+}
+
+class _FileCardState extends State<_FileCard> {
+  bool _busy = false;
+
+  String _formatSize(int? bytes) {
+    if (bytes == null) return '';
+    if (bytes < 1024) return '$bytes Б';
+    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} КБ';
+    return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} МБ';
+  }
+
+  Future<void> _openFile() async {
+    if (widget.url == null || _busy) return;
+    setState(() => _busy = true);
+    try {
+      final dir = await getTemporaryDirectory();
+      final safeName = widget.name.replaceAll(RegExp(r'[\\/]'), '_');
+      final filePath = '${dir.path}/$safeName';
+      final response = await http.get(Uri.parse(widget.url!));
+      if (response.statusCode != 200) throw Exception('Сервер повернув ${response.statusCode}');
+      await File(filePath).writeAsBytes(response.bodyBytes);
+      await OpenFilex.open(filePath);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('Не вдалося відкрити файл')));
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final fg = widget.isMine ? AppColors.obsidian950 : Colors.white;
+    final sub = widget.isMine ? AppColors.obsidian950.withValues(alpha: 0.6) : Colors.white54;
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(16),
+      onTap: _busy ? null : _openFile,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: widget.isMine ? AppColors.gold400.withValues(alpha: 0.9) : Colors.white.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(16),
+          border: widget.isMine ? null : Border.all(color: Colors.white10),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _busy
+                ? SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2, color: fg))
+                : Icon(Icons.insert_drive_file, color: fg),
+            const SizedBox(width: 10),
+            Flexible(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(widget.name,
+                      maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: fg, fontWeight: FontWeight.w600)),
+                  if (widget.size != null)
+                    Text(_formatSize(widget.size), style: TextStyle(color: sub, fontSize: 12)),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _VoicePlayer extends StatefulWidget {
+  final String? url;
+  final int duration;
+  final bool isMine;
+
+  const _VoicePlayer({required this.url, required this.duration, required this.isMine});
+
+  @override
+  State<_VoicePlayer> createState() => _VoicePlayerState();
+}
+
+class _VoicePlayerState extends State<_VoicePlayer> {
+  final _player = AudioPlayer();
+  bool _playing = false;
+  Duration _position = Duration.zero;
+  StreamSubscription<void>? _completeSub;
+  StreamSubscription<Duration>? _positionSub;
+
+  @override
+  void initState() {
+    super.initState();
+    _completeSub = _player.onPlayerComplete.listen((_) {
+      if (mounted) {
+        setState(() {
+          _playing = false;
+          _position = Duration.zero;
+        });
+      }
+    });
+    _positionSub = _player.onPositionChanged.listen((p) {
+      if (mounted) setState(() => _position = p);
+    });
+  }
+
+  @override
+  void dispose() {
+    _completeSub?.cancel();
+    _positionSub?.cancel();
+    _player.dispose();
+    super.dispose();
+  }
+
+  Future<void> _toggle() async {
+    if (widget.url == null) return;
+    if (_playing) {
+      await _player.pause();
+      if (mounted) setState(() => _playing = false);
+    } else {
+      await _player.play(UrlSource(widget.url!));
+      if (mounted) setState(() => _playing = true);
+    }
+  }
+
+  String _fmt(int totalSeconds) {
+    final m = totalSeconds ~/ 60;
+    final s = totalSeconds % 60;
+    return '$m:${s.toString().padLeft(2, '0')}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final fg = widget.isMine ? AppColors.obsidian950 : Colors.white;
+    final elapsed = _position.inSeconds;
+    final shown = _playing || elapsed > 0 ? elapsed : widget.duration;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: widget.isMine ? AppColors.gold400.withValues(alpha: 0.9) : Colors.white.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(20),
+        border: widget.isMine ? null : Border.all(color: Colors.white10),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconButton(
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+            icon: Icon(_playing ? Icons.pause_circle_filled : Icons.play_circle_fill, color: fg, size: 32),
+            onPressed: widget.url == null ? null : _toggle,
+          ),
+          const SizedBox(width: 8),
+          Icon(Icons.graphic_eq, color: fg.withValues(alpha: 0.6), size: 18),
+          const SizedBox(width: 8),
+          Text(_fmt(shown), style: TextStyle(color: fg, fontSize: 12)),
+        ],
+      ),
+    );
+  }
+}
+
+class _ContactPickerSheet extends StatefulWidget {
+  const _ContactPickerSheet();
+
+  @override
+  State<_ContactPickerSheet> createState() => _ContactPickerSheetState();
+}
+
+class _ContactPickerSheetState extends State<_ContactPickerSheet> {
+  List<dynamic> _matches = [];
+  Timer? _debounce;
+  bool _loading = false;
+
+  Future<void> _search(String query) async {
+    if (query.trim().length < 2) {
+      setState(() => _matches = []);
+      return;
+    }
+    setState(() => _loading = true);
+    try {
+      final matches = await ApiClient.instance.searchMessengerMembers(query);
+      if (mounted) setState(() => _matches = matches);
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  void _onChanged(String q) {
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 300), () => _search(q));
+  }
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 420,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            const Text('Поділитись контактом',
+                style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500)),
+            const SizedBox(height: 12),
+            TextField(
+              autofocus: true,
+              decoration: const InputDecoration(hintText: "Пошук за ім'ям…"),
+              onChanged: _onChanged,
+            ),
+            const SizedBox(height: 12),
+            Expanded(
+              child: _loading
+                  ? const Center(child: CircularProgressIndicator())
+                  : ListView.builder(
+                      itemCount: _matches.length,
+                      itemBuilder: (context, i) {
+                        final m = _matches[i] as Map<String, dynamic>;
+                        return ListTile(
+                          leading: CircleAvatar(
+                            backgroundColor: AppColors.obsidian800,
+                            backgroundImage:
+                                m['avatar_path'] != null ? NetworkImage(m['avatar_path'] as String) : null,
+                            child: m['avatar_path'] == null
+                                ? Text((m['name'] as String? ?? '?').substring(0, 1).toUpperCase())
+                                : null,
+                          ),
+                          title: Text(m['name'] as String? ?? '', style: const TextStyle(color: Colors.white)),
+                          onTap: () => Navigator.of(context).pop(m),
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
       ),
     );
   }

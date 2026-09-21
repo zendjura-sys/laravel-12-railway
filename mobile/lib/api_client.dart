@@ -725,6 +725,16 @@ class ApiClient {
     _decode(response);
   }
 
+  /// Видалення власного повідомлення — сервер сам перевіряє, що це
+  /// повідомлення саме цього користувача й саме з цієї розмови.
+  Future<void> deleteMessengerMessage(int conversationId, int messageId) async {
+    final response = await http.delete(
+      _uri('/messenger/$conversationId/messages/$messageId'),
+      headers: await _headers(auth: true),
+    );
+    _decode(response);
+  }
+
   Future<List<dynamic>> searchGifs(String query) async {
     final response = await http.get(
       _uri('/messenger/gifs/search').replace(queryParameters: {'q': query}),

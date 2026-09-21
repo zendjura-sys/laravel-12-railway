@@ -195,6 +195,41 @@ class _ConversationScreenState extends State<ConversationScreen> {
 
   void _startReply(Map<String, dynamic> message) => setState(() => _replyingTo = message);
 
+  Future<void> _confirmDeleteMessage(Map<String, dynamic> message) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Видалити повідомлення?'),
+        content: const Text('Дію не можна скасувати.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Скасувати')),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Видалити', style: TextStyle(color: Colors.redAccent)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    try {
+      await ApiClient.instance.deleteMessengerMessage(widget.conversationId, message['id'] as int);
+      if (mounted) {
+        setState(() {
+          _messages = _messages.where((m) => (m as Map<String, dynamic>)['id'] != message['id']).toList();
+          if (_replyingTo != null && _replyingTo!['id'] == message['id']) _replyingTo = null;
+        });
+      }
+    } on ApiException catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('Не вдалося видалити повідомлення.')));
+      }
+    }
+  }
+
   Future<void> _sendPhoto() async {
     if (_photo == null || _sending) return;
     setState(() => _sending = true);
@@ -663,12 +698,15 @@ class _ConversationScreenState extends State<ConversationScreen> {
                                 padding: const EdgeInsets.symmetric(horizontal: 12),
                                 child: Icon(Icons.reply, color: AppColors.gold300.withValues(alpha: 0.6)),
                               ),
-                              child: _MessageBubble(
-                                message: m,
-                                showSenderName: _type == 'family' || _type == 'deputies',
-                                showReadReceipt: _type == 'direct',
-                                otherLastReadMessageId: _otherLastReadMessageId,
-                                formatTime: _formatTime,
+                              child: GestureDetector(
+                                onLongPress: m['isMine'] == true ? () => _confirmDeleteMessage(m) : null,
+                                child: _MessageBubble(
+                                  message: m,
+                                  showSenderName: _type == 'family' || _type == 'deputies',
+                                  showReadReceipt: _type == 'direct',
+                                  otherLastReadMessageId: _otherLastReadMessageId,
+                                  formatTime: _formatTime,
+                                ),
                               ),
                             ),
                           );

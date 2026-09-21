@@ -330,6 +330,31 @@ class MessengerController
         ]);
     }
 
+    /**
+     * Видалення власного повідомлення — лише відправник, і лише в межах
+     * тієї розмови, де воно є (інакше можна було б підсунути чужий
+     * message_id з іншої розмови). Жорстке видалення, без soft-delete чи
+     * позначки "видалено": на відміну від Telegram, тут немає версії
+     * "видалено для всіх" з плейсхолдером — рядок просто зникає, як
+     * власний коментар, який автор прибрав.
+     */
+    public function destroyMessage(Request $request, Conversation $conversation, Message $message): JsonResponse
+    {
+        $this->ensureAccess($conversation, $request->user());
+
+        if ($message->conversation_id !== $conversation->id || $message->sender_id !== $request->user()->id) {
+            throw new AccessDeniedHttpException;
+        }
+
+        if ($message->attachment_path) {
+            Storage::disk('public')->delete($message->attachment_path);
+        }
+
+        $message->delete();
+
+        return response()->json(['ok' => true, 'message' => null, 'data' => null, 'errors' => null, 'redirect' => null]);
+    }
+
     /** Власна бібліотека стікерів того, хто питає — не спільна для всіх. */
     public function stickers(Request $request): JsonResponse
     {
@@ -562,7 +587,7 @@ class MessengerController
             'deputies' => $sender->name.' · Заступники',
             default => $sender->name,
         };
-        $body = $this->previewText($message);
+        $body = $this->pushPreviewText($message);
         $url = '/messenger/'.$conversation->id;
 
         (new MobilePushSender())->sendToUserIds($recipientIds, $title, $body, $url);
@@ -604,6 +629,18 @@ class MessengerController
             'voice' => '🎤 Голосове повідомлення',
             default => $m->body,
         };
+    }
+
+    /**
+     * Текст для push-сповіщення (банер/шторка ОС) — окремо від previewText(),
+     * бо та лишає слово "Зашифроване" прямо в тексті, який Android показує
+     * на екрані блокування чи в шторці: будь-хто поруч із телефоном бачив би,
+     * що конкретна розмова наскрізно зашифрована. Push має виглядати як
+     * звичайне повідомлення в будь-якому іншому месенджері.
+     */
+    protected function pushPreviewText(Message $m): string
+    {
+        return $m->type === 'text_e2ee' ? 'Надіслав(-ла) нове повідомлення' : $this->previewText($m);
     }
 
     /**

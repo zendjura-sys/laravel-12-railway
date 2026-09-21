@@ -17,5 +17,6 @@ Route::middleware(['web', 'auth'])->prefix('messenger')->name('messenger.')->gro
     Route::get('/{conversation}', [MessengerController::class, 'show'])->name('show');
     Route::get('/{conversation}/messages', [MessengerController::class, 'messagesSince'])->name('messages');
     Route::post('/{conversation}/messages', [MessengerController::class, 'store'])->name('messages.store');
+    Route::delete('/{conversation}/messages/{message}', [MessengerController::class, 'destroyMessage'])->name('messages.destroy');
     Route::post('/{conversation}/read', [MessengerController::class, 'markRead'])->name('read');
 });

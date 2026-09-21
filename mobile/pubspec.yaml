@@ -55,6 +55,12 @@ dependency_overrides:
   # нашому запінченому Flutter 3.27.1 (додано лише в новіших SDK) —
   # тримаємо останню версію без цього виклику, доки не оновимо Flutter.
   geolocator_android: 4.6.2
+  # geolocator (через geolocator_linux, для Linux-версії, якою застосунок
+  # не користується) тягне package_info_plus 9.x, чий Android-код вимагає
+  # kotlin-stdlib 2.2.0 — несумісно з нашим запінченим Kotlin Gradle Plugin
+  # 1.8.22 (компілятор читає метадані лише до 1.9.0), збірка релізного APK
+  # падала на compileReleaseKotlin. 8.3.1 — остання версія на kotlin 1.7.22.
+  package_info_plus: 8.3.1
 
 dev_dependencies:
   flutter_test:

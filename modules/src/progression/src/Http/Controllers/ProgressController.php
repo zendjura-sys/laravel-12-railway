@@ -140,6 +140,12 @@ class ProgressController
      */
     public function hallOfFame(): Response
     {
+        return Inertia::render('Progression/HallOfFame', ['records' => $this->hallOfFameRecords()]);
+    }
+
+    /** @return array<string, array<int, array<string, mixed>>> */
+    protected function hallOfFameRecords(): array
+    {
         $records = [
             'xp' => ProgressionProfile::with('user:id,name,first_name,last_name,position_key')
                 ->orderByDesc('xp')
@@ -184,7 +190,7 @@ class ProgressController
                 ->values();
         }
 
-        return Inertia::render('Progression/HallOfFame', ['records' => $records]);
+        return $records;
     }
 
     /** @return array<int,array<string,mixed>> */

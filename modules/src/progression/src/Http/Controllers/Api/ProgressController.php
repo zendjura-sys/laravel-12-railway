@@ -74,4 +74,9 @@ class ProgressController extends WebProgressController
             'categories' => $categories,
         ]);
     }
+
+    public function hallOfFameJson(): JsonResponse
+    {
+        return response()->json(['records' => $this->hallOfFameRecords()]);
+    }
 }

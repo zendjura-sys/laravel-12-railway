@@ -8,4 +8,5 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('api')->middleware('auth:sanctum')->group(function () {
     Route::get('/progress', [ProgressController::class, 'indexJson']);
     Route::get('/leaderboard', [ProgressController::class, 'leaderboardJson']);
+    Route::get('/hall-of-fame', [ProgressController::class, 'hallOfFameJson']);
 });

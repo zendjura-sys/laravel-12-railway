@@ -661,6 +661,12 @@ class ApiClient {
     _decode(response);
   }
 
+  Future<Map<String, dynamic>> hallOfFame() async {
+    final response = await http.get(_uri('/hall-of-fame'), headers: await _headers(auth: true));
+    final data = _decode(response) as Map<String, dynamic>;
+    return data['records'] as Map<String, dynamic>;
+  }
+
   Future<Map<String, dynamic>> adminUpdateGoalProgress(int id, int currentValue) async {
     final response = await http.put(
       _uri('/admin/family-goals/$id/progress'),

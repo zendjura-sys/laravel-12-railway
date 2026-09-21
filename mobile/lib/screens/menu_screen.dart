@@ -4,6 +4,7 @@ import '../theme.dart';
 import 'admin_screen.dart';
 import 'events_screen.dart';
 import 'family_goals_screen.dart';
+import 'hall_of_fame_screen.dart';
 import 'leaderboard_screen.dart';
 import 'messenger/conversations_screen.dart';
 import 'reports_screen.dart';
@@ -77,6 +78,14 @@ class _MenuScreenState extends State<MenuScreen> {
               subtitle: 'Активність, бізвар, контракти, премії',
               onTap: () => Navigator.of(context).push(
                   MaterialPageRoute(builder: (_) => const LeaderboardScreen())),
+            ),
+          if (widget.leaderboardEnabled)
+            _MenuTile(
+              icon: Icons.emoji_events_outlined,
+              title: 'Зал слави',
+              subtitle: 'Топ-3 учасники за різними категоріями',
+              onTap: () => Navigator.of(context)
+                  .push(MaterialPageRoute(builder: (_) => const HallOfFameScreen())),
             ),
           _MenuTile(
             icon: Icons.event_outlined,

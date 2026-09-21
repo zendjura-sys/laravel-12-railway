@@ -43,12 +43,23 @@ class MobilePushSender
      */
     public function sendToUserIds(iterable $userIds, string $title, ?string $body = null, ?string $url = null): void
     {
+        $userIds = [...$userIds];
+
         if (! $this->isConfigured()) {
+            // Раніше повністю тиха гілка — на практиці невідрізненна від
+            // "успішно надіслано" в логах, тож діагностика зависання push
+            // завжди впиралась у "а воно взагалі сюди доходить?". debug,
+            // не warning: середовище без Firebase (локальна розробка) —
+            // це нормальний, очікуваний стан, не помилка.
+            Log::debug('mobile_push.not_configured', ['user_ids' => $userIds]);
+
             return;
         }
 
-        $tokens = DeviceToken::query()->whereIn('user_id', [...$userIds])->pluck('token');
+        $tokens = DeviceToken::query()->whereIn('user_id', $userIds)->pluck('token');
         if ($tokens->isEmpty()) {
+            Log::debug('mobile_push.no_device_tokens', ['user_ids' => $userIds]);
+
             return;
         }
 
@@ -65,6 +76,7 @@ class MobilePushSender
             ->withData(['url' => $url ?: '/notifications']);
 
         $deadTokens = [];
+        $sent = 0;
 
         foreach ($tokens->chunk(500) as $chunk) {
             try {
@@ -76,10 +88,21 @@ class MobilePushSender
                 continue;
             }
 
+            $sent += $report->successes()->count();
+
             if ($report->hasFailures()) {
+                Log::warning('mobile_push.partial_failure', [
+                    'invalid_tokens' => $report->invalidTokens(),
+                    'unknown_tokens' => $report->unknownTokens(),
+                    'failures' => collect($report->failures()->getItems())
+                        ->map(fn ($f) => $f->error()?->getMessage())
+                        ->all(),
+                ]);
                 array_push($deadTokens, ...$report->invalidTokens(), ...$report->unknownTokens());
             }
         }
+
+        Log::debug('mobile_push.sent', ['user_ids' => $userIds, 'tokens' => $tokens->count(), 'successes' => $sent]);
 
         // Токен, який Android/Firebase вже вважає недійсним (переустановка,
         // вихід з акаунту, минув строк) — назавжди лишиться "мертвим" без

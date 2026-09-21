@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\AdminController;
 use App\Http\Controllers\Api\AppConfigController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\DashboardController;
+use App\Http\Controllers\Api\GalleryController;
 use Illuminate\Support\Facades\Route;
 
 /**
@@ -20,6 +21,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/me', [AuthController::class, 'me']);
     Route::get('/dashboard', [DashboardController::class, 'index']);
+    Route::get('/gallery', [GalleryController::class, 'index']);
 
     // Мінімальна нативна адмінка (лише ядро, без аддон-специфічних дій) —
     // доступ гейтиться в самому контролері (users.manage / будь-який *.manage).

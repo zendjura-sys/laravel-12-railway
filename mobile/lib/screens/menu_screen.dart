@@ -4,6 +4,7 @@ import '../theme.dart';
 import 'admin_screen.dart';
 import 'events_screen.dart';
 import 'family_goals_screen.dart';
+import 'gallery_screen.dart';
 import 'hall_of_fame_screen.dart';
 import 'leaderboard_screen.dart';
 import 'messenger/conversations_screen.dart';
@@ -100,6 +101,13 @@ class _MenuScreenState extends State<MenuScreen> {
             subtitle: 'Спільний прогрес і стрічка активності',
             onTap: () => Navigator.of(context)
                 .push(MaterialPageRoute(builder: (_) => const FamilyGoalsScreen())),
+          ),
+          _MenuTile(
+            icon: Icons.photo_library_outlined,
+            title: 'Галерея',
+            subtitle: 'Учасники родини й фото подій',
+            onTap: () => Navigator.of(context)
+                .push(MaterialPageRoute(builder: (_) => const GalleryScreen())),
           ),
           if (_isAdmin)
             _MenuTile(

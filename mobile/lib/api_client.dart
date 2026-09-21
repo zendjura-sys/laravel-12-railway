@@ -661,6 +661,11 @@ class ApiClient {
     _decode(response);
   }
 
+  Future<Map<String, dynamic>> gallery() async {
+    final response = await http.get(_uri('/gallery'), headers: await _headers(auth: true));
+    return _decode(response) as Map<String, dynamic>;
+  }
+
   Future<Map<String, dynamic>> hallOfFame() async {
     final response = await http.get(_uri('/hall-of-fame'), headers: await _headers(auth: true));
     final data = _decode(response) as Map<String, dynamic>;

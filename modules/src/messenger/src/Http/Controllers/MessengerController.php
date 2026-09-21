@@ -133,7 +133,7 @@ class MessengerController
 
         $messages = Message::query()
             ->where('conversation_id', $conversation->id)
-            ->with('sender:id,name,avatar_path,position_key')
+            ->with(['sender:id,name,avatar_path,position_key', 'replyTo.sender:id,name'])
             ->latest('id')
             ->limit(50)
             ->get()
@@ -162,6 +162,7 @@ class MessengerController
                 'type' => $conversation->type,
                 'title' => $title,
                 'otherUserId' => $otherUser?->id,
+                'otherLastReadMessageId' => $otherUser ? $this->otherParticipantLastRead($conversation, $otherUser->id) : null,
             ],
             'messages' => $messages->map(fn (Message $m) => $this->formatMessage($m, $request->user()->id)),
             'myId' => $request->user()->id,
@@ -177,20 +178,40 @@ class MessengerController
         $messages = Message::query()
             ->where('conversation_id', $conversation->id)
             ->where('id', '>', $afterId)
-            ->with('sender:id,name,avatar_path,position_key')
+            ->with(['sender:id,name,avatar_path,position_key', 'replyTo.sender:id,name'])
             ->oldest('id')
             ->limit(100)
             ->get();
+
+        // Для галочок прочитання (direct) — клієнт опитує цей ендпоінт
+        // кожні кілька секунд, тож достатньо віддавати поточне значення
+        // тут же, без окремого запиту.
+        $otherUserId = null;
+        if ($conversation->type === 'direct') {
+            $otherUserId = ConversationParticipant::query()
+                ->where('conversation_id', $conversation->id)
+                ->where('user_id', '!=', $request->user()->id)
+                ->value('user_id');
+        }
 
         return response()->json([
             'ok' => true,
             'message' => null,
             'data' => [
                 'messages' => $messages->map(fn (Message $m) => $this->formatMessage($m, $request->user()->id)),
+                'otherLastReadMessageId' => $otherUserId ? $this->otherParticipantLastRead($conversation, $otherUserId) : null,
             ],
             'errors' => null,
             'redirect' => null,
         ]);
+    }
+
+    protected function otherParticipantLastRead(Conversation $conversation, int $otherUserId): ?int
+    {
+        return ConversationRead::query()
+            ->where('conversation_id', $conversation->id)
+            ->where('user_id', $otherUserId)
+            ->value('last_read_message_id');
     }
 
     public function store(Request $request, Conversation $conversation): JsonResponse
@@ -203,7 +224,19 @@ class MessengerController
             'photo' => ['required_if:type,photo', 'nullable', 'image', 'max:8192'],
             'gif_url' => ['required_if:type,gif', 'nullable', 'url'],
             'sticker_id' => ['required_if:type,sticker', 'nullable', 'integer'],
+            'reply_to_message_id' => ['nullable', 'integer'],
         ]);
+
+        // Відповідь має бути на повідомлення з ЦІЄЇ Ж розмови — інакше
+        // можна було б процитувати чуже приватне листування, просто
+        // підставивши чужий id у запит.
+        $replyToId = null;
+        if (! empty($validated['reply_to_message_id'])) {
+            $replyToId = Message::query()
+                ->where('id', $validated['reply_to_message_id'])
+                ->where('conversation_id', $conversation->id)
+                ->value('id');
+        }
 
         $type = $validated['type'] ?? 'text';
         $body = trim($validated['body'] ?? '');
@@ -242,12 +275,13 @@ class MessengerController
         $message = Message::create([
             'conversation_id' => $conversation->id,
             'sender_id' => $request->user()->id,
+            'reply_to_message_id' => $replyToId,
             'body' => $body,
             'type' => $type,
             'attachment_path' => $attachmentPath,
             'attachment_url' => $attachmentUrl,
         ]);
-        $message->load('sender:id,name,avatar_path,position_key');
+        $message->load(['sender:id,name,avatar_path,position_key', 'replyTo.sender:id,name']);
 
         $conversation->touch();
 
@@ -590,6 +624,16 @@ class MessengerController
             'senderPosition' => $m->sender?->position_title,
             'isMine' => $m->sender_id === $myId,
             'createdAt' => $m->created_at,
+            'replyTo' => $m->replyTo ? [
+                'id' => $m->replyTo->id,
+                'senderName' => $m->replyTo->sender?->name,
+                'type' => $m->replyTo->type,
+                // previewText(), не сирий body: той самий текст, що й у
+                // списку розмов — для text_e2ee це вже "🔒 Зашифроване
+                // повідомлення" (без ciphertext), простіше й безпечніше,
+                // ніж окремо розшифровувати ще й цитату на клієнті.
+                'body' => $this->previewText($m->replyTo),
+            ] : null,
         ];
     }
 }

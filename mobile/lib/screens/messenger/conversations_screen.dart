@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../api_client.dart';
 import '../../theme.dart';
 import '../../widgets/fade_slide_in.dart';
+import '../member_profile_screen.dart';
 import 'conversation_screen.dart';
 
 String _initial(String? name) {
@@ -128,23 +129,29 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
                           decoration: glassPanelDecoration(radius: 16),
                           child: Row(
                             children: [
-                              Container(
-                                width: 44,
-                                height: 44,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: isGroup
-                                      ? AppColors.gold400.withValues(alpha: 0.15)
-                                      : Colors.white.withValues(alpha: 0.05),
-                                  border: Border.all(
-                                      color: isGroup
-                                          ? AppColors.gold400.withValues(alpha: 0.3)
-                                          : Colors.white24),
-                                ),
-                                alignment: Alignment.center,
-                                child: Text(
-                                  isFamily ? '👪' : (isDeputies ? '🎖️' : _initial(c['title'] as String?)),
-                                  style: const TextStyle(fontSize: 16, color: Colors.white70),
+                              GestureDetector(
+                                onTap: isGroup || c['otherUserId'] == null
+                                    ? null
+                                    : () => Navigator.of(context).push(MaterialPageRoute(
+                                        builder: (_) => MemberProfileScreen(userId: c['otherUserId'] as int))),
+                                child: Container(
+                                  width: 44,
+                                  height: 44,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: isGroup
+                                        ? AppColors.gold400.withValues(alpha: 0.15)
+                                        : Colors.white.withValues(alpha: 0.05),
+                                    border: Border.all(
+                                        color: isGroup
+                                            ? AppColors.gold400.withValues(alpha: 0.3)
+                                            : Colors.white24),
+                                  ),
+                                  alignment: Alignment.center,
+                                  child: Text(
+                                    isFamily ? '👪' : (isDeputies ? '🎖️' : _initial(c['title'] as String?)),
+                                    style: const TextStyle(fontSize: 16, color: Colors.white70),
+                                  ),
                                 ),
                               ),
                               const SizedBox(width: 12),

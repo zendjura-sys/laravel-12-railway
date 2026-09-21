@@ -5,6 +5,7 @@ import '../theme.dart';
 import '../widgets/fade_slide_in.dart';
 import '../widgets/member_card_widget.dart';
 import 'login_screen.dart';
+import 'member_profile_screen.dart';
 import 'notifications_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -129,12 +130,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 : ListView(
                     padding: const EdgeInsets.all(20),
                     children: [
-                      Text(
-                        'Вітаємо, ${user?['name'] ?? ''}',
-                        style: const TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w300,
-                            color: Colors.white),
+                      InkWell(
+                        borderRadius: BorderRadius.circular(8),
+                        onTap: user?['id'] == null
+                            ? null
+                            : () => Navigator.of(context).push(MaterialPageRoute(
+                                builder: (_) =>
+                                    MemberProfileScreen(userId: user!['id'] as int, isSelf: true))),
+                        child: Text(
+                          'Вітаємо, ${user?['name'] ?? ''}',
+                          style: const TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.w300,
+                              color: Colors.white),
+                        ),
                       ),
                       if (user?['position'] != null) ...[
                         const SizedBox(height: 4),

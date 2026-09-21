@@ -5,6 +5,7 @@ import '../app_info.dart';
 import '../services/push_notifications.dart';
 import '../theme.dart';
 import 'login_screen.dart';
+import 'member_profile_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -161,30 +162,38 @@ class _SettingsScreenState extends State<SettingsScreen> {
               : ListView(
                   padding: const EdgeInsets.all(20),
                   children: [
-                    Container(
-                      padding: const EdgeInsets.all(18),
-                      decoration: glassPanelDecoration(),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            _me?['name'] as String? ?? '',
-                            style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 18,
-                                fontWeight: FontWeight.w500),
-                          ),
-                          if (_me?['position'] != null) ...[
-                            const SizedBox(height: 4),
-                            Text(_me!['position'] as String,
-                                style: TextStyle(
-                                    color: AppColors.gold300, fontSize: 13)),
-                          ],
-                          const SizedBox(height: 10),
-                          Text(_me?['email'] as String? ?? '',
+                    InkWell(
+                      borderRadius: BorderRadius.circular(20),
+                      onTap: _me?['id'] == null
+                          ? null
+                          : () => Navigator.of(context).push(MaterialPageRoute(
+                              builder: (_) =>
+                                  MemberProfileScreen(userId: _me!['id'] as int, isSelf: true))),
+                      child: Container(
+                        padding: const EdgeInsets.all(18),
+                        decoration: glassPanelDecoration(),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _me?['name'] as String? ?? '',
                               style: const TextStyle(
-                                  color: Colors.white38, fontSize: 13)),
-                        ],
+                                  color: Colors.white,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w500),
+                            ),
+                            if (_me?['position'] != null) ...[
+                              const SizedBox(height: 4),
+                              Text(_me!['position'] as String,
+                                  style: TextStyle(
+                                      color: AppColors.gold300, fontSize: 13)),
+                            ],
+                            const SizedBox(height: 10),
+                            Text(_me?['email'] as String? ?? '',
+                                style: const TextStyle(
+                                    color: Colors.white38, fontSize: 13)),
+                          ],
+                        ),
                       ),
                     ),
                     if (_telegram != null) ...[

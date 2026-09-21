@@ -86,19 +86,84 @@ class _HomeShellState extends State<HomeShell> {
 
     return Scaffold(
       body: IndexedStack(index: index, children: screens),
-      // Справжнє "рідке скло" на панелі навігації — BackdropFilter
-      // блюрить контент, що скролиться позаду, а не просто малює
-      // напівпрозорий колір поверх.
-      bottomNavigationBar: ClipRect(
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
-          child: NavigationBar(
-            selectedIndex: index,
-            onDestinationSelected: (i) => setState(() => _index = i),
-            backgroundColor: AppColors.obsidian900.withValues(alpha: 0.55),
-            indicatorColor: AppColors.gold400.withValues(alpha: 0.16),
-            destinations: destinations,
+      // Плаваюча "піль"-панель (не на всю ширину, з відступами й
+      // закругленням з усіх боків) — той самий силует, що в Telegram,
+      // лише у своїх кольорах і зі своїми вкладками.
+      bottomNavigationBar: SafeArea(
+        minimum: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(28),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+            child: Container(
+              height: 62,
+              decoration: BoxDecoration(
+                color: AppColors.obsidian900.withValues(alpha: 0.7),
+                borderRadius: BorderRadius.circular(28),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.3),
+                    blurRadius: 24,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  for (var i = 0; i < destinations.length; i++)
+                    Expanded(
+                      child: _PillNavItem(
+                        destination: destinations[i],
+                        selected: i == index,
+                        onTap: () => setState(() => _index = i),
+                      ),
+                    ),
+                ],
+              ),
+            ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PillNavItem extends StatelessWidget {
+  final NavigationDestination destination;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _PillNavItem({required this.destination, required this.selected, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final color = selected ? AppColors.gold300 : Colors.white38;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOut,
+        margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        decoration: BoxDecoration(
+          color: selected ? AppColors.gold400.withValues(alpha: 0.14) : Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            IconTheme(
+              data: IconThemeData(color: color, size: 22),
+              child: selected ? (destination.selectedIcon ?? destination.icon) : destination.icon,
+            ),
+            const SizedBox(height: 2),
+            Text(
+              destination.label,
+              style: TextStyle(color: color, fontSize: 10.5, fontWeight: selected ? FontWeight.w600 : FontWeight.w400),
+            ),
+          ],
         ),
       ),
     );

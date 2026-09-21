@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../api_client.dart';
 import '../../services/e2ee.dart';
 import '../../theme.dart';
+import '../member_profile_screen.dart';
 import 'emoji_data.dart';
 
 class ConversationScreen extends StatefulWidget {
@@ -20,6 +21,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
   String _title = '';
   String _type = 'direct';
   int? _otherUserId;
+  int? _otherLastReadMessageId;
   List<dynamic> _messages = [];
   bool _loading = true;
   bool _sending = false;
@@ -28,6 +30,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
   final _scrollController = ScrollController();
   XFile? _photo;
   Timer? _pollTimer;
+  Map<String, dynamic>? _replyingTo;
 
   @override
   void initState() {
@@ -67,6 +70,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
           _title = conversation['title'] as String;
           _type = conversation['type'] as String;
           _messages = messages;
+          _otherLastReadMessageId = conversation['otherLastReadMessageId'] as int?;
         });
       }
       _scrollToBottom();
@@ -81,11 +85,22 @@ class _ConversationScreenState extends State<ConversationScreen> {
 
   Future<void> _poll() async {
     try {
-      final fresh = await ApiClient.instance.messengerMessagesSince(widget.conversationId, _lastId);
-      if (fresh.isNotEmpty && mounted) {
+      final data = await ApiClient.instance.messengerMessagesSince(widget.conversationId, _lastId);
+      final fresh = data['messages'] as List<dynamic>;
+      final otherLastRead = data['otherLastReadMessageId'] as int?;
+      if (!mounted) return;
+
+      if (fresh.isNotEmpty) {
         final decrypted = await _decryptIncoming(fresh);
-        setState(() => _messages = [..._messages, ...decrypted]);
+        setState(() {
+          _messages = [..._messages, ...decrypted];
+          _otherLastReadMessageId = otherLastRead;
+        });
         _scrollToBottom();
+      } else if (otherLastRead != _otherLastReadMessageId) {
+        // Немає нових повідомлень, але співрозмовник міг щойно прочитати
+        // наші — оновлюємо самі лише галочки, без зайвого relayout списку.
+        setState(() => _otherLastReadMessageId = otherLastRead);
       }
     } catch (_) {
       // Тиха невдача опитування — спробуємо ще раз наступним тіком.
@@ -129,6 +144,8 @@ class _ConversationScreenState extends State<ConversationScreen> {
     }
     if (body.isEmpty || _sending) return;
 
+    final replyToId = _replyingTo?['id'] as int?;
+
     setState(() => _sending = true);
     try {
       // encryptFor() повертає null, якщо співрозмовник ще не опублікував
@@ -138,8 +155,9 @@ class _ConversationScreenState extends State<ConversationScreen> {
           ? await E2eeService.instance.encryptFor(_otherUserId!, body)
           : null;
       final message = encrypted != null
-          ? await ApiClient.instance.sendMessengerEncryptedText(widget.conversationId, encrypted)
-          : await ApiClient.instance.sendMessengerText(widget.conversationId, body);
+          ? await ApiClient.instance
+              .sendMessengerEncryptedText(widget.conversationId, encrypted, replyToMessageId: replyToId)
+          : await ApiClient.instance.sendMessengerText(widget.conversationId, body, replyToMessageId: replyToId);
       // Той самий шлях, що й вхідні: сервер повертає рівно те, що
       // надіслали (шифротекст), і власне повідомлення розшифровується тим
       // самим спільним ключем (ECDH статика-статика симетрична для обох
@@ -148,6 +166,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
       setState(() {
         _messages = [..._messages, ...decrypted];
         _draftController.clear();
+        _replyingTo = null;
       });
       _scrollToBottom();
     } on ApiException catch (e) {
@@ -156,6 +175,8 @@ class _ConversationScreenState extends State<ConversationScreen> {
       if (mounted) setState(() => _sending = false);
     }
   }
+
+  void _startReply(Map<String, dynamic> message) => setState(() => _replyingTo = message);
 
   Future<void> _sendPhoto() async {
     if (_photo == null || _sending) return;
@@ -274,18 +295,24 @@ class _ConversationScreenState extends State<ConversationScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Flexible(child: Text(_title, overflow: TextOverflow.ellipsis)),
-            if (_type == 'direct') ...[
-              const SizedBox(width: 8),
-              Tooltip(
-                message: 'Наскрізне шифрування',
-                child: Icon(Icons.lock_outline, size: 16, color: AppColors.gold300.withValues(alpha: 0.7)),
-              ),
+        title: InkWell(
+          onTap: _type == 'direct' && _otherUserId != null
+              ? () => Navigator.of(context)
+                  .push(MaterialPageRoute(builder: (_) => MemberProfileScreen(userId: _otherUserId!)))
+              : null,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Flexible(child: Text(_title, overflow: TextOverflow.ellipsis)),
+              if (_type == 'direct') ...[
+                const SizedBox(width: 8),
+                Tooltip(
+                  message: 'Наскрізне шифрування',
+                  child: Icon(Icons.lock_outline, size: 16, color: AppColors.gold300.withValues(alpha: 0.7)),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
       body: _loading
@@ -322,15 +349,70 @@ class _ConversationScreenState extends State<ConversationScreen> {
                               opacity: t,
                               child: Transform.translate(offset: Offset(0, (1 - t) * 10), child: child),
                             ),
-                            child: _MessageBubble(
-                              message: m,
-                              showSenderName: _type == 'family' || _type == 'deputies',
-                              formatTime: _formatTime,
+                            // Dismissible з confirmDismiss, що завжди повертає
+                            // false, — стандартний спосіб зробити "своп для
+                            // дії" (тут — відповісти), не видаляючи елемент:
+                            // бульбашка пружинить назад одразу після свопу.
+                            child: Dismissible(
+                              key: ValueKey('reply-${m['id']}'),
+                              direction: DismissDirection.startToEnd,
+                              confirmDismiss: (_) async {
+                                _startReply(m);
+                                return false;
+                              },
+                              background: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 12),
+                                child: Icon(Icons.reply, color: AppColors.gold300.withValues(alpha: 0.6)),
+                              ),
+                              child: _MessageBubble(
+                                message: m,
+                                showSenderName: _type == 'family' || _type == 'deputies',
+                                showReadReceipt: _type == 'direct',
+                                otherLastReadMessageId: _otherLastReadMessageId,
+                                formatTime: _formatTime,
+                              ),
                             ),
                           );
                         },
                       ),
                     ),
+                    if (_replyingTo != null)
+                      Container(
+                        margin: const EdgeInsets.fromLTRB(12, 4, 12, 0),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.05),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border(left: BorderSide(color: AppColors.gold400, width: 3)),
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    _replyingTo!['isMine'] == true
+                                        ? 'Ви'
+                                        : (_replyingTo!['senderName'] as String? ?? 'Учасник'),
+                                    style: TextStyle(color: AppColors.gold300, fontSize: 12, fontWeight: FontWeight.w600),
+                                  ),
+                                  Text(
+                                    _replyingTo!['body'] as String? ?? '',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(color: Colors.white54, fontSize: 12),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.close, size: 18),
+                              onPressed: () => setState(() => _replyingTo = null),
+                            ),
+                          ],
+                        ),
+                      ),
                     if (_photo != null)
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -393,9 +475,17 @@ class _ConversationScreenState extends State<ConversationScreen> {
 class _MessageBubble extends StatelessWidget {
   final Map<String, dynamic> message;
   final bool showSenderName;
+  final bool showReadReceipt;
+  final int? otherLastReadMessageId;
   final String Function(String) formatTime;
 
-  const _MessageBubble({required this.message, required this.showSenderName, required this.formatTime});
+  const _MessageBubble({
+    required this.message,
+    required this.showSenderName,
+    this.showReadReceipt = false,
+    this.otherLastReadMessageId,
+    required this.formatTime,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -445,7 +535,13 @@ class _MessageBubble extends StatelessWidget {
         crossAxisAlignment: isMine ? CrossAxisAlignment.end : CrossAxisAlignment.start,
         children: [
           if (!isMine && showSenderName)
-            Padding(
+            InkWell(
+              borderRadius: BorderRadius.circular(8),
+              onTap: message['senderId'] == null
+                  ? null
+                  : () => Navigator.of(context).push(MaterialPageRoute(
+                      builder: (_) => MemberProfileScreen(userId: message['senderId'] as int))),
+              child: Padding(
               padding: const EdgeInsets.only(left: 4, bottom: 2),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -469,6 +565,34 @@ class _MessageBubble extends StatelessWidget {
                   ],
                 ],
               ),
+              ),
+            ),
+          if (message['replyTo'] != null)
+            Container(
+              constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.72),
+              margin: const EdgeInsets.only(bottom: 3),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.04),
+                borderRadius: BorderRadius.circular(8),
+                border: Border(left: BorderSide(color: AppColors.gold400.withValues(alpha: 0.6), width: 2)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    (message['replyTo'] as Map<String, dynamic>)['senderName'] as String? ?? 'Учасник',
+                    style: TextStyle(color: AppColors.gold300.withValues(alpha: 0.8), fontSize: 10, fontWeight: FontWeight.w600),
+                  ),
+                  Text(
+                    (message['replyTo'] as Map<String, dynamic>)['body'] as String? ?? '',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: Colors.white38, fontSize: 11),
+                  ),
+                ],
+              ),
             ),
           ConstrainedBox(
             constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.72),
@@ -476,8 +600,25 @@ class _MessageBubble extends StatelessWidget {
           ),
           Padding(
             padding: const EdgeInsets.only(top: 2, left: 4, right: 4),
-            child: Text(formatTime(message['createdAt'] as String),
-                style: const TextStyle(color: Colors.white24, fontSize: 10)),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(formatTime(message['createdAt'] as String),
+                    style: const TextStyle(color: Colors.white24, fontSize: 10)),
+                if (isMine && showReadReceipt) ...[
+                  const SizedBox(width: 3),
+                  Builder(builder: (context) {
+                    final id = message['id'] as int?;
+                    final read = id != null && otherLastReadMessageId != null && id <= otherLastReadMessageId!;
+                    return Icon(
+                      read ? Icons.done_all : Icons.done,
+                      size: 13,
+                      color: read ? AppColors.gold300 : Colors.white24,
+                    );
+                  }),
+                ],
+              ],
+            ),
           ),
         ],
       ),

@@ -537,31 +537,43 @@ class ApiClient {
     return data['data'] as Map<String, dynamic>;
   }
 
-  Future<List<dynamic>> messengerMessagesSince(int conversationId, int afterId) async {
+  /// Повертає і нові повідомлення, і поточний otherLastReadMessageId
+  /// (галочки прочитання, лише direct) — той самий запит, окремий для
+  /// цього не потрібен.
+  Future<Map<String, dynamic>> messengerMessagesSince(int conversationId, int afterId) async {
     final response = await http.get(
       _uri('/messenger/$conversationId/messages').replace(queryParameters: {'after_id': '$afterId'}),
       headers: await _headers(auth: true),
     );
     final data = _decode(response) as Map<String, dynamic>;
-    return (data['data'] as Map<String, dynamic>)['messages'] as List<dynamic>;
+    return data['data'] as Map<String, dynamic>;
   }
 
-  Future<Map<String, dynamic>> sendMessengerText(int conversationId, String body) async {
+  Future<Map<String, dynamic>> sendMessengerText(int conversationId, String body, {int? replyToMessageId}) async {
     final response = await http.post(
       _uri('/messenger/$conversationId/messages'),
       headers: await _headers(auth: true),
-      body: jsonEncode({'type': 'text', 'body': body}),
+      body: jsonEncode({
+        'type': 'text',
+        'body': body,
+        if (replyToMessageId != null) 'reply_to_message_id': replyToMessageId,
+      }),
     );
     final data = _decode(response) as Map<String, dynamic>;
     return (data['data'] as Map<String, dynamic>)['message'] as Map<String, dynamic>;
   }
 
   /// body тут — уже зашифрований блок (E2eeService.encryptFor), не текст.
-  Future<Map<String, dynamic>> sendMessengerEncryptedText(int conversationId, String encryptedBody) async {
+  Future<Map<String, dynamic>> sendMessengerEncryptedText(int conversationId, String encryptedBody,
+      {int? replyToMessageId}) async {
     final response = await http.post(
       _uri('/messenger/$conversationId/messages'),
       headers: await _headers(auth: true),
-      body: jsonEncode({'type': 'text_e2ee', 'body': encryptedBody}),
+      body: jsonEncode({
+        'type': 'text_e2ee',
+        'body': encryptedBody,
+        if (replyToMessageId != null) 'reply_to_message_id': replyToMessageId,
+      }),
     );
     final data = _decode(response) as Map<String, dynamic>;
     return (data['data'] as Map<String, dynamic>)['message'] as Map<String, dynamic>;
@@ -633,6 +645,11 @@ class ApiClient {
     final response = await http.post(_uri('/messenger/direct/$targetUserId'), headers: await _headers(auth: true));
     final data = _decode(response) as Map<String, dynamic>;
     return (data['data'] as Map<String, dynamic>)['conversationId'] as int;
+  }
+
+  Future<Map<String, dynamic>> userProfile(int userId) async {
+    final response = await http.get(_uri('/users/$userId'), headers: await _headers(auth: true));
+    return _decode(response) as Map<String, dynamic>;
   }
 
   Future<List<dynamic>> messengerStickers() async {

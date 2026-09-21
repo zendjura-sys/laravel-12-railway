@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\DeviceTokenController;
 use App\Http\Controllers\Api\GalleryController;
+use App\Http\Controllers\Api\UserProfileController;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Support\Facades\Route;
 
@@ -34,6 +35,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/admin/stats', [AdminController::class, 'stats']);
     Route::get('/admin/users', [AdminController::class, 'users']);
     Route::get('/admin/users/options', [AdminController::class, 'userOptions']);
+});
+
+// Профіль учасника (свій чи чужий) — окрема група лише заради
+// SubstituteBindings ({user} інакше мовчки підставляє порожню модель).
+Route::middleware(['auth:sanctum', SubstituteBindings::class])->group(function () {
+    Route::get('/users/{user}', [UserProfileController::class, 'show']);
 });
 
 // Керування конкретним учасником (редагування, ролі, посада, скидання

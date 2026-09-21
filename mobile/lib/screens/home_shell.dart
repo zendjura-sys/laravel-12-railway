@@ -92,14 +92,19 @@ class _HomeShellState extends State<HomeShell> {
       bottomNavigationBar: SafeArea(
         minimum: const EdgeInsets.fromLTRB(16, 0, 16, 10),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(28),
+          // 22, не 28 — з item-пілюлями (свій радіус 20) і відступом лише
+          // 8px від краю більший зовнішній радіус різав кут крайніх
+          // вкладок (найпомітніше на останній, з активним фоном): дуга
+          // контейнера впиналась у пряму сторону пілюлі, лишаючи
+          // нерівний "зрізаний" куточок замість плавного контуру.
+          borderRadius: BorderRadius.circular(22),
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
             child: Container(
               height: 62,
               decoration: BoxDecoration(
                 color: AppColors.obsidian900.withValues(alpha: 0.7),
-                borderRadius: BorderRadius.circular(28),
+                borderRadius: BorderRadius.circular(22),
                 border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
                 boxShadow: [
                   BoxShadow(
@@ -145,7 +150,7 @@ class _PillNavItem extends StatelessWidget {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         curve: Curves.easeOut,
-        margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+        margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
         padding: const EdgeInsets.symmetric(vertical: 4),
         decoration: BoxDecoration(
           color: selected ? AppColors.gold400.withValues(alpha: 0.14) : Colors.transparent,

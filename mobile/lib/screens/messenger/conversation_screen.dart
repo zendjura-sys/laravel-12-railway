@@ -252,6 +252,21 @@ class _ConversationScreenState extends State<ConversationScreen> {
         child: Wrap(
           children: [
             ListTile(
+              leading: const Icon(Icons.image_outlined),
+              title: const Text('Фото'),
+              onTap: () => Navigator.of(context).pop('photo'),
+            ),
+            ListTile(
+              leading: const SizedBox(width: 24, child: Text('GIF', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold))),
+              title: const Text('Gif'),
+              onTap: () => Navigator.of(context).pop('gif'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.sticky_note_2_outlined),
+              title: const Text('Стікер'),
+              onTap: () => Navigator.of(context).pop('sticker'),
+            ),
+            ListTile(
               leading: const Icon(Icons.insert_drive_file_outlined),
               title: const Text('Файл'),
               onTap: () => Navigator.of(context).pop('file'),
@@ -272,6 +287,12 @@ class _ConversationScreenState extends State<ConversationScreen> {
     );
     if (!mounted || choice == null) return;
     switch (choice) {
+      case 'photo':
+        await _pickPhoto();
+      case 'gif':
+        _showGifPicker();
+      case 'sticker':
+        _showStickerPicker();
       case 'file':
         await _sendFile();
       case 'location':
@@ -476,12 +497,12 @@ class _ConversationScreenState extends State<ConversationScreen> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
+        // Фото/gif/стікер переїхали в один пікер вкладень (_showAttachmentSheet)
+        // разом із файлом/геопозицією/контактом — п'ять окремих кнопок тут
+        // лишали текстовому полю замало місця й воно стискалось у вузьку
+        // колонку з переносом слова "Повідомлення" по буквах.
         IconButton(icon: const Icon(Icons.attach_file), onPressed: _showAttachmentSheet),
-        IconButton(icon: const Icon(Icons.image_outlined), onPressed: _pickPhoto),
         IconButton(icon: const Icon(Icons.emoji_emotions_outlined), onPressed: _showEmojiPicker),
-        IconButton(
-            icon: const Text('GIF', style: TextStyle(fontWeight: FontWeight.bold)), onPressed: _showGifPicker),
-        IconButton(icon: const Icon(Icons.sticky_note_2_outlined), onPressed: _showStickerPicker),
         Expanded(
           child: TextField(
             controller: _draftController,

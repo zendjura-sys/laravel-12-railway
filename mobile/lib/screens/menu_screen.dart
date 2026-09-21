@@ -3,6 +3,7 @@ import '../api_client.dart';
 import '../theme.dart';
 import 'admin_screen.dart';
 import 'events_screen.dart';
+import 'family_goals_screen.dart';
 import 'leaderboard_screen.dart';
 import 'messenger/conversations_screen.dart';
 import 'reports_screen.dart';
@@ -83,6 +84,13 @@ class _MenuScreenState extends State<MenuScreen> {
             subtitle: 'Найближчі події й відповідь "прийду/не прийду"',
             onTap: () => Navigator.of(context)
                 .push(MaterialPageRoute(builder: (_) => const EventsScreen())),
+          ),
+          _MenuTile(
+            icon: Icons.flag_outlined,
+            title: 'Цілі родини',
+            subtitle: 'Спільний прогрес і стрічка активності',
+            onTap: () => Navigator.of(context)
+                .push(MaterialPageRoute(builder: (_) => const FamilyGoalsScreen())),
           ),
           if (_isAdmin)
             _MenuTile(

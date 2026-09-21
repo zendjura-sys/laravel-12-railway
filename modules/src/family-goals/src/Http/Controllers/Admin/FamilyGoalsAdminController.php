@@ -5,6 +5,7 @@ namespace Addons\FamilyGoals\Http\Controllers\Admin;
 use Addons\FamilyGoals\Events\FamilyGoalCompleted;
 use Addons\FamilyGoals\Models\ActivityEvent;
 use Addons\FamilyGoals\Models\FamilyGoal;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -43,7 +44,15 @@ class FamilyGoalsAdminController
 
     public function store(Request $request): RedirectResponse
     {
-        $data = $request->validate([
+        $this->createGoal($this->validated($request), $request->user());
+
+        return back()->with('success', 'Ціль створено.');
+    }
+
+    /** @return array<string, mixed> */
+    protected function validated(Request $request): array
+    {
+        return $request->validate([
             'title' => ['required', 'string', 'max:150'],
             'description' => ['nullable', 'string', 'max:2000'],
             'target_value' => ['nullable', 'integer', 'min:1'],
@@ -51,15 +60,19 @@ class FamilyGoalsAdminController
             'metric' => ['nullable', 'string', Rule::in(array_keys(FamilyGoal::METRICS))],
             'deadline' => ['nullable', 'date'],
         ]);
+    }
 
+    /** @param array<string, mixed> $data */
+    protected function createGoal(array $data, User $user): FamilyGoal
+    {
         $goal = FamilyGoal::create([
             ...$data,
-            'created_by' => $request->user()->id,
+            'created_by' => $user->id,
         ]);
 
-        ActivityEvent::log('goal_created', $request->user()->id, "Нова ціль родини: «{$goal->title}»");
+        ActivityEvent::log('goal_created', $user->id, "Нова ціль родини: «{$goal->title}»");
 
-        return back()->with('success', 'Ціль створено.');
+        return $goal;
     }
 
     public function updateProgress(Request $request, FamilyGoal $familyGoal): JsonResponse

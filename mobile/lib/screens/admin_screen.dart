@@ -3,6 +3,7 @@ import '../api_client.dart';
 import '../theme.dart';
 import 'admin_broadcasts_screen.dart';
 import 'admin_events_screen.dart';
+import 'admin_family_goals_screen.dart';
 import 'admin_leave_requests_screen.dart';
 import 'admin_reports_screen.dart';
 
@@ -113,7 +114,8 @@ class _AdminScreenState extends State<AdminScreen> {
                       if (_permissions.contains('reports.manage') ||
                           _permissions.contains('members.manage') ||
                           _permissions.contains('broadcasts.manage') ||
-                          _permissions.contains('events.manage')) ...[
+                          _permissions.contains('events.manage') ||
+                          _permissions.contains('goals.manage')) ...[
                         Text('Модерація',
                             style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w500)),
                         const SizedBox(height: 10),
@@ -154,6 +156,14 @@ class _AdminScreenState extends State<AdminScreen> {
                             count: null,
                             onTap: () => Navigator.of(context)
                                 .push(MaterialPageRoute(builder: (_) => const AdminEventsScreen())),
+                          ),
+                        if (_permissions.contains('goals.manage'))
+                          _ModerationTile(
+                            icon: Icons.flag_outlined,
+                            label: 'Цілі родини',
+                            count: null,
+                            onTap: () => Navigator.of(context)
+                                .push(MaterialPageRoute(builder: (_) => const AdminFamilyGoalsScreen())),
                           ),
                         const SizedBox(height: 28),
                       ],

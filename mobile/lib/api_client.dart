@@ -625,4 +625,55 @@ class ApiClient {
     final data = _decode(response) as Map<String, dynamic>;
     return data['data'] as Map<String, dynamic>;
   }
+
+  // ---------------- Спільні цілі родини (модуль Family Goals) ----------------
+
+  Future<Map<String, dynamic>> familyGoals() async {
+    final response = await http.get(_uri('/family-goals'), headers: await _headers(auth: true));
+    return _decode(response) as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> adminFamilyGoals() async {
+    final response = await http.get(_uri('/admin/family-goals'), headers: await _headers(auth: true));
+    return _decode(response) as Map<String, dynamic>;
+  }
+
+  Future<void> adminCreateFamilyGoal({
+    required String title,
+    String? description,
+    int? targetValue,
+    String? unit,
+    String? metric,
+    String? deadline,
+  }) async {
+    final response = await http.post(
+      _uri('/admin/family-goals'),
+      headers: await _headers(auth: true),
+      body: jsonEncode({
+        'title': title,
+        if (description != null && description.isNotEmpty) 'description': description,
+        if (targetValue != null) 'target_value': targetValue,
+        if (unit != null && unit.isNotEmpty) 'unit': unit,
+        if (metric != null) 'metric': metric,
+        if (deadline != null && deadline.isNotEmpty) 'deadline': deadline,
+      }),
+    );
+    _decode(response);
+  }
+
+  Future<Map<String, dynamic>> adminUpdateGoalProgress(int id, int currentValue) async {
+    final response = await http.put(
+      _uri('/admin/family-goals/$id/progress'),
+      headers: await _headers(auth: true),
+      body: jsonEncode({'current_value': currentValue}),
+    );
+    final data = _decode(response) as Map<String, dynamic>;
+    return (data['data'] as Map<String, dynamic>)['goal'] as Map<String, dynamic>;
+  }
+
+  Future<void> adminCloseFamilyGoal(int id) async {
+    final response =
+        await http.post(_uri('/admin/family-goals/$id/close'), headers: await _headers(auth: true));
+    _decode(response);
+  }
 }

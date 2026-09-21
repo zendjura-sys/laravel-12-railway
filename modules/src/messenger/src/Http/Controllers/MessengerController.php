@@ -64,7 +64,13 @@ class MessengerController
             ->orderByDesc('messages_max_created_at')
             ->get();
 
-        $conversations = collect([$family])->concat($directs);
+        // Чат заступників — та сама ідея, що й family (один спільний
+        // на всіх, хто підходить, без окремих conversation_participants),
+        // тільки видимий не всім, а лише тим, у кого посада
+        // "Заступник директора" (isDeputy()).
+        $conversations = $this->isDeputy($user)
+            ? collect([$family, $this->deputiesConversation()])->concat($directs)
+            : collect([$family])->concat($directs);
 
         $reads = ConversationRead::query()
             ->where('user_id', $user->id)
@@ -85,11 +91,11 @@ class MessengerController
                 ->where('sender_id', '!=', $user->id)
                 ->count();
 
-            $title = 'Загальний чат родини';
-            if ($c->type === 'direct') {
-                $other = $c->participants->pluck('user')->filter(fn ($u) => $u && $u->id !== $user->id)->first();
-                $title = $other?->name ?? 'Учасник';
-            }
+            $title = match ($c->type) {
+                'deputies' => 'Заступники',
+                'direct' => $c->participants->pluck('user')->filter(fn ($u) => $u && $u->id !== $user->id)->first()?->name ?? 'Учасник',
+                default => 'Загальний чат родини',
+            };
 
             return [
                 'id' => $c->id,
@@ -125,15 +131,15 @@ class MessengerController
 
         $this->markRead($request, $conversation);
 
-        $title = 'Загальний чат родини';
-        if ($conversation->type === 'direct') {
-            $other = ConversationParticipant::query()
+        $title = match ($conversation->type) {
+            'deputies' => 'Заступники',
+            'direct' => (ConversationParticipant::query()
                 ->where('conversation_id', $conversation->id)
                 ->where('user_id', '!=', $request->user()->id)
                 ->with('user:id,name,avatar_path')
-                ->first()?->user;
-            $title = $other?->name ?? 'Учасник';
-        }
+                ->first()?->user)?->name ?? 'Учасник',
+            default => 'Загальний чат родини',
+        };
 
         return [
             'conversation' => [
@@ -404,9 +410,34 @@ class MessengerController
         return Conversation::firstOrCreate(['type' => 'family']);
     }
 
+    protected function deputiesConversation(): Conversation
+    {
+        return Conversation::firstOrCreate(['type' => 'deputies']);
+    }
+
+    /**
+     * "Заступник" тут — конкретна посада ("Заступник директора" у
+     * FamilyContent::positions(), ключ deputy-director), а не окрема
+     * spatie-роль: група чату для заступників має слідувати за тим самим
+     * призначенням посади, яким адмін уже керує в Адмін → Учасники, без
+     * додаткового окремого перемикача.
+     */
+    protected function isDeputy(User $user): bool
+    {
+        return $user->position_key === 'deputy-director';
+    }
+
     protected function ensureAccess(Conversation $conversation, User $user): void
     {
         if ($conversation->type === 'family') {
+            return;
+        }
+
+        if ($conversation->type === 'deputies') {
+            if (! $this->isDeputy($user)) {
+                throw new AccessDeniedHttpException;
+            }
+
             return;
         }
 

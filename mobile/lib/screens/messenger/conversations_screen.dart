@@ -110,6 +110,8 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
                       final last = c['lastMessage'] as Map<String, dynamic>?;
                       final unread = c['unread'] as int? ?? 0;
                       final isFamily = c['type'] == 'family';
+                      final isDeputies = c['type'] == 'deputies';
+                      final isGroup = isFamily || isDeputies;
 
                       return FadeSlideIn(
                         index: i,
@@ -131,17 +133,17 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
                                 height: 44,
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
-                                  color: isFamily
+                                  color: isGroup
                                       ? AppColors.gold400.withValues(alpha: 0.15)
                                       : Colors.white.withValues(alpha: 0.05),
                                   border: Border.all(
-                                      color: isFamily
+                                      color: isGroup
                                           ? AppColors.gold400.withValues(alpha: 0.3)
                                           : Colors.white24),
                                 ),
                                 alignment: Alignment.center,
                                 child: Text(
-                                  isFamily ? '👪' : _initial(c['title'] as String?),
+                                  isFamily ? '👪' : (isDeputies ? '🎖️' : _initial(c['title'] as String?)),
                                   style: const TextStyle(fontSize: 16, color: Colors.white70),
                                 ),
                               ),

@@ -166,7 +166,7 @@ onBeforeUnmount(() => {
                         :class="m.isMine ? 'justify-end' : 'justify-start'"
                     >
                         <div class="max-w-[75%]" :class="m.isMine ? 'text-right' : 'text-left'">
-                            <p v-if="!m.isMine && conversation.type === 'family'" class="mb-0.5 flex items-center gap-1.5 px-1 text-[11px] font-medium text-gold-300">
+                            <p v-if="!m.isMine && (conversation.type === 'family' || conversation.type === 'deputies')" class="mb-0.5 flex items-center gap-1.5 px-1 text-[11px] font-medium text-gold-300">
                                 {{ m.senderName }}
                                 <span
                                     v-if="m.senderPosition"

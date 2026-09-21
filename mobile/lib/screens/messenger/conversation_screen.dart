@@ -271,7 +271,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
                             ),
                             child: _MessageBubble(
                               message: m,
-                              showSenderName: _type == 'family',
+                              showSenderName: _type == 'family' || _type == 'deputies',
                               formatTime: _formatTime,
                             ),
                           );

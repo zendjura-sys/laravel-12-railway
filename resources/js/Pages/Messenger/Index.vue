@@ -110,11 +110,11 @@ function initials(name) {
                     >
                         <span
                             class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-sm font-semibold ring-1"
-                            :class="c.type === 'family'
+                            :class="c.type === 'family' || c.type === 'deputies'
                                 ? 'bg-gold-400/15 text-gold-300 ring-gold-400/30'
                                 : 'bg-white/5 text-white/70 ring-white/10'"
                         >
-                            {{ c.type === 'family' ? '👪' : initials(c.title) }}
+                            {{ c.type === 'family' ? '👪' : c.type === 'deputies' ? '🎖️' : initials(c.title) }}
                         </span>
                         <div class="min-w-0 flex-1">
                             <div class="flex items-center justify-between gap-2">
@@ -124,7 +124,7 @@ function initials(name) {
                             <p class="mt-0.5 truncate text-xs text-white/40">
                                 <template v-if="c.lastMessage">
                                     <span v-if="c.lastMessage.isMine">Ви: </span>
-                                    <span v-else-if="c.type === 'family'">{{ c.lastMessage.senderName }}: </span>
+                                    <span v-else-if="c.type === 'family' || c.type === 'deputies'">{{ c.lastMessage.senderName }}: </span>
                                     {{ c.lastMessage.body }}
                                 </template>
                                 <template v-else>Ще немає повідомлень</template>

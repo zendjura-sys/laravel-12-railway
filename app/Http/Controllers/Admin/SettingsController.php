@@ -121,10 +121,13 @@ class SettingsController extends Controller
      * origin сайта у каждого, кто нажмёт «Подати заявку». Ограничение на
      * стороне сервера, а не шаблона: потребителей у настройки несколько.
      *
+     * mobile_app_download_url свідомо НЕ тут — у нього окреме правило
+     * нижче в update(), яке дозволяє ще й відносний шлях (/downloads/…).
+     *
      * @var array<int, string>
      */
     private const URL_FIELDS = [
-        'telegram_webhook_url', 'telegram_bot_url', 'discord_redirect_uri', 'mobile_app_download_url',
+        'telegram_webhook_url', 'telegram_bot_url', 'discord_redirect_uri',
     ];
 
     public function index(): Response
@@ -154,6 +157,17 @@ class SettingsController extends Controller
             $rules[$key] = match (true) {
                 in_array($key, self::BOOLEAN_FIELDS, true) => ['boolean'],
                 in_array($key, ['mobile_app_min_build', 'mobile_app_latest_build'], true) => ['nullable', 'integer', 'min:1'],
+                // mobile_app_download_url: deploy/setup-vps.sh і кнопка
+                // "Завантажити .apk" нижче самі пишуть сюди відносний
+                // шлях (/downloads/…) замість повного URL — телефон не
+                // знає домену сайту заздалегідь, а плутати адміна ще
+                // одним окремим полем "шлях чи URL" не хочеться. Звичайне
+                // 'url:http,https' відносний шлях відхиляв би.
+                $key === 'mobile_app_download_url' => ['nullable', 'string', 'max:2000', function (string $attribute, $value, $fail) {
+                    if ($value !== '' && ! str_starts_with($value, '/') && ! preg_match('/^https?:\/\//', $value)) {
+                        $fail('Посилання має бути повним URL (https://…) або відносним шляхом (/downloads/…).');
+                    }
+                }],
                 in_array($key, self::URL_FIELDS, true) => ['nullable', 'string', 'max:2000', 'url:http,https'],
                 in_array($key, self::LONG_TEXT_FIELDS, true) => ['nullable', 'string', 'max:5000'],
                 default => ['nullable', 'string', 'max:2000'],
@@ -177,5 +191,35 @@ class SettingsController extends Controller
         }
 
         return back()->with('status', 'settings-updated');
+    }
+
+    /**
+     * Ручне завантаження .apk просто з адмінки — на випадок, коли
+     * deploy/setup-vps.sh не може сам дотягнутись до GitHub Release
+     * (мережеві обмеження на VDS) або коли зручніше просто перетягнути
+     * файл, зібраний CI, замість SCP на сервер. Кладемо в public/downloads
+     * (той самий шлях, яким уже користується deploy-скрипт) і одразу
+     * виставляємо mobile_app_download_url на нього — окремо вручну
+     * вводити посилання після цього не треба.
+     */
+    public function uploadMobileApk(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'apk' => ['required', 'file', 'max:122880', function (string $attribute, $value, $fail) {
+                if (strtolower($value->getClientOriginalExtension()) !== 'apk') {
+                    $fail('Файл має бути .apk.');
+                }
+            }],
+        ]);
+
+        if (! is_dir(public_path('downloads'))) {
+            mkdir(public_path('downloads'), 0755, true);
+        }
+
+        $request->file('apk')->move(public_path('downloads'), 'monsory-connect.apk');
+
+        Setting::set('mobile_app_download_url', '/downloads/monsory-connect.apk', 'mobile_app');
+
+        return back()->with('status', 'mobile-apk-uploaded');
     }
 }

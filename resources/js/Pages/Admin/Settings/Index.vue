@@ -171,7 +171,7 @@ const TABS = {
             {
                 key: 'mobile_app_download_url',
                 label: 'Посилання на завантаження .apk',
-                hint: 'Наприклад, посилання на GitHub Release зі зібраним застосунком — показується учасникам у Профілі/Довідці.',
+                hint: 'Заповнюється автоматично після завантаження файлу кнопкою нижче — або впишіть власне посилання (наприклад, на GitHub Release) вручну. Показується учасникам у Профілі/Довідці.',
             },
         ],
     },
@@ -205,6 +205,40 @@ function submit(group) {
 /* ---------- перевірка підключення Mistral ---------- */
 const aiTesting = ref(false);
 const aiTestResult = ref(null);
+
+/* ---------- ручне завантаження .apk (Мобільний застосунок) ---------- */
+const apkForm = useForm({ apk: null });
+const apkInput = ref(null);
+const apkUploadResult = ref(null);
+
+function pickApk() {
+    apkInput.value?.click();
+}
+
+function onApkSelected(event) {
+    const file = event.target.files?.[0] ?? null;
+    if (!file) return;
+
+    apkForm.apk = file;
+    apkUploadResult.value = null;
+    apkForm.post(route('admin.settings.mobile-app.apk'), {
+        preserveScroll: true,
+        onSuccess: () => {
+            // Сервер уже поклав файл і сам виставив Setting — підтягуємо
+            // те саме значення у відкриту форму, щоб адмін одразу побачив
+            // заповнене поле, а не лише після ручного перезавантаження сторінки.
+            forms.mobile_app.mobile_app_download_url = '/downloads/monsory-connect.apk';
+            apkUploadResult.value = { ok: true, message: `Завантажено: ${file.name}` };
+        },
+        onError: () => {
+            apkUploadResult.value = { ok: false, message: apkForm.errors.apk || 'Не вдалося завантажити файл.' };
+        },
+        onFinish: () => {
+            apkForm.reset();
+            if (apkInput.value) apkInput.value.value = '';
+        },
+    });
+}
 
 async function testAi() {
     aiTesting.value = true;
@@ -287,6 +321,34 @@ async function testAi() {
                     <p v-if="activeTab === 'api_keys' && aiTestResult" class="text-sm" :class="aiTestResult.ok ? 'text-emerald-300' : 'text-ember-500'">
                         {{ aiTestResult.message }}
                     </p>
+                </div>
+
+                <div v-if="activeTab === 'mobile_app'" class="border-t border-white/10 pt-5">
+                    <p class="text-sm text-white/70">Або завантажте файл .apk вручну — з комп'ютера прямо на сервер</p>
+                    <p class="mt-1 text-xs text-white/30">
+                        Кладе файл у {{ ' ' }}<code class="text-white/50">public/downloads/monsory-connect.apk</code> на сервері
+                        й сам виставляє посилання вище — окремо копіювати нікуди не треба.
+                    </p>
+                    <input
+                        ref="apkInput"
+                        type="file"
+                        accept=".apk"
+                        class="hidden"
+                        @change="onApkSelected"
+                    />
+                    <div class="mt-3 flex flex-wrap items-center gap-4">
+                        <button
+                            type="button"
+                            :disabled="apkForm.processing"
+                            class="rounded-full border border-white/15 px-4 py-2 text-xs uppercase tracking-widest text-white/60 transition-colors hover:border-gold-400/40 hover:text-white disabled:opacity-40"
+                            @click="pickApk"
+                        >
+                            {{ apkForm.processing ? `Завантажую… ${apkForm.progress?.percentage ?? 0}%` : 'Завантажити .apk' }}
+                        </button>
+                        <p v-if="apkUploadResult" class="text-sm" :class="apkUploadResult.ok ? 'text-emerald-300' : 'text-ember-500'">
+                            {{ apkUploadResult.message }}
+                        </p>
+                    </div>
                 </div>
             </form>
         </Transition>

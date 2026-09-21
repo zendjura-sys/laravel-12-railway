@@ -19,10 +19,7 @@ pluginManagement {
 plugins {
     id "dev.flutter.flutter-plugin-loader" version "1.0.0"
     id "com.android.application" version "8.1.0" apply false
-    // firebase_core вимагає Kotlin Gradle Plugin 1.9.20+ (kotlin {
-    // compilerOptions { ... } } — цього DSL ще нема в 1.8.22, збірка
-    // падає з "Could not find method compilerOptions()").
-    id "org.jetbrains.kotlin.android" version "1.9.24" apply false
+    id "org.jetbrains.kotlin.android" version "1.8.22" apply false
     // Push-сповіщення (firebase_messaging) — читає android/app/google-services.json.
     id "com.google.gms.google-services" version "4.4.2" apply false
 }

@@ -5,33 +5,39 @@ import 'package:http/http.dart' as http;
 import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'api_client.dart';
 import 'app_info.dart';
 import 'theme.dart';
 
 const _dismissedBuildKey = 'update_dismissed_build';
 final _storage = const FlutterSecureStorage();
 
-// Стабільні публічні посилання GitHub Release (той самий тег mobile-latest,
-// що й у .github/workflows/mobile-build.yml) — не потребують токена й
-// завжди свіжі одразу після успішної CI-збірки. На відміну від
-// mobile_app_latest_build у Setting на сайті (яку оновлює лише РУЧНИЙ
-// деплой ядра, deploy/setup-vps.sh) — мобільні збірки виходять незалежно
-// від нього, тож Setting часто відстає й пропозиція оновитись не з'являлась.
-const _githubBuildUrl =
-    'https://github.com/zendjura-sys/laravel-12-railway/releases/latest/download/build.txt';
-const _githubApkUrl =
-    'https://github.com/zendjura-sys/laravel-12-railway/releases/latest/download/monsory-connect.apk';
+// Раніше тут були прямі посилання на github.com/releases — телефон качав
+// build.txt і сам APK напряму з GitHub. У частини користувачів це стабільно
+// провалювалось ("Не вдалося завантажити оновлення") — GitHub недоступний
+// чи обрізається на їхній мобільній мережі/операторі, хоча сам сервер
+// сайту до GitHub достукується без проблем. Тепер телефон качає з нашого
+// власного домену (monsory.net), а MobileDownloadController на бекенді
+// проксіює запит до того самого GitHub Release без локального кешу — тож
+// файл лишається актуальним одразу після нової CI-збірки, як і раніше.
+//
+// На відміну від mobile_app_latest_build у Setting на сайті (яку оновлює
+// лише РУЧНИЙ деплой ядра, deploy/setup-vps.sh) — мобільні збірки виходять
+// незалежно від нього, тож Setting часто відстає й пропозиція оновитись
+// не з'являлась.
+const _updateBuildUrl = '${ApiClient.baseUrl}/downloads/mobile-build.txt';
+const _updateApkUrl = '${ApiClient.baseUrl}/downloads/mobile-apk';
 
-Future<({int build, String downloadUrl})?> _fetchGithubLatestBuild() async {
+Future<({int build, String downloadUrl})?> _fetchLatestBuild() async {
   try {
     final response =
-        await http.get(Uri.parse(_githubBuildUrl)).timeout(const Duration(seconds: 6));
+        await http.get(Uri.parse(_updateBuildUrl)).timeout(const Duration(seconds: 6));
     if (response.statusCode != 200) return null;
     final build = int.tryParse(response.body.trim());
     if (build == null) return null;
-    return (build: build, downloadUrl: _githubApkUrl);
+    return (build: build, downloadUrl: _updateApkUrl);
   } catch (_) {
-    // Офлайн чи GitHub недоступний — не критично, просто лишаємось на
+    // Офлайн чи сайт недоступний — не критично, просто лишаємось на
     // даних із app-config (якщо там є) замість зависання на старті.
     return null;
   }
@@ -48,9 +54,9 @@ Future<void> maybeShowUpdatePrompt(
   String? message,
   String? downloadUrl,
 }) async {
-  final github = await _fetchGithubLatestBuild();
-  final effectiveLatestBuild = github != null && github.build > latestBuild ? github.build : latestBuild;
-  final effectiveDownloadUrl = github != null && github.build > latestBuild ? github.downloadUrl : downloadUrl;
+  final remote = await _fetchLatestBuild();
+  final effectiveLatestBuild = remote != null && remote.build > latestBuild ? remote.build : latestBuild;
+  final effectiveDownloadUrl = remote != null && remote.build > latestBuild ? remote.downloadUrl : downloadUrl;
 
   if (effectiveLatestBuild <= currentBuildNumber) return;
 

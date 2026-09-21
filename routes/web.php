@@ -16,6 +16,7 @@ use App\Http\Controllers\Admin\UnionController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\ChangelogController;
 use App\Http\Controllers\GuideController;
+use App\Http\Controllers\MobileDownloadController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PushSubscriptionController;
 use App\Http\Controllers\TwoFactorAuthenticationController;
@@ -58,6 +59,12 @@ if ($unionDomain = config('app.union_domain')) {
         })->name('union.home');
     });
 }
+
+// Проксі GitHub Release для самооновлення мобільного застосунку — див.
+// докблок MobileDownloadController. Публічно, без авторизації: саме так
+// незалогінений телефон і скачує оновлення.
+Route::get('/downloads/mobile-apk', [MobileDownloadController::class, 'apk'])->name('mobile.download.apk');
+Route::get('/downloads/mobile-build.txt', [MobileDownloadController::class, 'build'])->name('mobile.download.build');
 
 Route::get('/', function () {
     // Только реальные цифры — модулей Reports/Progression ещё нет,

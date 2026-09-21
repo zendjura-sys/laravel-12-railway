@@ -340,6 +340,51 @@ class ApiClient {
     return data['users'] as List<dynamic>;
   }
 
+  /// Довідники (ролі + посади) для форми редагування учасника.
+  Future<Map<String, dynamic>> adminUserOptions() async {
+    final response = await http.get(_uri('/admin/users/options'), headers: await _headers(auth: true));
+    return _decode(response) as Map<String, dynamic>;
+  }
+
+  Future<void> adminUpdateUser(int id, {required String firstName, String? lastName, required String email}) async {
+    final response = await http.put(
+      _uri('/admin/users/$id'),
+      headers: await _headers(auth: true),
+      body: jsonEncode({'first_name': firstName, 'last_name': lastName, 'email': email}),
+    );
+    _decode(response);
+  }
+
+  Future<void> adminUpdateUserRoles(int id, List<String> roles) async {
+    final response = await http.put(
+      _uri('/admin/users/$id/roles'),
+      headers: await _headers(auth: true),
+      body: jsonEncode({'roles': roles}),
+    );
+    _decode(response);
+  }
+
+  Future<void> adminUpdateUserPosition(int id, String? positionKey) async {
+    final response = await http.put(
+      _uri('/admin/users/$id/position'),
+      headers: await _headers(auth: true),
+      body: jsonEncode({'position_key': positionKey}),
+    );
+    _decode(response);
+  }
+
+  /// Повертає новий тимчасовий пароль — сервер показує його рівно один раз.
+  Future<String> adminResetUserPassword(int id) async {
+    final response = await http.post(_uri('/admin/users/$id/reset-password'), headers: await _headers(auth: true));
+    final data = _decode(response) as Map<String, dynamic>;
+    return (data['data'] as Map<String, dynamic>)['password'] as String;
+  }
+
+  Future<void> adminDeleteUser(int id) async {
+    final response = await http.delete(_uri('/admin/users/$id'), headers: await _headers(auth: true));
+    _decode(response);
+  }
+
   // ---------------- Адмін-модерація (модулі Reports, Member Center) ----------------
 
   Future<List<dynamic>> adminPendingReports() async {

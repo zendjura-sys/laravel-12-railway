@@ -4,10 +4,12 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Support\FamilyContent;
 use App\Support\FamilyStats;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Spatie\Permission\Models\Role;
 
 /**
  * Мінімальна нативна адмінка в мобільному застосунку — лише ядро (жодних
@@ -41,8 +43,11 @@ class AdminController extends Controller
             ->through(fn (User $user) => [
                 'id' => $user->id,
                 'name' => $user->name,
+                'firstName' => $user->first_name,
+                'lastName' => $user->last_name,
                 'email' => $user->email,
                 'position' => $user->position_title,
+                'positionKey' => $user->position_key,
                 'roles' => $user->roles->pluck('name'),
                 'avatarUrl' => $user->avatar_path ? Storage::url($user->avatar_path) : null,
                 'isShadow' => $user->is_shadow,
@@ -52,6 +57,23 @@ class AdminController extends Controller
             'users' => $users->items(),
             'currentPage' => $users->currentPage(),
             'lastPage' => $users->lastPage(),
+        ]);
+    }
+
+    /**
+     * Довідники для форми редагування учасника: список ролей і посад —
+     * той самий FamilyContent::positions(), що й у веб-адмінці, тож
+     * порядок і назви завжди збігаються.
+     */
+    public function userOptions(Request $request): JsonResponse
+    {
+        abort_unless($request->user()->can('users.manage'), 403);
+
+        return response()->json([
+            'roles' => Role::query()->orderBy('name')->pluck('name'),
+            'positions' => collect(FamilyContent::positions())
+                ->map(fn (array $p) => ['key' => $p['key'], 'title' => $p['title']])
+                ->values(),
         ]);
     }
 

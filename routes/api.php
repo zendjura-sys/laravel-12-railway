@@ -1,11 +1,13 @@
 <?php
 
+use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Api\AdminController;
 use App\Http\Controllers\Api\AppConfigController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\DeviceTokenController;
 use App\Http\Controllers\Api\GalleryController;
+use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Support\Facades\Route;
 
 /**
@@ -31,4 +33,18 @@ Route::middleware('auth:sanctum')->group(function () {
     // доступ гейтиться в самому контролері (users.manage / будь-який *.manage).
     Route::get('/admin/stats', [AdminController::class, 'stats']);
     Route::get('/admin/users', [AdminController::class, 'users']);
+    Route::get('/admin/users/options', [AdminController::class, 'userOptions']);
+});
+
+// Керування конкретним учасником (редагування, ролі, посада, скидання
+// пароля, видалення) — ті самі методи Admin\UserController, що вже
+// віддають чистий JSON для веб-адмінки (Admin/Users), напряму. Окрема
+// група потрібна лише заради SubstituteBindings: без нього {user}
+// мовчки підставляє порожню модель замість реальної з БД.
+Route::middleware(['auth:sanctum', SubstituteBindings::class, 'permission:users.manage'])->group(function () {
+    Route::put('/admin/users/{user}', [AdminUserController::class, 'update']);
+    Route::put('/admin/users/{user}/roles', [AdminUserController::class, 'updateRoles']);
+    Route::put('/admin/users/{user}/position', [AdminUserController::class, 'updatePosition']);
+    Route::post('/admin/users/{user}/reset-password', [AdminUserController::class, 'resetPassword']);
+    Route::delete('/admin/users/{user}', [AdminUserController::class, 'destroy']);
 });

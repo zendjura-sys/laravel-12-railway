@@ -5,6 +5,7 @@ import 'admin_broadcasts_screen.dart';
 import 'admin_events_screen.dart';
 import 'admin_family_goals_screen.dart';
 import 'admin_leave_requests_screen.dart';
+import 'admin_member_edit_screen.dart';
 import 'admin_reports_screen.dart';
 
 /// Мінімальна нативна адмінка — ядро (статистика родини й список
@@ -208,36 +209,52 @@ class _AdminScreenState extends State<AdminScreen> {
                       ..._users.map((u) {
                         final user = u as Map<String, dynamic>;
                         final roles = (user['roles'] as List).cast<String>();
-                        return Container(
-                          margin: const EdgeInsets.only(bottom: 8),
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                          decoration: glassPanelDecoration(radius: 14),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(user['name'] as String,
-                                        style: const TextStyle(color: Colors.white, fontSize: 14)),
-                                    if (user['position'] != null)
-                                      Text(user['position'] as String,
-                                          style: const TextStyle(color: Colors.white38, fontSize: 12)),
-                                  ],
-                                ),
-                              ),
-                              if (roles.isNotEmpty)
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.gold400.withValues(alpha: 0.1),
-                                    borderRadius: BorderRadius.circular(999),
-                                    border: Border.all(color: AppColors.gold400.withValues(alpha: 0.3)),
+                        final canManage = _permissions.contains('users.manage');
+                        return InkWell(
+                          borderRadius: BorderRadius.circular(14),
+                          onTap: canManage
+                              ? () async {
+                                  final changed = await Navigator.of(context).push<bool>(MaterialPageRoute(
+                                      builder: (_) => AdminMemberEditScreen(user: user)));
+                                  if (changed == true) _load();
+                                }
+                              : null,
+                          child: Container(
+                            margin: const EdgeInsets.only(bottom: 8),
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                            decoration: glassPanelDecoration(radius: 14),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(user['name'] as String,
+                                          style: const TextStyle(color: Colors.white, fontSize: 14)),
+                                      if (user['position'] != null)
+                                        Text(user['position'] as String,
+                                            style: const TextStyle(color: Colors.white38, fontSize: 12)),
+                                    ],
                                   ),
-                                  child: Text(roles.first,
-                                      style: TextStyle(color: AppColors.gold300, fontSize: 11)),
                                 ),
-                            ],
+                                if (roles.isNotEmpty) ...[
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.gold400.withValues(alpha: 0.1),
+                                      borderRadius: BorderRadius.circular(999),
+                                      border: Border.all(color: AppColors.gold400.withValues(alpha: 0.3)),
+                                    ),
+                                    child: Text(roles.first,
+                                        style: TextStyle(color: AppColors.gold300, fontSize: 11)),
+                                  ),
+                                ],
+                                if (canManage) ...[
+                                  const SizedBox(width: 6),
+                                  const Icon(Icons.chevron_right, color: Colors.white24, size: 18),
+                                ],
+                              ],
+                            ),
                           ),
                         );
                       }),

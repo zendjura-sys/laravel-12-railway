@@ -257,10 +257,23 @@ class _ConversationScreenState extends State<ConversationScreen> {
                         itemCount: _messages.length,
                         itemBuilder: (context, i) {
                           final m = _messages[i] as Map<String, dynamic>;
-                          return _MessageBubble(
-                            message: m,
-                            showSenderName: _type == 'family',
-                            formatTime: _formatTime,
+                          // ValueKey(id), не index — щоб бульбашка, яка вже
+                          // з'явилась, не програвала анімацію заново при
+                          // кожному setState() від опитування нових повідомлень.
+                          return TweenAnimationBuilder<double>(
+                            key: ValueKey(m['id']),
+                            tween: Tween(begin: 0, end: 1),
+                            duration: const Duration(milliseconds: 260),
+                            curve: Curves.easeOutCubic,
+                            builder: (context, t, child) => Opacity(
+                              opacity: t,
+                              child: Transform.translate(offset: Offset(0, (1 - t) * 10), child: child),
+                            ),
+                            child: _MessageBubble(
+                              message: m,
+                              showSenderName: _type == 'family',
+                              formatTime: _formatTime,
+                            ),
                           );
                         },
                       ),

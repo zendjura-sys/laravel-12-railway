@@ -114,7 +114,38 @@ ThemeData buildAppTheme() {
     textButtonTheme: TextButtonThemeData(
       style: TextButton.styleFrom(foregroundColor: AppColors.gold300),
     ),
+    // Плавний fade+slide замість стандартного платформного переходу
+    // (різкий на Android) — однаковий, передбачуваний рух між екранами
+    // на обох платформах.
+    pageTransitionsTheme: const PageTransitionsTheme(
+      builders: {
+        TargetPlatform.android: _FadeSlidePageTransitionsBuilder(),
+        TargetPlatform.iOS: _FadeSlidePageTransitionsBuilder(),
+      },
+    ),
   );
+}
+
+class _FadeSlidePageTransitionsBuilder extends PageTransitionsBuilder {
+  const _FadeSlidePageTransitionsBuilder();
+
+  @override
+  Widget buildTransitions<T>(
+    PageRoute<T> route,
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) {
+    final curved = CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
+    return FadeTransition(
+      opacity: curved,
+      child: SlideTransition(
+        position: Tween<Offset>(begin: const Offset(0, 0.04), end: Offset.zero).animate(curved),
+        child: child,
+      ),
+    );
+  }
 }
 
 /// Стиль "скляної панелі" з сайту (.glass-panel) — тонка золота обвідка,

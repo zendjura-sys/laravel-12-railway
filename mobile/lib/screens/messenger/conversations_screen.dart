@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../api_client.dart';
 import '../../theme.dart';
+import '../../widgets/fade_slide_in.dart';
 import 'conversation_screen.dart';
 
 String _initial(String? name) {
@@ -110,7 +111,9 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
                       final unread = c['unread'] as int? ?? 0;
                       final isFamily = c['type'] == 'family';
 
-                      return InkWell(
+                      return FadeSlideIn(
+                        index: i,
+                        child: InkWell(
                         borderRadius: BorderRadius.circular(16),
                         onTap: () async {
                           await Navigator.of(context).push(MaterialPageRoute(
@@ -183,6 +186,7 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
                               ],
                             ],
                           ),
+                        ),
                         ),
                       );
                     },

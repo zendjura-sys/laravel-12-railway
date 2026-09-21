@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../api_client.dart';
 import '../services/push_notifications.dart';
 import '../theme.dart';
+import '../widgets/fade_slide_in.dart';
 import '../widgets/member_card_widget.dart';
 import 'login_screen.dart';
 import 'notifications_screen.dart';
@@ -95,16 +96,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 Positioned(
                   right: 8,
                   top: 8,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                    decoration: BoxDecoration(
-                        color: AppColors.gold400, borderRadius: BorderRadius.circular(999)),
-                    constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
-                    child: Text(
-                      _unreadNotifications > 99 ? '99+' : '$_unreadNotifications',
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                          color: AppColors.obsidian950, fontSize: 10, fontWeight: FontWeight.w600),
+                  child: TweenAnimationBuilder<double>(
+                    key: ValueKey(_unreadNotifications),
+                    tween: Tween(begin: 0.4, end: 1),
+                    duration: const Duration(milliseconds: 220),
+                    curve: Curves.elasticOut,
+                    builder: (context, scale, child) => Transform.scale(scale: scale, child: child),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                      decoration: BoxDecoration(
+                          color: AppColors.gold400, borderRadius: BorderRadius.circular(999)),
+                      constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                      child: Text(
+                        _unreadNotifications > 99 ? '99+' : '$_unreadNotifications',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                            color: AppColors.obsidian950, fontSize: 10, fontWeight: FontWeight.w600),
+                      ),
                     ),
                   ),
                 ),
@@ -137,24 +145,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         ),
                       ],
                       const SizedBox(height: 24),
-                      if (bankCard != null)
-                        MemberCardWidget(
-                          maskedNumber: bankCard['number'] as String,
-                          name: bankCard['name'] as String,
-                          balance: bankCard['balance'] as int,
-                        )
-                      else
-                        Container(
-                          padding: const EdgeInsets.all(20),
-                          decoration: glassPanelDecoration(),
-                          child: const Text(
-                            'Банк ще не підключено для родини.',
-                            style: TextStyle(color: Colors.white54),
-                          ),
-                        ),
+                      FadeSlideIn(
+                        index: 0,
+                        child: bankCard != null
+                            ? MemberCardWidget(
+                                maskedNumber: bankCard['number'] as String,
+                                name: bankCard['name'] as String,
+                                balance: bankCard['balance'] as int,
+                              )
+                            : Container(
+                                padding: const EdgeInsets.all(20),
+                                decoration: glassPanelDecoration(),
+                                child: const Text(
+                                  'Банк ще не підключено для родини.',
+                                  style: TextStyle(color: Colors.white54),
+                                ),
+                              ),
+                      ),
                       if (_profile != null) ...[
                         const SizedBox(height: 24),
-                        _ProgressStats(profile: _profile!),
+                        FadeSlideIn(index: 1, child: _ProgressStats(profile: _profile!)),
                       ],
                     ],
                   ),

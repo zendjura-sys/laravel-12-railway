@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../api_client.dart';
 import '../theme.dart';
+import '../widgets/shimmer_skeleton.dart';
 
 class LeaderboardScreen extends StatefulWidget {
   const LeaderboardScreen({super.key});
@@ -90,9 +91,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                     ),
                   const SizedBox(height: 20),
                   if (_loading)
-                    const Padding(
-                        padding: EdgeInsets.only(top: 40),
-                        child: Center(child: CircularProgressIndicator()))
+                    const ShimmerListSkeleton()
                   else if (entries.isEmpty)
                     const Padding(
                       padding: EdgeInsets.only(top: 40),

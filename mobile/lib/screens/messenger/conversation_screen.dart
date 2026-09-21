@@ -830,7 +830,10 @@ class _MessageBubble extends StatelessWidget {
                   ? null
                   : () => Navigator.of(context).push(
                       MaterialPageRoute(builder: (_) => PhotoViewerScreen(photos: [attachmentUrl]))),
-              child: Image.network(attachmentUrl ?? '', fit: BoxFit.cover),
+              child: Hero(
+                tag: attachmentUrl ?? 'msg-photo-${message['id']}',
+                child: Image.network(attachmentUrl ?? '', fit: BoxFit.cover),
+              ),
             ),
             if (body.isNotEmpty)
               Container(

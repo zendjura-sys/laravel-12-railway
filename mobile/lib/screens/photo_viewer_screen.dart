@@ -91,13 +91,16 @@ class _PhotoViewerScreenState extends State<PhotoViewerScreen> {
           minScale: 1,
           maxScale: 5,
           child: Center(
-            child: Image.network(
-              widget.photos[i],
-              fit: BoxFit.contain,
-              loadingBuilder: (context, child, progress) =>
-                  progress == null ? child : const Center(child: CircularProgressIndicator()),
-              errorBuilder: (context, error, stack) =>
-                  const Icon(Icons.broken_image_outlined, color: Colors.white38, size: 48),
+            child: Hero(
+              tag: widget.photos[i],
+              child: Image.network(
+                widget.photos[i],
+                fit: BoxFit.contain,
+                loadingBuilder: (context, child, progress) =>
+                    progress == null ? child : const Center(child: CircularProgressIndicator()),
+                errorBuilder: (context, error, stack) =>
+                    const Icon(Icons.broken_image_outlined, color: Colors.white38, size: 48),
+              ),
             ),
           ),
         ),

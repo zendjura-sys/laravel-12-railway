@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/physics.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 /// Та сама палітра, що й на сайті (tailwind.config.js): obsidian — фон,
@@ -126,6 +127,26 @@ ThemeData buildAppTheme() {
   );
 }
 
+/// Фізика пружини (SpringSimulation), не звичайна tween-крива — та сама
+/// "тактильна" властивість, через яку преміальні застосунки (Telegram,
+/// iOS-навігація) відчуваються "живими": рух ледь-ледь проскакує ціль і
+/// плавно осідає, замість монотонного уповільнення easeOutCubic.
+/// stiffness/damping підібрані під критично недодемпфовану пружину —
+/// overshoot помітний, але без "желейного" бовтання (як у Curves.elasticOut).
+class _SpringCurve extends Curve {
+  const _SpringCurve();
+
+  static final SpringSimulation _simulation = SpringSimulation(
+    const SpringDescription(mass: 1, stiffness: 500, damping: 32),
+    0,
+    1,
+    0,
+  );
+
+  @override
+  double transformInternal(double t) => _simulation.x(t);
+}
+
 class _FadeSlidePageTransitionsBuilder extends PageTransitionsBuilder {
   const _FadeSlidePageTransitionsBuilder();
 
@@ -137,11 +158,16 @@ class _FadeSlidePageTransitionsBuilder extends PageTransitionsBuilder {
     Animation<double> secondaryAnimation,
     Widget child,
   ) {
-    final curved = CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
+    // Дві окремі криві: Opacity в Flutter суворо вимагає значення в
+    // [0.0, 1.0] (assert), а недодемпфована пружина навмисно трохи
+    // проскакує за 1.0 — тому spring-крива йде лише під зсув (Offset не
+    // має такого обмеження), а прозорість веде звичайний монотонний easeOut.
+    final fadeCurved = CurvedAnimation(parent: animation, curve: Curves.easeOut);
+    final slideCurved = CurvedAnimation(parent: animation, curve: const _SpringCurve());
     return FadeTransition(
-      opacity: curved,
+      opacity: fadeCurved,
       child: SlideTransition(
-        position: Tween<Offset>(begin: const Offset(0, 0.04), end: Offset.zero).animate(curved),
+        position: Tween<Offset>(begin: const Offset(0, 0.05), end: Offset.zero).animate(slideCurved),
         child: child,
       ),
     );

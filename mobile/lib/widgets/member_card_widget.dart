@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../theme.dart';
+import 'animated_counter.dart';
 
 /// Мобільний варіант картки з сайту (MemberCard.vue): пропорції ID-1
 /// (85.6×53.98мм), номер у 4 групи по 4 цифри, баланс по центру,
@@ -28,8 +29,6 @@ class MemberCardWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final balanceText = '${NumberFormat.decimalPattern('uk').format(balance)}₴';
-
     return AspectRatio(
       aspectRatio: 85.6 / 53.98,
       child: Container(
@@ -83,8 +82,9 @@ class MemberCardWidget extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             Center(
-              child: Text(
-                balanceText,
+              child: AnimatedCounter(
+                value: balance,
+                formatter: (v) => '${NumberFormat.decimalPattern('uk').format(v.round())}₴',
                 style: TextStyle(
                   color: AppColors.gold200,
                   fontSize: 26,

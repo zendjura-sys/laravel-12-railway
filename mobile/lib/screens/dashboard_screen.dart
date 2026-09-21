@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import '../api_client.dart';
 import '../services/push_notifications.dart';
 import '../theme.dart';
+import '../widgets/animated_counter.dart';
 import '../widgets/fade_slide_in.dart';
 import '../widgets/member_card_widget.dart';
+import '../widgets/shimmer_skeleton.dart';
 import 'login_screen.dart';
 import 'member_profile_screen.dart';
 import 'messenger/conversations_screen.dart';
@@ -128,7 +130,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       body: RefreshIndicator(
         onRefresh: _load,
         child: _loading
-            ? const Center(child: CircularProgressIndicator())
+            ? const Padding(padding: EdgeInsets.all(20), child: _DashboardSkeleton())
             : _error != null
                 ? _ErrorView(message: _error!, onRetry: _load)
                 : ListView(
@@ -251,10 +253,10 @@ class _ProgressStats extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tiles = [
-      ('Рівень', '${profile['level'] ?? '—'}'),
-      ('Досвід', '${profile['xp'] ?? 0}'),
-      ('Серія', '${profile['current_streak'] ?? 0}'),
-      ('Контракти', '${profile['contracts_count'] ?? 0}'),
+      ('Рівень', profile['level'] as num?),
+      ('Досвід', profile['xp'] as num? ?? 0),
+      ('Серія', profile['current_streak'] as num? ?? 0),
+      ('Контракти', profile['contracts_count'] as num? ?? 0),
     ];
 
     return Container(
@@ -271,9 +273,16 @@ class _ProgressStats extends StatelessWidget {
                 .map((t) => Expanded(
                       child: Column(
                         children: [
-                          Text(t.$2,
-                              style: TextStyle(
-                                  color: AppColors.gold300, fontSize: 18, fontWeight: FontWeight.w600)),
+                          t.$2 == null
+                              ? Text('—',
+                                  style: TextStyle(
+                                      color: AppColors.gold300, fontSize: 18, fontWeight: FontWeight.w600))
+                              : AnimatedCounter(
+                                  value: t.$2!,
+                                  formatter: (v) => '${v.round()}',
+                                  style: TextStyle(
+                                      color: AppColors.gold300, fontSize: 18, fontWeight: FontWeight.w600),
+                                ),
                           const SizedBox(height: 2),
                           Text(t.$1,
                               style: const TextStyle(color: Colors.white38, fontSize: 11),
@@ -282,6 +291,50 @@ class _ProgressStats extends StatelessWidget {
                       ),
                     ))
                 .toList(),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DashboardSkeleton extends StatelessWidget {
+  const _DashboardSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return ShimmerLoader(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const ShimmerBox(width: 200, height: 22),
+          const SizedBox(height: 8),
+          const ShimmerBox(width: 100, height: 13),
+          const SizedBox(height: 24),
+          ShimmerBox(width: double.infinity, height: 170, radius: 20),
+          const SizedBox(height: 24),
+          Container(
+            padding: const EdgeInsets.all(18),
+            decoration: glassPanelDecoration(),
+            child: Row(
+              children: List.generate(
+                4,
+                (i) => Expanded(
+                  child: Padding(
+                    padding: EdgeInsets.only(right: i == 3 ? 0 : 8),
+                    child: const Column(children: [ShimmerBox(width: 36, height: 18), SizedBox(height: 6), ShimmerBox(width: 44, height: 10)]),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+          Row(
+            children: [
+              Expanded(child: ShimmerBox(height: 76, radius: 16)),
+              const SizedBox(width: 12),
+              Expanded(child: ShimmerBox(height: 76, radius: 16)),
+            ],
           ),
         ],
       ),

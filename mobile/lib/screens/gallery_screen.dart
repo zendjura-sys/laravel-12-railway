@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../api_client.dart';
 import '../theme.dart';
+import '../widgets/shimmer_skeleton.dart';
 import 'photo_viewer_screen.dart';
 
 class GalleryScreen extends StatefulWidget {
@@ -57,7 +58,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
       body: RefreshIndicator(
         onRefresh: _load,
         child: _loading
-            ? const Center(child: CircularProgressIndicator())
+            ? const Padding(padding: EdgeInsets.all(20), child: ShimmerGridSkeleton())
             : _error != null
                 ? Center(
                     child: Column(
@@ -112,13 +113,16 @@ class _GalleryScreenState extends State<GalleryScreen> {
                                               border: Border.all(
                                                   color: AppColors.gold400.withValues(alpha: 0.4), width: 1.5),
                                             ),
-                                            child: ClipOval(
-                                              child: Image.network(
-                                                member['url'] as String,
-                                                fit: BoxFit.cover,
-                                                errorBuilder: (context, error, stack) => const Icon(
-                                                    Icons.person_outline,
-                                                    color: Colors.white38),
+                                            child: Hero(
+                                              tag: member['url'] as String,
+                                              child: ClipOval(
+                                                child: Image.network(
+                                                  member['url'] as String,
+                                                  fit: BoxFit.cover,
+                                                  errorBuilder: (context, error, stack) => const Icon(
+                                                      Icons.person_outline,
+                                                      color: Colors.white38),
+                                                ),
                                               ),
                                             ),
                                           ),
@@ -161,14 +165,17 @@ class _GalleryScreenState extends State<GalleryScreen> {
                                   final photo = _galleryPhotos[i] as Map<String, dynamic>;
                                   return GestureDetector(
                                     onTap: () => _openViewer(_galleryPhotos, i),
-                                    child: ClipRRect(
-                                      borderRadius: BorderRadius.circular(10),
-                                      child: Image.network(
-                                        photo['url'] as String,
-                                        fit: BoxFit.cover,
-                                        errorBuilder: (context, error, stack) => Container(
-                                          color: AppColors.obsidian800,
-                                          child: const Icon(Icons.broken_image_outlined, color: Colors.white24),
+                                    child: Hero(
+                                      tag: photo['url'] as String,
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.circular(10),
+                                        child: Image.network(
+                                          photo['url'] as String,
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (context, error, stack) => Container(
+                                            color: AppColors.obsidian800,
+                                            child: const Icon(Icons.broken_image_outlined, color: Colors.white24),
+                                          ),
                                         ),
                                       ),
                                     ),

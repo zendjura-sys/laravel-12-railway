@@ -50,6 +50,7 @@ dependencies:
   record: ^6.2.1
   audioplayers: ^6.6.0
   gal: ^2.3.3
+  shimmer: ^3.0.0
 
 dependency_overrides:
   # geolocator_android 5.x використовує Color.toARGB32(), якого немає в

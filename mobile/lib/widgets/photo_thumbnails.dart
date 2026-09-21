@@ -20,21 +20,24 @@ class PhotoThumbnails extends StatelessWidget {
           borderRadius: BorderRadius.circular(10),
           onTap: () => Navigator.of(context).push(MaterialPageRoute(
               builder: (_) => PhotoViewerScreen(photos: photos, initialIndex: i))),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(10),
-            child: Image.network(
-              photos[i],
-              width: 64,
-              height: 64,
-              fit: BoxFit.cover,
-              loadingBuilder: (context, child, progress) => progress == null
-                  ? child
-                  : Container(width: 64, height: 64, color: Colors.white.withValues(alpha: 0.05)),
-              errorBuilder: (context, error, stack) => Container(
+          child: Hero(
+            tag: photos[i],
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: Image.network(
+                photos[i],
                 width: 64,
                 height: 64,
-                color: Colors.white.withValues(alpha: 0.05),
-                child: const Icon(Icons.broken_image_outlined, color: Colors.white24, size: 20),
+                fit: BoxFit.cover,
+                loadingBuilder: (context, child, progress) => progress == null
+                    ? child
+                    : Container(width: 64, height: 64, color: Colors.white.withValues(alpha: 0.05)),
+                errorBuilder: (context, error, stack) => Container(
+                  width: 64,
+                  height: 64,
+                  color: Colors.white.withValues(alpha: 0.05),
+                  child: const Icon(Icons.broken_image_outlined, color: Colors.white24, size: 20),
+                ),
               ),
             ),
           ),

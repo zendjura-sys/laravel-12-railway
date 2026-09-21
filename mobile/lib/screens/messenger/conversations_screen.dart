@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../api_client.dart';
 import '../../theme.dart';
 import '../../widgets/fade_slide_in.dart';
+import '../../widgets/shimmer_skeleton.dart';
 import '../member_profile_screen.dart';
 import 'conversation_screen.dart';
 
@@ -91,7 +92,7 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
       body: RefreshIndicator(
         onRefresh: _load,
         child: _loading
-            ? const Center(child: CircularProgressIndicator())
+            ? const Padding(padding: EdgeInsets.all(16), child: ShimmerListSkeleton())
             : _error != null
                 ? Center(
                     child: Column(

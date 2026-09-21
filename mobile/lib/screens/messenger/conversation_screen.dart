@@ -381,8 +381,28 @@ class _MessageBubble extends StatelessWidget {
           if (!isMine && showSenderName)
             Padding(
               padding: const EdgeInsets.only(left: 4, bottom: 2),
-              child: Text(message['senderName'] as String? ?? '',
-                  style: TextStyle(color: AppColors.gold300, fontSize: 11, fontWeight: FontWeight.w500)),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(message['senderName'] as String? ?? '',
+                      style: TextStyle(color: AppColors.gold300, fontSize: 11, fontWeight: FontWeight.w500)),
+                  if ((message['senderPosition'] as String?)?.isNotEmpty == true) ...[
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                      decoration: BoxDecoration(
+                        color: AppColors.gold400.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(999),
+                        border: Border.all(color: AppColors.gold400.withValues(alpha: 0.3)),
+                      ),
+                      child: Text(
+                        (message['senderPosition'] as String).toUpperCase(),
+                        style: TextStyle(color: AppColors.gold300.withValues(alpha: 0.8), fontSize: 9, letterSpacing: 0.3),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
             ),
           ConstrainedBox(
             constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.72),

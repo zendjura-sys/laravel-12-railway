@@ -116,7 +116,7 @@ class MessengerController
 
         $messages = Message::query()
             ->where('conversation_id', $conversation->id)
-            ->with('sender:id,name,avatar_path')
+            ->with('sender:id,name,avatar_path,position_key')
             ->latest('id')
             ->limit(50)
             ->get()
@@ -155,7 +155,7 @@ class MessengerController
         $messages = Message::query()
             ->where('conversation_id', $conversation->id)
             ->where('id', '>', $afterId)
-            ->with('sender:id,name,avatar_path')
+            ->with('sender:id,name,avatar_path,position_key')
             ->oldest('id')
             ->limit(100)
             ->get();
@@ -216,7 +216,7 @@ class MessengerController
             'attachment_path' => $attachmentPath,
             'attachment_url' => $attachmentUrl,
         ]);
-        $message->load('sender:id,name,avatar_path');
+        $message->load('sender:id,name,avatar_path,position_key');
 
         $conversation->touch();
 
@@ -440,6 +440,7 @@ class MessengerController
             'attachmentUrl' => $m->attachment_url,
             'senderId' => $m->sender_id,
             'senderName' => $m->sender?->name,
+            'senderPosition' => $m->sender?->position_title,
             'isMine' => $m->sender_id === $myId,
             'createdAt' => $m->created_at,
         ];

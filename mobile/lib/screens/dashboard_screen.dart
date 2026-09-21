@@ -128,7 +128,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
             : _error != null
                 ? _ErrorView(message: _error!, onRetry: _load)
                 : ListView(
-                    padding: const EdgeInsets.all(20),
+                    // Знизу більше, ніж по інших краях — та сама причина,
+                    // що в menu_screen.dart: плаваюча нижня навігація
+                    // лишала останній картці замало повітря над собою.
+                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 44),
                     children: [
                       InkWell(
                         borderRadius: BorderRadius.circular(8),

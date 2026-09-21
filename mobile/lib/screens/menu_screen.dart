@@ -55,7 +55,11 @@ class _MenuScreenState extends State<MenuScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Меню')),
       body: ListView(
-        padding: const EdgeInsets.all(20),
+        // Знизу більше, ніж по інших краях — плаваюча нижня навігація не
+        // ховає контент (Scaffold сам резервує під неї місце), але 20px
+        // звідусіль лишали останній картці замало повітря над панеллю,
+        // її край візуально впирався в блюр панелі.
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 44),
         children: [
           _MenuTile(
             icon: Icons.forum_outlined,

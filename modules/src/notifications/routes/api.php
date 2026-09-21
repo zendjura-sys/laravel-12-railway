@@ -14,6 +14,7 @@ Route::prefix('api')->middleware(['auth:sanctum', SubstituteBindings::class])->g
     Route::get('/notifications', [ApiNotificationController::class, 'indexJson']);
     Route::post('/notifications/{notification}/read', [NotificationController::class, 'markRead']);
     Route::post('/notifications/read-all', [NotificationController::class, 'markAllRead']);
+    Route::delete('/notifications/{notification}', [NotificationController::class, 'destroy']);
 });
 
 // Мінімальна адмінка в застосунку: написати й надіслати розсилку.

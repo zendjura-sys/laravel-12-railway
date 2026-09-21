@@ -58,4 +58,19 @@ class NotificationController
             'redirect' => null,
         ]);
     }
+
+    public function destroy(Request $request, Notification $notification): JsonResponse
+    {
+        abort_unless($notification->user_id === $request->user()->id, 403);
+
+        $notification->delete();
+
+        return response()->json([
+            'ok' => true,
+            'message' => null,
+            'data' => null,
+            'errors' => null,
+            'redirect' => null,
+        ]);
+    }
 }

@@ -473,6 +473,11 @@ class ApiClient {
     _decode(response);
   }
 
+  Future<void> deleteNotification(int id) async {
+    final response = await http.delete(_uri('/notifications/$id'), headers: await _headers(auth: true));
+    _decode(response);
+  }
+
   // ---------------- Месенджер (модуль Messenger) ----------------
 
   Future<List<dynamic>> messengerConversations() async {

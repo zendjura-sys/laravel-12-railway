@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../api_client.dart';
 import '../theme.dart';
+import '../widgets/fade_slide_in.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -52,6 +53,16 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     await ApiClient.instance.markAllNotificationsRead();
   }
 
+  Future<void> _delete(Map<String, dynamic> notification) async {
+    setState(() => _notifications.remove(notification));
+    try {
+      await ApiClient.instance.deleteNotification(notification['id'] as int);
+    } catch (_) {
+      // Мережа підвела — повертаємо назад, щоб список не розходився з сервером.
+      if (mounted) setState(() => _notifications.insert(0, notification));
+    }
+  }
+
   String _formatTime(String iso) {
     final dt = DateTime.parse(iso).toLocal();
     return '${dt.day.toString().padLeft(2, '0')}.${dt.month.toString().padLeft(2, '0')} '
@@ -94,47 +105,65 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                         itemBuilder: (context, i) {
                           final n = _notifications[i] as Map<String, dynamic>;
                           final unread = n['read_at'] == null;
-                          return InkWell(
-                            borderRadius: BorderRadius.circular(14),
-                            onTap: () => _markRead(n),
-                            child: Container(
-                              margin: const EdgeInsets.only(bottom: 8),
-                              padding: const EdgeInsets.all(14),
-                              decoration: glassPanelDecoration(radius: 14).copyWith(
-                                border: unread ? Border.all(color: AppColors.gold400.withValues(alpha: 0.3)) : null,
+                          return FadeSlideIn(
+                            index: i,
+                            child: Dismissible(
+                              key: ValueKey(n['id']),
+                              direction: DismissDirection.endToStart,
+                              onDismissed: (_) => _delete(n),
+                              background: Container(
+                                margin: const EdgeInsets.only(bottom: 8),
+                                padding: const EdgeInsets.symmetric(horizontal: 20),
+                                alignment: Alignment.centerRight,
+                                decoration: BoxDecoration(
+                                  color: Colors.redAccent.withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                                child: const Icon(Icons.delete_outline, color: Colors.redAccent),
                               ),
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  if (unread)
-                                    Container(
-                                      margin: const EdgeInsets.only(top: 5, right: 10),
-                                      width: 8,
-                                      height: 8,
-                                      decoration: BoxDecoration(
-                                          color: AppColors.gold400, shape: BoxShape.circle),
-                                    ),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(n['title'] as String? ?? '',
-                                            style: TextStyle(
-                                                color: Colors.white,
-                                                fontSize: 14,
-                                                fontWeight: unread ? FontWeight.w600 : FontWeight.w400)),
-                                        if (n['body'] != null) ...[
-                                          const SizedBox(height: 4),
-                                          Text(n['body'] as String,
-                                              style: const TextStyle(color: Colors.white54, fontSize: 13)),
-                                        ],
-                                        const SizedBox(height: 6),
-                                        Text(_formatTime(n['created_at'] as String),
-                                            style: const TextStyle(color: Colors.white24, fontSize: 11)),
-                                      ],
-                                    ),
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(14),
+                                onTap: () => _markRead(n),
+                                child: Container(
+                                  margin: const EdgeInsets.only(bottom: 8),
+                                  padding: const EdgeInsets.all(14),
+                                  decoration: glassPanelDecoration(radius: 14).copyWith(
+                                    border: unread ? Border.all(color: AppColors.gold400.withValues(alpha: 0.3)) : null,
                                   ),
-                                ],
+                                  child: Row(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      if (unread)
+                                        Container(
+                                          margin: const EdgeInsets.only(top: 5, right: 10),
+                                          width: 8,
+                                          height: 8,
+                                          decoration: BoxDecoration(
+                                              color: AppColors.gold400, shape: BoxShape.circle),
+                                        ),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(n['title'] as String? ?? '',
+                                                style: TextStyle(
+                                                    color: Colors.white,
+                                                    fontSize: 14,
+                                                    fontWeight: unread ? FontWeight.w600 : FontWeight.w400)),
+                                            if (n['body'] != null) ...[
+                                              const SizedBox(height: 4),
+                                              Text(n['body'] as String,
+                                                  style: const TextStyle(color: Colors.white54, fontSize: 13)),
+                                            ],
+                                            const SizedBox(height: 6),
+                                            Text(_formatTime(n['created_at'] as String),
+                                                style: const TextStyle(color: Colors.white24, fontSize: 11)),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
                               ),
                             ),
                           );

@@ -10,6 +10,7 @@ use Addons\TelegramBot\Models\TelegramLink;
 use App\Models\Setting;
 use App\Models\User;
 use App\Support\FamilyContent;
+use App\Support\MobilePushSender;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -105,6 +106,7 @@ class BroadcastController
         });
 
         $this->dispatchTelegramDeliveries($broadcast, $recipients);
+        (new MobilePushSender())->sendToUserIds($recipients->pluck('id'), $broadcast->title, $broadcast->body);
 
         return $broadcast;
     }

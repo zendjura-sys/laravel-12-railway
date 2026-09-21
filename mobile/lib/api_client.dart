@@ -135,6 +135,24 @@ class ApiClient {
     return data;
   }
 
+  Future<void> registerDeviceToken(String token, {String platform = 'android'}) async {
+    final response = await http.post(
+      _uri('/device-tokens'),
+      headers: await _headers(auth: true),
+      body: jsonEncode({'token': token, 'platform': platform}),
+    );
+    _decode(response);
+  }
+
+  Future<void> unregisterDeviceToken(String token) async {
+    final response = await http.delete(
+      _uri('/device-tokens'),
+      headers: await _headers(auth: true),
+      body: jsonEncode({'token': token}),
+    );
+    _decode(response);
+  }
+
   Future<void> forgotPassword(String email) async {
     final response = await http.post(
       _uri('/forgot-password'),

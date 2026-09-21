@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../api_client.dart';
 import '../app_info.dart';
+import '../services/push_notifications.dart';
 import '../theme.dart';
 import 'login_screen.dart';
 
@@ -129,6 +130,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (confirmed != true) return;
 
     setState(() => _loggingOut = true);
+    await PushNotifications.instance.unregister();
     await ApiClient.instance.logout();
     if (!mounted) return;
     Navigator.of(context).pushAndRemoveUntil(

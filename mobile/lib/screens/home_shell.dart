@@ -1,5 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import '../main.dart' show navigatorKey;
+import '../services/push_notifications.dart';
 import '../theme.dart';
 import '../update_prompt.dart';
 import 'bank_screen.dart';
@@ -51,6 +53,7 @@ class _HomeShellState extends State<HomeShell> {
         downloadUrl: widget.downloadUrl,
       );
     });
+    PushNotifications.instance.init(navigatorKey);
   }
 
   @override

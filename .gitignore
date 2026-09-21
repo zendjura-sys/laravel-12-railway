@@ -21,6 +21,8 @@
 /public/downloads
 /storage/*.key
 /storage/pail
+# Службовий обліковий запис Firebase (config/firebase.php) — секрет, ніколи в git.
+/storage/app/firebase-service-account.json
 /vendor
 Homestead.json
 Homestead.yaml

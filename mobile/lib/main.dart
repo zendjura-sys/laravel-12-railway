@@ -1,3 +1,5 @@
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'api_client.dart';
 import 'app_info.dart';
@@ -7,7 +9,22 @@ import 'screens/login_screen.dart';
 import 'theme.dart';
 import 'widgets/aurora_background.dart';
 
-void main() {
+/// FCM викликає це в окремому ізоляті, поки застосунок закритий/згорнутий
+/// — тому функція має бути top-level (не метод класу) і сама по собі
+/// нічого не робить: системне сповіщення Android показує сам, це лише
+/// точка, де можна було б додатково обробити payload.
+@pragma('vm:entry-point')
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {}
+
+/// Спільний навігатор — щоб PushNotifications міг відкрити екран
+/// сповіщень із тапу по системному сповіщенню, не маючи власного
+/// BuildContext (сервіс живе поза деревом віджетів).
+final navigatorKey = GlobalKey<NavigatorState>();
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
+  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
   runApp(const MonsoryConnectApp());
 }
 
@@ -22,6 +39,7 @@ class _MonsoryConnectAppState extends State<MonsoryConnectApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: navigatorKey,
       title: 'Monsory Connect',
       debugShowCheckedModeBanner: false,
       // Перебудовується наново кожного разу, коли _StartupGate повідомляє

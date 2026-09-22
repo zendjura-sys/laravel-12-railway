@@ -229,7 +229,12 @@ class LiquidGlass extends StatelessWidget {
 /// навколо неї той самий фон, що й у вікні, без прямокутної підкладки),
 /// а Scaffold передає висоту панелі + системний відступ у
 /// MediaQuery.padding.bottom. Без цього останню картку ховала б панель.
+///
+/// Згори — так само: вкладки HomeShell не мають AppBar, над ними плаває
+/// верхній острівець, і його висота теж приходить у MediaQuery.padding.top
+/// (на екранах зі звичайною AppBar Scaffold цей відступ уже прибрав).
 EdgeInsets navAwareListPadding(BuildContext context, {double side = 20, double top = 20, double extra = 24}) {
-  return EdgeInsets.fromLTRB(side, top, side, MediaQuery.paddingOf(context).bottom + extra);
+  final padding = MediaQuery.paddingOf(context);
+  return EdgeInsets.fromLTRB(side, padding.top + top, side, padding.bottom + extra);
 }
 

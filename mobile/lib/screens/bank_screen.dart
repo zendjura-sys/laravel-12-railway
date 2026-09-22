@@ -95,9 +95,10 @@ class _BankScreenState extends State<BankScreen> {
     final deposits = (_data?['deposits'] as List<dynamic>?) ?? [];
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Банк')),
+      // Шапка — спільна верхня панель HomeShell.
       body: RefreshIndicator(
         onRefresh: _load,
+        edgeOffset: MediaQuery.paddingOf(context).top,
         child: _loading
             ? const Center(child: CircularProgressIndicator())
             : _error != null

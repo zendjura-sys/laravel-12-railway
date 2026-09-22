@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../api_client.dart';
 import '../services/push_notifications.dart';
+import '../services/update_notifier.dart';
 import '../theme.dart';
 import '../widgets/animated_counter.dart';
 import '../widgets/fade_slide_in.dart';
@@ -10,7 +11,6 @@ import 'admin_reports_screen.dart';
 import 'login_screen.dart';
 import 'member_profile_screen.dart';
 import 'messenger/conversations_screen.dart';
-import 'notifications_screen.dart';
 import 'reports_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -25,7 +25,6 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   Map<String, dynamic>? _data;
   Map<String, dynamic>? _profile;
-  int _unreadNotifications = 0;
   bool _canManageReports = false;
   bool _loading = true;
   String? _error;
@@ -54,7 +53,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       } catch (_) {}
       try {
         final notifications = await ApiClient.instance.notifications();
-        if (mounted) setState(() => _unreadNotifications = notifications['unreadCount'] as int? ?? 0);
+        AppBadges.unreadNotifications.value = notifications['unreadCount'] as int? ?? 0;
       } catch (_) {}
       try {
         final me = await ApiClient.instance.me();
@@ -84,60 +83,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Future<void> _openNotifications() async {
-    await Navigator.of(context)
-        .push(MaterialPageRoute(builder: (_) => const NotificationsScreen()));
-    _load();
-  }
-
   @override
   Widget build(BuildContext context) {
     final user = _data?['user'] as Map<String, dynamic>?;
     final bankCard = _data?['bankCard'] as Map<String, dynamic>?;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Кабінет'),
-        actions: [
-          Stack(
-            alignment: Alignment.center,
-            children: [
-              IconButton(
-                icon: const Icon(Icons.notifications_outlined),
-                onPressed: _openNotifications,
-              ),
-              if (_unreadNotifications > 0)
-                Positioned(
-                  right: 8,
-                  top: 8,
-                  child: TweenAnimationBuilder<double>(
-                    key: ValueKey(_unreadNotifications),
-                    tween: Tween(begin: 0.4, end: 1),
-                    duration: const Duration(milliseconds: 220),
-                    curve: Curves.elasticOut,
-                    builder: (context, scale, child) => Transform.scale(scale: scale, child: child),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                      decoration: BoxDecoration(
-                          color: AppColors.gold400, borderRadius: BorderRadius.circular(999)),
-                      constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
-                      child: Text(
-                        _unreadNotifications > 99 ? '99+' : '$_unreadNotifications',
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                            color: AppColors.obsidian950, fontSize: 10, fontWeight: FontWeight.w600),
-                      ),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ],
-      ),
+      // Шапки тут немає — її роль виконує спільна верхня панель HomeShell
+      // (дзвіночок, MONSORY, меню ⋮), що плаває над вмістом.
       body: RefreshIndicator(
         onRefresh: _load,
+        edgeOffset: MediaQuery.paddingOf(context).top,
         child: _loading
-            ? const Padding(padding: EdgeInsets.all(20), child: _DashboardSkeleton())
+            ? Padding(padding: navAwareListPadding(context), child: const _DashboardSkeleton())
             : _error != null
                 ? _ErrorView(message: _error!, onRetry: _load)
                 : ListView(

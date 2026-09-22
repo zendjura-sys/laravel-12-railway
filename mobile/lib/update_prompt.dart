@@ -6,7 +6,6 @@ import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'api_client.dart';
-import 'app_info.dart';
 import 'theme.dart';
 
 const _dismissedBuildKey = 'update_dismissed_build';
@@ -28,7 +27,7 @@ final _storage = const FlutterSecureStorage();
 const _updateBuildUrl = '${ApiClient.baseUrl}/downloads/mobile-build.txt';
 const _updateApkUrl = '${ApiClient.baseUrl}/downloads/mobile-apk';
 
-Future<({int build, String downloadUrl})?> _fetchLatestBuild() async {
+Future<({int build, String downloadUrl})?> fetchLatestBuild() async {
   try {
     final response =
         await http.get(Uri.parse(_updateBuildUrl)).timeout(const Duration(seconds: 6));
@@ -43,36 +42,28 @@ Future<({int build, String downloadUrl})?> _fetchLatestBuild() async {
   }
 }
 
-/// М'яка пропозиція оновитись — на відміну від BlockingScreen (жорсткий
-/// блок за mobile_app_min_build), тут застосунок працює як завжди, просто
-/// раз показує акуратне вікно. "Раз" — доки на сайті не випустять ЩЕ
-/// новішу збірку: номер, на якому людина натиснула "Не зараз", лишається
-/// на пристрої, і те саме число (чи старіше) вдруге вікно не відкриє.
-Future<void> maybeShowUpdatePrompt(
+/// Номер збірки, на якій людина натиснула "Не зараз" / закрила оголошення —
+/// та сама (чи старіша) збірка вдруге не пропонується.
+Future<int> dismissedUpdateBuild() async =>
+    int.tryParse(await _storage.read(key: _dismissedBuildKey) ?? '') ?? 0;
+
+Future<void> dismissUpdateBuild(int build) => _storage.write(key: _dismissedBuildKey, value: '$build');
+
+/// Вікно оновлення (завантаження APK прямо в застосунку з прогресом) —
+/// відкривається з оголошення про нову версію у верхній панелі.
+Future<void> showUpdateDialog(
   BuildContext context, {
   required int latestBuild,
   String? message,
   String? downloadUrl,
-}) async {
-  final remote = await _fetchLatestBuild();
-  final effectiveLatestBuild = remote != null && remote.build > latestBuild ? remote.build : latestBuild;
-  final effectiveDownloadUrl = remote != null && remote.build > latestBuild ? remote.downloadUrl : downloadUrl;
-
-  if (effectiveLatestBuild <= currentBuildNumber) return;
-
-  final dismissedRaw = await _storage.read(key: _dismissedBuildKey);
-  final dismissed = int.tryParse(dismissedRaw ?? '') ?? 0;
-  if (dismissed >= effectiveLatestBuild) return;
-
-  if (!context.mounted) return;
-
-  await showDialog<void>(
+}) {
+  return showDialog<void>(
     context: context,
     barrierDismissible: true,
     builder: (dialogContext) => _UpdateDialog(
-      latestBuild: effectiveLatestBuild,
+      latestBuild: latestBuild,
       message: message,
-      downloadUrl: effectiveDownloadUrl,
+      downloadUrl: downloadUrl,
     ),
   );
 }

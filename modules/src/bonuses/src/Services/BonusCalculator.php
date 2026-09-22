@@ -6,7 +6,7 @@ use Addons\Bonuses\Models\BonusPayout;
 use Addons\Bonuses\Models\BonusSettings;
 use Addons\Bonuses\Models\InvestmentAchievementTier;
 use Addons\Bonuses\Models\UserInvestmentAchievement;
-use Addons\Notifications\Services\NotificationService;
+use Addons\Bonuses\Support\FinanceNotifier;
 use Addons\Progression\Models\ProgressionProfile;
 use Addons\Reports\Models\Report;
 use App\Models\User;
@@ -350,15 +350,12 @@ class BonusCalculator
 
     private function notifyInvestmentTier(User $user, InvestmentAchievementTier $tier): void
     {
-        if (! class_exists(NotificationService::class)) {
-            return;
-        }
-
-        app(NotificationService::class)->notify(
+        FinanceNotifier::notify(
             $user,
             'investment_tier_unlocked',
+            '🏆',
             'Новий інвестиційний тір!',
-            "Ви досягли рівня «{$tier->label}» — премія {$tier->bonus_amount}₴ увійде в найближчий тижневий розрахунок.",
+            "Ви досягли рівня «{$tier->label}» — премія ".FinanceNotifier::money($tier->bonus_amount).' увійде в найближчий тижневий розрахунок.',
         );
     }
 }

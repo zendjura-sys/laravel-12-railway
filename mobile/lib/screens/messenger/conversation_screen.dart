@@ -726,7 +726,8 @@ class _ConversationScreenState extends State<ConversationScreen> {
                               alignment: m['isMine'] == true ? Alignment.centerRight : Alignment.centerLeft,
                               child: Dismissible(
                               key: ValueKey('reply-${m['id']}'),
-                              direction: DismissDirection.startToEnd,
+                              // Відповідати в службовий чат Monsory Finance нема куди.
+                              direction: _type == 'finance' ? DismissDirection.none : DismissDirection.startToEnd,
                               confirmDismiss: (_) async {
                                 _startReply(m);
                                 return false;
@@ -809,7 +810,18 @@ class _ConversationScreenState extends State<ConversationScreen> {
                       top: false,
                       child: Padding(
                         padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
-                        child: _buildComposerRow(),
+                        // Службовий чат Monsory Finance — лише для читання,
+                        // сервер однаково відхилить надсилання сюди.
+                        child: _type == 'finance'
+                            ? const Padding(
+                                padding: EdgeInsets.symmetric(vertical: 10),
+                                child: Text(
+                                  'Службові повідомлення про ваш рахунок — відповідати не потрібно.',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(color: Colors.white38, fontSize: 12),
+                                ),
+                              )
+                            : _buildComposerRow(),
                       ),
                     ),
                   ],

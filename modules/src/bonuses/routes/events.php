@@ -3,9 +3,8 @@
 use Addons\Bonuses\Models\BonusPayout;
 use Addons\Bonuses\Services\BonusCalculator;
 use Addons\Bonuses\Services\BonusDigest;
-use Addons\Notifications\Services\NotificationService;
+use Addons\Bonuses\Support\FinanceNotifier;
 use Illuminate\Console\Scheduling\Schedule;
-use Illuminate\Support\Facades\Route;
 
 // Файл підключається на кожен boot (включно з artisan schedule:run), тому
 // реєстрація тут безпечна — той самий приём, що й у Progression.
@@ -21,19 +20,13 @@ app(Schedule::class)
         $credited = $calculator->runWeeklyPayouts($weekStart, credit: true);
         app(BonusDigest::class)->sendFor($weekStart);
 
-        if (! class_exists(NotificationService::class)) {
-            return;
-        }
-        $button = Route::has('bonuses.index')
-            ? ['text' => '🏦  Відкрити банк', 'url' => route('bonuses.index')]
-            : null;
-        $credited->each(fn (BonusPayout $payout) => app(NotificationService::class)->notify(
+        $credited->each(fn (BonusPayout $payout) => FinanceNotifier::notify(
             $payout->user,
             'bonus_credited',
+            '💰',
             'Премію зараховано',
-            'На ваш рахунок зараховано '.number_format($payout->total_amount, 0, ',', ' ')
-                .'₴ — премія за тиждень від '.$weekStart->format('d.m.Y').'.',
-            $button,
+            '+'.FinanceNotifier::money($payout->total_amount).' на ваш рахунок — премія за тиждень '
+                .$weekStart->format('d.m').'–'.$weekStart->copy()->addDays(6)->format('d.m.Y').'.',
         ));
     })
     ->name('bonuses-weekly-payouts')

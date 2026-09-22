@@ -11,7 +11,7 @@ use Addons\Bonuses\Models\InvestmentAchievementTier;
 use Addons\Bonuses\Models\ManualBonusAward;
 use Addons\Bonuses\Services\BonusCalculator;
 use Addons\Bonuses\Services\BonusDigest;
-use Addons\Notifications\Services\NotificationService;
+use Addons\Bonuses\Support\FinanceNotifier;
 use App\Models\User;
 use App\Support\CsvExport;
 use Illuminate\Http\JsonResponse;
@@ -116,10 +116,11 @@ class BonusAdminController
             'note' => ['nullable', 'string', 'max:255'],
         ]);
 
-        ManualBonusAward::create([
+        $award = ManualBonusAward::create([
             ...$data,
             'awarded_by' => $request->user()->id,
         ]);
+        FinanceNotifier::manualAwardGranted($award, $request->user());
 
         return back()->with('success', 'Премію видано.');
     }
@@ -127,6 +128,7 @@ class BonusAdminController
     public function destroyManualAward(ManualBonusAward $manualAward): RedirectResponse
     {
         $manualAward->delete();
+        FinanceNotifier::manualAwardRevoked($manualAward, request()->user());
 
         return back()->with('success', 'Запис видалено.');
     }
@@ -221,14 +223,23 @@ class BonusAdminController
             'reversed_by' => request()->user()->id,
         ]);
 
-        if (class_exists(NotificationService::class) && $transfer->sender) {
-            app(NotificationService::class)->notify(
-                $transfer->sender,
-                'bank_transfer_reversed',
-                'Переказ скасовано',
-                "Ваш переказ на {$transfer->amount}₴ до {$transfer->recipient?->name} скасовано адміністрацією — кошти повернуто на баланс.",
-            );
-        }
+        $admin = request()->user()->name;
+        $amount = FinanceNotifier::money($transfer->amount);
+
+        FinanceNotifier::notify(
+            $transfer->sender,
+            'bank_transfer_reversed',
+            '↩️',
+            'Переказ скасовано',
+            "+{$amount} повернуто на ваш рахунок — переказ до {$transfer->recipient?->name} скасовано.\nСкасував(-ла): {$admin}",
+        );
+        FinanceNotifier::notify(
+            $transfer->recipient,
+            'bank_transfer_reversed',
+            '↩️',
+            'Вхідний переказ скасовано',
+            "−{$amount} — переказ від {$transfer->sender?->name} скасовано, кошти повернуто відправнику.\nСкасував(-ла): {$admin}",
+        );
 
         return response()->json([
             'ok' => true,
@@ -258,14 +269,13 @@ class BonusAdminController
             'resolved_at' => now(),
         ]);
 
-        if (class_exists(NotificationService::class) && $cashRequest->user) {
-            app(NotificationService::class)->notify(
-                $cashRequest->user,
-                'bank_cash_completed',
-                'Готівку видано',
-                "Ваш запит на {$cashRequest->amount}₴ підтверджено — готівку видано на руки.",
-            );
-        }
+        FinanceNotifier::notify(
+            $cashRequest->user,
+            'bank_cash_completed',
+            '✅',
+            'Готівку видано',
+            'Запит на '.FinanceNotifier::money($cashRequest->amount)." підтверджено — готівку видано на руки.\nПідтвердив(-ла): ".request()->user()->name,
+        );
 
         return response()->json([
             'ok' => true,
@@ -295,14 +305,13 @@ class BonusAdminController
             'resolved_at' => now(),
         ]);
 
-        if (class_exists(NotificationService::class) && $cashRequest->user) {
-            app(NotificationService::class)->notify(
-                $cashRequest->user,
-                'bank_cash_cancelled',
-                'Запит на готівку скасовано',
-                "Ваш запит на {$cashRequest->amount}₴ скасовано — кошти повернуто на баланс.",
-            );
-        }
+        FinanceNotifier::notify(
+            $cashRequest->user,
+            'bank_cash_cancelled',
+            '❌',
+            'Запит на готівку скасовано',
+            '+'.FinanceNotifier::money($cashRequest->amount)." повернуто на ваш рахунок — запит на готівку скасовано.\nСкасував(-ла): ".request()->user()->name,
+        );
 
         return response()->json([
             'ok' => true,

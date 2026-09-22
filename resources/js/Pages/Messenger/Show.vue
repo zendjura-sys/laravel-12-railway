@@ -242,6 +242,11 @@ onBeforeUnmount(() => {
                     </p>
                 </div>
 
+                <!-- Службовий чат Monsory Finance — лише для читання. -->
+                <p v-if="conversation.type === 'finance'" class="mt-3 text-center text-xs text-white/35">
+                    Службові повідомлення про ваш рахунок — відповідати не потрібно.
+                </p>
+                <template v-else>
                 <div v-if="photoPreview" class="relative mt-3 inline-flex w-fit items-start gap-2 rounded-xl bg-white/5 p-2 ring-1 ring-white/10">
                     <img :src="photoPreview" alt="" class="h-16 w-16 rounded-lg object-cover" />
                     <button type="button" class="text-xs text-white/40 hover:text-white/70" @click="cancelPhoto">Скасувати</button>
@@ -283,6 +288,7 @@ onBeforeUnmount(() => {
                         Надіслати
                     </button>
                 </form>
+                </template>
             </div>
         </div>
     </AuthenticatedLayout>

@@ -8,6 +8,7 @@ use Addons\Messenger\Models\ConversationRead;
 use Addons\Messenger\Models\Message;
 use Addons\Messenger\Models\Sticker;
 use Addons\Messenger\Models\UserIdentityKey;
+use Addons\Messenger\Services\SystemInbox;
 use App\Models\Setting;
 use App\Models\User;
 use App\Support\MobilePushSender;
@@ -91,7 +92,9 @@ class MessengerController
             $unread = Message::query()
                 ->where('conversation_id', $c->id)
                 ->where('id', '>', $lastRead)
-                ->where('sender_id', '!=', $user->id)
+                // sender_id NULL — системне повідомлення (чат Monsory Finance):
+                // "NULL != x" у SQL не істинне, тож без whereNull воно не рахувалось би.
+                ->where(fn ($q) => $q->whereNull('sender_id')->orWhere('sender_id', '!=', $user->id))
                 ->count();
 
             $otherUser = $c->type === 'direct'
@@ -100,6 +103,7 @@ class MessengerController
 
             $title = match ($c->type) {
                 'deputies' => 'Заступники',
+                'finance' => SystemInbox::FINANCE_TITLE,
                 'direct' => $otherUser?->name ?? 'Учасник',
                 default => 'Загальний чат родини',
             };
@@ -152,6 +156,7 @@ class MessengerController
 
         $title = match ($conversation->type) {
             'deputies' => 'Заступники',
+            'finance' => SystemInbox::FINANCE_TITLE,
             'direct' => $otherUser?->name ?? 'Учасник',
             default => 'Загальний чат родини',
         };
@@ -217,6 +222,11 @@ class MessengerController
     public function store(Request $request, Conversation $conversation): JsonResponse
     {
         $this->ensureAccess($conversation, $request->user());
+
+        // Службовий чат (Monsory Finance) — лише для читання.
+        if ($conversation->type === 'finance') {
+            throw new AccessDeniedHttpException;
+        }
 
         $validated = $request->validate([
             'type' => ['nullable', Rule::in(['text', 'text_e2ee', 'photo', 'gif', 'sticker', 'contact', 'location', 'file', 'voice'])],

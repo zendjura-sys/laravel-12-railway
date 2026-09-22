@@ -114,7 +114,7 @@ function initials(name) {
                                 ? 'bg-gold-400/15 text-gold-300 ring-gold-400/30'
                                 : 'bg-white/5 text-white/70 ring-white/10'"
                         >
-                            {{ c.type === 'family' ? '👪' : c.type === 'deputies' ? '🎖️' : initials(c.title) }}
+                            {{ c.type === 'family' ? '👪' : c.type === 'deputies' ? '🎖️' : c.type === 'finance' ? '🏦' : initials(c.title) }}
                         </span>
                         <div class="min-w-0 flex-1">
                             <div class="flex items-center justify-between gap-2">

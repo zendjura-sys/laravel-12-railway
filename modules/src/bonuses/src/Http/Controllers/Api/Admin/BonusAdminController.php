@@ -8,6 +8,7 @@ use Addons\Bonuses\Models\BonusSettings;
 use Addons\Bonuses\Models\CashRequest;
 use Addons\Bonuses\Models\InvestmentAchievementTier;
 use Addons\Bonuses\Models\ManualBonusAward;
+use Addons\Bonuses\Support\FinanceNotifier;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -71,6 +72,7 @@ class BonusAdminController
             ...$data,
             'awarded_by' => $request->user()->id,
         ])->load(['user:id,name', 'awardedBy:id,name']);
+        FinanceNotifier::manualAwardGranted($award, $request->user());
 
         return response()->json([
             'ok' => true,
@@ -84,6 +86,7 @@ class BonusAdminController
     public function destroyManualAward(ManualBonusAward $manualAward): JsonResponse
     {
         $manualAward->delete();
+        FinanceNotifier::manualAwardRevoked($manualAward, request()->user());
 
         return response()->json(['ok' => true, 'message' => 'Запис видалено.', 'data' => null, 'errors' => null, 'redirect' => null]);
     }

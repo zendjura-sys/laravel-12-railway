@@ -150,7 +150,13 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
                                   ),
                                   alignment: Alignment.center,
                                   child: Text(
-                                    isFamily ? '👪' : (isDeputies ? '🎖️' : _initial(c['title'] as String?)),
+                                    isFamily
+                                        ? '👪'
+                                        : isDeputies
+                                            ? '🎖️'
+                                            : c['type'] == 'finance'
+                                                ? '🏦'
+                                                : _initial(c['title'] as String?),
                                     style: const TextStyle(fontSize: 16, color: Colors.white70),
                                   ),
                                 ),

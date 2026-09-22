@@ -121,7 +121,10 @@ class HandleInertiaRequests extends Middleware
             $count += DB::table('messages')
                 ->where('conversation_id', $conversationId)
                 ->where('id', '>', $lastRead)
-                ->where('sender_id', '!=', $userId)
+                // sender_id NULL — системне повідомлення (чат Monsory Finance);
+                // у SQL "NULL != x" не істинне, тож без whereNull воно ніколи
+                // не рахувалось би непрочитаним.
+                ->where(fn ($q) => $q->whereNull('sender_id')->orWhere('sender_id', '!=', $userId))
                 ->count();
         }
 

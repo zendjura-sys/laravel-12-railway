@@ -12,6 +12,7 @@ use Addons\Bonuses\Models\ManualBonusAward;
 use Addons\Bonuses\Models\UserInvestmentAchievement;
 use Addons\Bonuses\Services\BalanceCalculator;
 use Addons\Bonuses\Services\DepositService;
+use Addons\Bonuses\Support\FinanceNotifier;
 use Addons\Notifications\Services\NotificationService;
 use Addons\Reports\Models\Report;
 use App\Models\User;
@@ -276,17 +277,22 @@ class BonusController
             ]);
         });
 
-        if (class_exists(NotificationService::class)) {
-            $recipient = User::find($data['recipient_id']);
-            if ($recipient) {
-                app(NotificationService::class)->notify(
-                    $recipient,
-                    'bank_transfer_received',
-                    'Вам надійшов переказ',
-                    "{$sender->name} переказав(-ла) вам {$data['amount']}₴".($data['note'] ? " — «{$data['note']}»" : '').'.',
-                );
-            }
-        }
+        $recipient = User::find($data['recipient_id']);
+        $note = $data['note'] ? "\nКоментар: «{$data['note']}»" : '';
+
+        FinanceNotifier::notify(
+            $recipient,
+            'bank_transfer_received',
+            '💸',
+            'Вхідний переказ',
+            '+'.FinanceNotifier::money($data['amount'])." від {$sender->name}.".$note,
+        );
+        FinanceNotifier::receipt(
+            $sender,
+            '📤',
+            'Переказ виконано',
+            '−'.FinanceNotifier::money($data['amount'])." → {$recipient?->name}.".$note,
+        );
 
         return back()->with('success', 'Переказ виконано.');
     }
@@ -355,6 +361,13 @@ class BonusController
                 );
             }
         }
+
+        FinanceNotifier::receipt(
+            $user,
+            '🏧',
+            'Запит на готівку',
+            FinanceNotifier::money($data['amount']).' зарезервовано до видачі. Керівництво отримало запит — щойно гроші передадуть на руки, тут з\'явиться підтвердження.',
+        );
 
         return back()->with('success', 'Запит надіслано. Замовам і лідеру прийшло сповіщення.');
     }

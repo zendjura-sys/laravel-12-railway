@@ -4,7 +4,7 @@ namespace Addons\Bonuses\Services;
 
 use Addons\Bonuses\Models\BankDeposit;
 use Addons\Bonuses\Models\BonusSettings;
-use Addons\Notifications\Services\NotificationService;
+use Addons\Bonuses\Support\FinanceNotifier;
 use App\Models\User;
 use Illuminate\Validation\ValidationException;
 
@@ -38,7 +38,7 @@ class DepositService
             throw ValidationException::withMessages(['amount' => 'Недостатньо коштів на балансі.']);
         }
 
-        return BankDeposit::create([
+        $deposit = BankDeposit::create([
             'user_id' => $user->id,
             'amount' => $amount,
             'interest_rate' => $settings->deposit_interest_rate,
@@ -46,6 +46,16 @@ class DepositService
             'matures_at' => now()->addDays($settings->deposit_term_days),
             'status' => 'active',
         ]);
+
+        FinanceNotifier::receipt(
+            $user,
+            '🔒',
+            'Депозит відкрито',
+            FinanceNotifier::money($amount)." під {$deposit->interest_rate}% на {$deposit->term_days} дн. — до "
+                .$deposit->matures_at->format('d.m.Y').'. До виплати: '.FinanceNotifier::money($deposit->projectedPayout()).'.',
+        );
+
+        return $deposit;
     }
 
     /** Закриває всі дозрілі депозити користувача — з відсотком, як і було обіцяно при відкритті. */
@@ -64,14 +74,14 @@ class DepositService
                 'closed_at' => now(),
             ]);
 
-            if (class_exists(NotificationService::class)) {
-                app(NotificationService::class)->notify(
-                    $deposit->user,
-                    'deposit_matured',
-                    'Депозит дозрів',
-                    "Ваш депозит на {$deposit->amount}₴ дозрів — повернено {$deposit->payout_amount}₴ на баланс.",
-                );
-            }
+            FinanceNotifier::notify(
+                $deposit->user,
+                'deposit_matured',
+                '📈',
+                'Депозит дозрів',
+                '+'.FinanceNotifier::money($deposit->payout_amount).' повернуто на ваш рахунок — депозит на '
+                    .FinanceNotifier::money($deposit->amount).' з відсотками.',
+            );
         }
     }
 
@@ -87,5 +97,12 @@ class DepositService
             'payout_amount' => $deposit->amount,
             'closed_at' => now(),
         ]);
+
+        FinanceNotifier::receipt(
+            $deposit->user,
+            '🔓',
+            'Депозит знято достроково',
+            '+'.FinanceNotifier::money($deposit->amount).' повернуто на ваш рахунок (без відсотків).',
+        );
     }
 }

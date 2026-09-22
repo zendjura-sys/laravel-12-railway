@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../main.dart' show navigatorKey;
 import '../services/e2ee.dart';
 import '../services/push_notifications.dart';
@@ -86,43 +87,44 @@ class _HomeShellState extends State<HomeShell> {
 
     return Scaffold(
       body: IndexedStack(index: index, children: screens),
-      // Плаваюча "піль"-панель (не на всю ширину, з відступами й
-      // закругленням з усіх боків) — той самий силует, що в Telegram,
-      // лише у своїх кольорах і зі своїми вкладками.
+      // Плаваючий "острівець" у стилі композера Claude: великий радіус,
+      // неактивні вкладки — круглі кнопки лише з іконкою, активна
+      // розгортається в пілюлю з назвою. Зовнішній радіус = радіус кнопки
+      // (26) + внутрішній відступ (10) — контури концентричні, кути
+      // крайніх кнопок не впираються в дугу контейнера.
       bottomNavigationBar: SafeArea(
         minimum: const EdgeInsets.fromLTRB(16, 0, 16, 10),
         child: ClipRRect(
-          // 22, не 28 — з item-пілюлями (свій радіус 20) і відступом лише
-          // 8px від краю більший зовнішній радіус різав кут крайніх
-          // вкладок (найпомітніше на останній, з активним фоном): дуга
-          // контейнера впиналась у пряму сторону пілюлі, лишаючи
-          // нерівний "зрізаний" куточок замість плавного контуру.
-          borderRadius: BorderRadius.circular(22),
+          borderRadius: BorderRadius.circular(36),
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
             child: Container(
-              height: 62,
+              padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: AppColors.obsidian900.withValues(alpha: 0.7),
-                borderRadius: BorderRadius.circular(22),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                color: AppColors.obsidian900.withValues(alpha: 0.78),
+                borderRadius: BorderRadius.circular(36),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.09)),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.3),
-                    blurRadius: 24,
-                    offset: const Offset(0, 8),
+                    color: Colors.black.withValues(alpha: 0.35),
+                    blurRadius: 28,
+                    offset: const Offset(0, 10),
                   ),
                 ],
               ),
               child: Row(
+                mainAxisAlignment: destinations.length > 2
+                    ? MainAxisAlignment.spaceBetween
+                    : MainAxisAlignment.spaceEvenly,
                 children: [
                   for (var i = 0; i < destinations.length; i++)
-                    Expanded(
-                      child: _PillNavItem(
-                        destination: destinations[i],
-                        selected: i == index,
-                        onTap: () => setState(() => _index = i),
-                      ),
+                    _PillNavItem(
+                      destination: destinations[i],
+                      selected: i == index,
+                      onTap: () {
+                        if (i != index) HapticFeedback.selectionClick();
+                        setState(() => _index = i);
+                      },
                     ),
                 ],
               ),
@@ -141,34 +143,66 @@ class _PillNavItem extends StatelessWidget {
 
   const _PillNavItem({required this.destination, required this.selected, required this.onTap});
 
+  static const double _size = 52;
+
   @override
   Widget build(BuildContext context) {
-    final color = selected ? AppColors.gold300 : Colors.white38;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(20),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        curve: Curves.easeOut,
-        margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-        padding: const EdgeInsets.symmetric(vertical: 4),
-        decoration: BoxDecoration(
-          color: selected ? AppColors.gold400.withValues(alpha: 0.14) : Colors.transparent,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            IconTheme(
-              data: IconThemeData(color: color, size: 22),
-              child: selected ? (destination.selectedIcon ?? destination.icon) : destination.icon,
+    final color = selected ? AppColors.gold300 : Colors.white70;
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: destination.label,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          customBorder: const StadiumBorder(),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 260),
+            curve: Curves.easeOutCubic,
+            height: _size,
+            constraints: const BoxConstraints(minWidth: _size),
+            padding: EdgeInsets.symmetric(horizontal: selected ? 20 : 0),
+            decoration: ShapeDecoration(
+              color: selected
+                  ? AppColors.gold400.withValues(alpha: 0.16)
+                  : Colors.white.withValues(alpha: 0.07),
+              shape: StadiumBorder(
+                side: BorderSide(
+                  color: selected
+                      ? AppColors.gold400.withValues(alpha: 0.35)
+                      : Colors.white.withValues(alpha: 0.06),
+                ),
+              ),
             ),
-            const SizedBox(height: 2),
-            Text(
-              destination.label,
-              style: TextStyle(color: color, fontSize: 10.5, fontWeight: selected ? FontWeight.w600 : FontWeight.w400),
+            child: AnimatedSize(
+              duration: const Duration(milliseconds: 260),
+              curve: Curves.easeOutCubic,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  IconTheme(
+                    data: IconThemeData(color: color, size: 24),
+                    child: selected ? (destination.selectedIcon ?? destination.icon) : destination.icon,
+                  ),
+                  if (selected) ...[
+                    const SizedBox(width: 10),
+                    Text(
+                      destination.label,
+                      maxLines: 1,
+                      style: TextStyle(
+                        color: color,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.2,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
             ),
-          ],
+          ),
         ),
       ),
     );

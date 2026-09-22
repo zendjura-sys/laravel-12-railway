@@ -194,7 +194,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       const SizedBox(height: 24),
                       FadeSlideIn(
                         index: 2,
+                        // IntrinsicHeight + stretch — щоб довший підпис
+                        // ("Перевірити звіти", у два рядки) не робив свою
+                        // кнопку вищою за сусідні: усі три рівняються на
+                        // найвищу, замість кожної під власний вміст.
+                        child: IntrinsicHeight(
                         child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             Expanded(
                               child: _QuickActionButton(
@@ -228,6 +234,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             ],
                           ],
                         ),
+                        ),
                       ),
                     ],
                   ),
@@ -252,6 +259,7 @@ class _QuickActionButton extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: glassPanelDecoration(),
         child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(icon, color: AppColors.gold300),
             const SizedBox(height: 6),

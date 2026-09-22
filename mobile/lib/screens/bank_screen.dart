@@ -103,11 +103,9 @@ class _BankScreenState extends State<BankScreen> {
             : _error != null
                 ? _ErrorView(message: _error!, onRetry: _load)
                 : ListView(
-                    // Знизу більше, ніж по інших краях — та сама причина,
-                    // що в menu_screen.dart/dashboard_screen.dart: плаваюча
-                    // нижня навігація лишала останній картці замало повітря
-                    // над собою.
-                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 44),
+                    // Вміст іде під плаваючу навігацію (extendBody у
+                    // HomeShell) — знизу відступ на її висоту.
+                    padding: navAwareListPadding(context),
                     children: [
                       if (card != null)
                         MemberCardWidget(

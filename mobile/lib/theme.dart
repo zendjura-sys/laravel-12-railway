@@ -223,3 +223,13 @@ class LiquidGlass extends StatelessWidget {
     );
   }
 }
+
+/// Нижній відступ списку на вкладці під плаваючим "острівцем" навігації.
+/// HomeShell має extendBody: true — вміст прокручується ПІД панеллю (тому
+/// навколо неї той самий фон, що й у вікні, без прямокутної підкладки),
+/// а Scaffold передає висоту панелі + системний відступ у
+/// MediaQuery.padding.bottom. Без цього останню картку ховала б панель.
+EdgeInsets navAwareListPadding(BuildContext context, {double side = 20, double top = 20, double extra = 24}) {
+  return EdgeInsets.fromLTRB(side, top, side, MediaQuery.paddingOf(context).bottom + extra);
+}
+

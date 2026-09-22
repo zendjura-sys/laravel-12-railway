@@ -86,6 +86,13 @@ class _HomeShellState extends State<HomeShell> {
     final index = _index.clamp(0, screens.length - 1);
 
     return Scaffold(
+      // extendBody — вміст вкладок продовжується ПІД панеллю, тож навколо
+      // "острівця" той самий фон, що й у вікні, а не прямокутний слот
+      // bottomNavigationBar з обірваним над ним вмістом. Сам слот нічим
+      // не заливається: оформлення (колір, радіус, обводка) — лише в
+      // Container острівця всередині ClipRRect.
+      extendBody: true,
+      backgroundColor: Colors.transparent,
       body: IndexedStack(index: index, children: screens),
       // Плаваючий "острівець" у стилі композера Claude: великий радіус,
       // неактивні вкладки — круглі кнопки лише з іконкою, активна
@@ -93,6 +100,7 @@ class _HomeShellState extends State<HomeShell> {
       // (26) + внутрішній відступ (10) — контури концентричні, кути
       // крайніх кнопок не впираються в дугу контейнера.
       bottomNavigationBar: SafeArea(
+        top: false,
         minimum: const EdgeInsets.fromLTRB(16, 0, 16, 10),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(36),

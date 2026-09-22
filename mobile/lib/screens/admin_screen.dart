@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../api_client.dart';
 import '../theme.dart';
+import 'admin_bonuses_screen.dart';
 import 'admin_broadcasts_screen.dart';
 import 'admin_events_screen.dart';
 import 'admin_family_goals_screen.dart';
@@ -26,6 +27,7 @@ class _AdminScreenState extends State<AdminScreen> {
   List<String> _permissions = [];
   int? _pendingReports;
   int? _pendingLeaveRequests;
+  int? _pendingCashRequests;
   bool _loading = true;
   String? _error;
   final _searchController = TextEditingController();
@@ -64,6 +66,15 @@ class _AdminScreenState extends State<AdminScreen> {
         try {
           final pending = await ApiClient.instance.adminPendingLeaveRequests();
           if (mounted) setState(() => _pendingLeaveRequests = pending.length);
+        } catch (_) {}
+      }
+      if (permissions.contains('bonuses.manage')) {
+        try {
+          final overview = await ApiClient.instance.adminBonusesOverview();
+          final pending = (overview['cashRequests'] as List<dynamic>)
+              .where((r) => (r as Map<String, dynamic>)['status'] == 'pending')
+              .length;
+          if (mounted) setState(() => _pendingCashRequests = pending);
         } catch (_) {}
       }
     } on ApiException catch (e) {
@@ -116,7 +127,8 @@ class _AdminScreenState extends State<AdminScreen> {
                           _permissions.contains('members.manage') ||
                           _permissions.contains('broadcasts.manage') ||
                           _permissions.contains('events.manage') ||
-                          _permissions.contains('goals.manage')) ...[
+                          _permissions.contains('goals.manage') ||
+                          _permissions.contains('bonuses.manage')) ...[
                         Text('Модерація',
                             style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w500)),
                         const SizedBox(height: 10),
@@ -165,6 +177,17 @@ class _AdminScreenState extends State<AdminScreen> {
                             count: null,
                             onTap: () => Navigator.of(context)
                                 .push(MaterialPageRoute(builder: (_) => const AdminFamilyGoalsScreen())),
+                          ),
+                        if (_permissions.contains('bonuses.manage'))
+                          _ModerationTile(
+                            icon: Icons.payments_outlined,
+                            label: 'Премії',
+                            count: _pendingCashRequests,
+                            onTap: () async {
+                              await Navigator.of(context)
+                                  .push(MaterialPageRoute(builder: (_) => const AdminBonusesScreen()));
+                              _load();
+                            },
                           ),
                         const SizedBox(height: 28),
                       ],

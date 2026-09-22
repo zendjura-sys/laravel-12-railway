@@ -501,6 +501,87 @@ class ApiClient {
     _decode(response);
   }
 
+  // ---------------- Адмінка премій/бонусів (модуль Bonuses) ----------------
+
+  Future<Map<String, dynamic>> adminBonusesOverview() async {
+    final response = await http.get(_uri('/admin/bonuses'), headers: await _headers(auth: true));
+    final data = _decode(response) as Map<String, dynamic>;
+    return data['data'] as Map<String, dynamic>;
+  }
+
+  Future<List<dynamic>> adminBonusesSearchMembers(String query) async {
+    final response = await http.get(
+      _uri('/admin/bonuses/members/search').replace(queryParameters: {'q': query}),
+      headers: await _headers(auth: true),
+    );
+    final data = _decode(response) as Map<String, dynamic>;
+    return (data['data'] as Map<String, dynamic>)['members'] as List<dynamic>;
+  }
+
+  Future<void> adminStoreManualAward(int userId, int amount, String? note) async {
+    final response = await http.post(
+      _uri('/admin/bonuses/manual'),
+      headers: await _headers(auth: true),
+      body: jsonEncode({'user_id': userId, 'amount': amount, if (note != null && note.isNotEmpty) 'note': note}),
+    );
+    _decode(response);
+  }
+
+  Future<void> adminDeleteManualAward(int id) async {
+    final response = await http.delete(_uri('/admin/bonuses/manual/$id'), headers: await _headers(auth: true));
+    _decode(response);
+  }
+
+  Future<void> adminUpdateBonusSettings(Map<String, dynamic> fields) async {
+    final response = await http.put(_uri('/admin/bonuses/settings'), headers: await _headers(auth: true), body: jsonEncode(fields));
+    _decode(response);
+  }
+
+  Future<void> adminUpdateBankSettings(Map<String, dynamic> fields) async {
+    final response =
+        await http.put(_uri('/admin/bonuses/bank-settings'), headers: await _headers(auth: true), body: jsonEncode(fields));
+    _decode(response);
+  }
+
+  Future<void> adminStoreTier(String label, int threshold, int bonus) async {
+    final response = await http.post(
+      _uri('/admin/bonuses/tiers'),
+      headers: await _headers(auth: true),
+      body: jsonEncode({'label': label, 'threshold_amount': threshold, 'bonus_amount': bonus}),
+    );
+    _decode(response);
+  }
+
+  Future<void> adminDeleteTier(int id) async {
+    final response = await http.delete(_uri('/admin/bonuses/tiers/$id'), headers: await _headers(auth: true));
+    _decode(response);
+  }
+
+  Future<void> adminReverseTransfer(int id) async {
+    final response = await http.post(_uri('/admin/bonuses/transfers/$id/reverse'), headers: await _headers(auth: true));
+    _decode(response);
+  }
+
+  Future<void> adminCompleteCashRequest(int id) async {
+    final response = await http.post(_uri('/admin/bonuses/cash-requests/$id/complete'), headers: await _headers(auth: true));
+    _decode(response);
+  }
+
+  Future<void> adminCancelCashRequest(int id) async {
+    final response = await http.post(_uri('/admin/bonuses/cash-requests/$id/cancel'), headers: await _headers(auth: true));
+    _decode(response);
+  }
+
+  Future<void> adminMarkPayoutPaid(int id) async {
+    final response = await http.post(_uri('/admin/bonuses/payouts/$id/mark-paid'), headers: await _headers(auth: true));
+    _decode(response);
+  }
+
+  Future<void> adminRunBonusesNow() async {
+    final response = await http.post(_uri('/admin/bonuses/run-now'), headers: await _headers(auth: true));
+    _decode(response);
+  }
+
   // ---------------- Сповіщення (модуль Notifications) ----------------
 
   Future<Map<String, dynamic>> notifications() async {

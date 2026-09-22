@@ -11,6 +11,7 @@ use Addons\Messenger\Models\UserIdentityKey;
 use Addons\Messenger\Services\SystemInbox;
 use App\Models\Setting;
 use App\Models\User;
+use App\Support\Presence;
 use App\Support\MobilePushSender;
 use App\Support\WebPushSender;
 use Illuminate\Http\JsonResponse;
@@ -63,7 +64,9 @@ class MessengerController
 
         $directs = Conversation::query()
             ->whereIn('id', $directIds)
-            ->with(['participants.user:id,name,avatar_path'])
+            // Повний User (не id,name,avatar_path) — для статусу 🟢/🔴
+            // потрібні last_seen_at і gender ("був"/"була").
+            ->with(['participants.user'])
             ->withMax('messages', 'created_at')
             ->orderByDesc('messages_max_created_at')
             ->get();
@@ -81,7 +84,12 @@ class MessengerController
             ->whereIn('conversation_id', $conversations->pluck('id'))
             ->pluck('last_read_message_id', 'conversation_id');
 
-        return $conversations->map(function (Conversation $c) use ($user, $reads) {
+        $group = [
+            'family' => $this->groupPresence('family'),
+            'deputies' => $this->groupPresence('deputies'),
+        ];
+
+        return $conversations->map(function (Conversation $c) use ($user, $reads, $group) {
             $lastMessage = Message::query()
                 ->where('conversation_id', $c->id)
                 ->with('sender:id,name')
@@ -116,6 +124,10 @@ class MessengerController
                 // (Фаза 1: лише direct) — щоб отримати публічний ключ
                 // співрозмовника й вивести спільний секрет через ECDH.
                 'otherUserId' => $otherUser?->id,
+                // direct — статус співрозмовника; family/deputies — скільки
+                // учасників групи зараз у мережі.
+                'presence' => $c->type === 'direct' ? $this->presenceOf($otherUser) : null,
+                'onlineCount' => $group[$c->type]['onlineCount'] ?? null,
                 'lastMessage' => $lastMessage ? [
                     'body' => $this->previewText($lastMessage),
                     'senderName' => $lastMessage->sender?->name,
@@ -150,7 +162,7 @@ class MessengerController
             ? ConversationParticipant::query()
                 ->where('conversation_id', $conversation->id)
                 ->where('user_id', '!=', $request->user()->id)
-                ->with('user:id,name,avatar_path')
+                ->with('user')
                 ->first()?->user
             : null;
 
@@ -168,7 +180,12 @@ class MessengerController
                 'title' => $title,
                 'otherUserId' => $otherUser?->id,
                 'otherLastReadMessageId' => $otherUser ? $this->otherParticipantLastRead($conversation, $otherUser->id) : null,
+                'presence' => $conversation->type === 'direct' ? $this->presenceOf($otherUser) : null,
+                'onlineCount' => $this->groupPresence($conversation->type)['onlineCount'] ?? null,
             ],
+            // Хто з авторів повідомлень зараз у мережі — 🟢/🔴 біля імені
+            // в груповому чаті (клієнт звіряє з message.senderId).
+            'onlineUserIds' => $this->groupPresence($conversation->type)['onlineUserIds'] ?? [],
             'messages' => $messages->map(fn (Message $m) => $this->formatMessage($m, $request->user()->id)),
             'myId' => $request->user()->id,
         ];
@@ -205,6 +222,11 @@ class MessengerController
             'data' => [
                 'messages' => $messages->map(fn (Message $m) => $this->formatMessage($m, $request->user()->id)),
                 'otherLastReadMessageId' => $otherUserId ? $this->otherParticipantLastRead($conversation, $otherUserId) : null,
+                // Той самий polling, що й для нових повідомлень, оновлює
+                // і статус — окремого запиту клієнт не робить.
+                'presence' => $otherUserId ? $this->presenceOf(User::query()->find($otherUserId)) : null,
+                'onlineCount' => $this->groupPresence($conversation->type)['onlineCount'] ?? null,
+                'onlineUserIds' => $this->groupPresence($conversation->type)['onlineUserIds'] ?? [],
             ],
             'errors' => null,
             'redirect' => null,
@@ -471,6 +493,47 @@ class MessengerController
         return response()->json(['ok' => true, 'message' => null, 'data' => null, 'errors' => null, 'redirect' => null]);
     }
 
+    /**
+     * Учасники розмови зі статусом 🟢/🔴 — спершу ті, хто в мережі, далі за
+     * тим, хто був нещодавно. family — усі реальні (не тіньові) учасники,
+     * deputies — посада "Заступник директора", direct — двоє.
+     */
+    public function members(Request $request, Conversation $conversation): JsonResponse
+    {
+        $this->ensureAccess($conversation, $request->user());
+
+        $users = match ($conversation->type) {
+            'family' => User::query()->where('is_shadow', false)->get(),
+            'deputies' => User::query()->where('is_shadow', false)->where('position_key', 'deputy-director')->get(),
+            default => User::query()->whereIn('id', ConversationParticipant::query()
+                ->where('conversation_id', $conversation->id)->pluck('user_id'))->get(),
+        };
+
+        $members = $users
+            ->sortBy([
+                fn (User $a, User $b) => ($this->presenceOf($b)['online'] ?? false) <=> ($this->presenceOf($a)['online'] ?? false),
+                fn (User $a, User $b) => ($b->last_seen_at?->getTimestamp() ?? 0) <=> ($a->last_seen_at?->getTimestamp() ?? 0),
+                fn (User $a, User $b) => strcmp($a->name, $b->name),
+            ])
+            ->values()
+            ->map(fn (User $u) => [
+                'id' => $u->id,
+                'name' => $u->name,
+                'position' => $u->position_title,
+                'avatarUrl' => $u->avatar_path ? Storage::url($u->avatar_path) : null,
+                'isMe' => $u->id === $request->user()->id,
+                'presence' => $this->presenceOf($u),
+            ]);
+
+        return response()->json([
+            'ok' => true,
+            'message' => null,
+            'data' => ['members' => $members],
+            'errors' => null,
+            'redirect' => null,
+        ]);
+    }
+
     public function searchMembers(Request $request): JsonResponse
     {
         $query = trim((string) $request->query('q', ''));
@@ -484,7 +547,13 @@ class MessengerController
             ->where('name', 'like', '%'.$query.'%')
             ->orderBy('name')
             ->limit(10)
-            ->get(['id', 'name', 'avatar_path']);
+            ->get()
+            ->map(fn (User $u) => [
+                'id' => $u->id,
+                'name' => $u->name,
+                'avatar_path' => $u->avatar_path,
+                'presence' => $this->presenceOf($u),
+            ]);
 
         return response()->json([
             'ok' => true,
@@ -534,6 +603,33 @@ class MessengerController
 
         return $conversation;
     }
+
+    /**
+     * Статус 🟢/🔴 + "був(-ла) у мережі …" (App\Support\Presence з ядра).
+     * null, поки ядро ще не оновлене до версії з Presence — модуль і
+     * ядро оновлюються окремо, і месенджер не повинен від цього впасти.
+     */
+    protected function presenceOf(?User $user): ?array
+    {
+        return $user && class_exists(Presence::class) ? Presence::payload($user) : null;
+    }
+
+    /** @return array{onlineCount: int, onlineUserIds: list<int>}|null Лише для групових чатів. */
+    protected function groupPresence(string $type): ?array
+    {
+        if (! in_array($type, ['family', 'deputies'], true) || ! class_exists(Presence::class)) {
+            return null;
+        }
+
+        $this->onlineIdsCache ??= Presence::onlineUserIds();
+        $ids = $type === 'deputies'
+            ? User::query()->whereIn('id', $this->onlineIdsCache)->where('position_key', 'deputy-director')->pluck('id')
+            : $this->onlineIdsCache;
+
+        return ['onlineCount' => $ids->count(), 'onlineUserIds' => $ids->values()->all()];
+    }
+
+    private ?Collection $onlineIdsCache = null;
 
     protected function familyConversation(): Conversation
     {

@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../api_client.dart';
 import '../main.dart' show navigatorKey;
 import '../services/e2ee.dart';
 import '../services/push_notifications.dart';
@@ -38,12 +40,42 @@ class HomeShell extends StatefulWidget {
   State<HomeShell> createState() => _HomeShellState();
 }
 
-class _HomeShellState extends State<HomeShell> {
+class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
   int _index = 0;
+
+  // Heartbeat онлайн-статусу (🟢): поки застосунок на екрані — раз на
+  // 45с; у фоні таймер зупиняється, і за ~2 хв учасник стає 🔴 з
+  // "був(-ла) у мережі …". Кожен інший API-запит теж оновлює статус.
+  Timer? _presenceTimer;
+
+  void _startPresence() {
+    _presenceTimer?.cancel();
+    ApiClient.instance.presencePing();
+    _presenceTimer = Timer.periodic(const Duration(seconds: 45), (_) => ApiClient.instance.presencePing());
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _startPresence();
+    } else if (state == AppLifecycleState.paused || state == AppLifecycleState.detached) {
+      _presenceTimer?.cancel();
+      _presenceTimer = null;
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _presenceTimer?.cancel();
+    super.dispose();
+  }
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _startPresence();
     // Після першого кадру — Dialog потребує вже змонтований Navigator над
     // собою, а показувати запит на оновлення поверх ще порожнього екрана
     // недоречно.

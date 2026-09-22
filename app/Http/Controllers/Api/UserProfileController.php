@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Support\Presence;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Storage;
 
@@ -25,6 +26,7 @@ class UserProfileController extends Controller
             'avatarUrl' => $user->avatar_path ? Storage::url($user->avatar_path) : null,
             'memberSince' => $user->created_at,
             'birthDate' => $user->birth_date?->format('Y-m-d'),
+            'presence' => Presence::payload($user),
         ]);
     }
 }

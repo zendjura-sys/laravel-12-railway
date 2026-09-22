@@ -17,6 +17,12 @@ return Application::configure(basePath: dirname(__DIR__))
             \Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets::class,
         ]);
 
+        // Глобально, а не лише у web/api-групах: API-маршрути модулів
+        // (/api/messenger/...) оголошені поза "api"-групою, а polling чату
+        // з телефона — саме там. Користувача TrackLastSeen читає вже
+        // ПІСЛЯ обробки, коли auth/auth:sanctum маршруту його визначили.
+        $middleware->append(\App\Http\Middleware\TrackLastSeen::class);
+
         $middleware->alias([
             'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,
             'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,

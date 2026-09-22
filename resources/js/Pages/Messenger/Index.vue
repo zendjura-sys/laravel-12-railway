@@ -1,11 +1,18 @@
 <script setup>
 import { Head, Link, router } from '@inertiajs/vue3';
-import { ref, watch } from 'vue';
+import { onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 
 defineProps({
     conversations: { type: Array, required: true },
 });
+
+// Тихе оновлення списку раз на 30с — статуси 🟢/🔴 і лічильники не застигають.
+let refreshTimer = null;
+onMounted(() => {
+    refreshTimer = setInterval(() => router.reload({ only: ['conversations'] }), 30000);
+});
+onBeforeUnmount(() => clearInterval(refreshTimer));
 
 const showSearch = ref(false);
 const query = ref('');
@@ -93,7 +100,10 @@ function initials(name) {
                             <span class="flex h-8 w-8 items-center justify-center rounded-full bg-gold-400/10 text-xs font-semibold text-gold-300 ring-1 ring-gold-400/30">
                                 {{ initials(m.name) }}
                             </span>
-                            {{ m.name }}
+                            <span class="min-w-0">
+                                <span class="block truncate"><span v-if="m.presence" class="mr-1 text-[10px]">{{ m.presence.emoji }}</span>{{ m.name }}</span>
+                                <span v-if="m.presence" class="block text-[11px]" :class="m.presence.online ? 'text-emerald-400/80' : 'text-white/35'">{{ m.presence.label }}</span>
+                            </span>
                         </button>
                     </div>
                     <p v-else-if="query.trim().length >= 2 && !searching" class="mt-3 text-xs text-white/30">
@@ -118,7 +128,10 @@ function initials(name) {
                         </span>
                         <div class="min-w-0 flex-1">
                             <div class="flex items-center justify-between gap-2">
-                                <p class="truncate text-sm font-medium text-white">{{ c.title }}</p>
+                                <p class="truncate text-sm font-medium text-white">
+                                    <span v-if="c.presence" class="mr-1 text-[10px]">{{ c.presence.emoji }}</span>{{ c.title }}
+                                    <span v-if="c.onlineCount" class="ml-1 text-[11px] font-normal text-white/35">· 🟢 {{ c.onlineCount }}</span>
+                                </p>
                                 <span class="shrink-0 text-[11px] text-white/30">{{ formatTime(c.lastMessage?.createdAt) }}</span>
                             </div>
                             <p class="mt-0.5 truncate text-xs text-white/40">

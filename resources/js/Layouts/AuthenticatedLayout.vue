@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue';
+import { onBeforeUnmount, onMounted, ref } from 'vue';
 import ApplicationLogo from '@/Components/ApplicationLogo.vue';
 import AmbientBackground from '@/Components/AmbientBackground.vue';
 import Dropdown from '@/Components/Dropdown.vue';
@@ -9,6 +9,23 @@ import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
 import { Link } from '@inertiajs/vue3';
 
 const showingNavigationDropdown = ref(false);
+
+// Heartbeat онлайн-статусу (🟢 у месенджері): поки вкладка відкрита й
+// видима, раз на 45с — щоб учасник, який просто читає сторінку без
+// переходів, не ставав 🔴. Мітку ставить серверний TrackLastSeen.
+let presenceTimer = null;
+function pingPresence() {
+    if (document.visibilityState !== 'visible' || !route().has('presence.ping')) return;
+    window.axios.post(route('presence.ping')).catch(() => {});
+}
+onMounted(() => {
+    presenceTimer = setInterval(pingPresence, 45000);
+    document.addEventListener('visibilitychange', pingPresence);
+});
+onBeforeUnmount(() => {
+    clearInterval(presenceTimer);
+    document.removeEventListener('visibilitychange', pingPresence);
+});
 </script>
 
 <template>

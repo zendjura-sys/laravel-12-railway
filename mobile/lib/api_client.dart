@@ -589,6 +589,21 @@ class ApiClient {
     return _decode(response) as Map<String, dynamic>;
   }
 
+  /// Heartbeat онлайн-статусу (🟢) — тіло відповіді порожнє (204), тож
+  /// без _decode; збій мовчки ігнорується, наступний тік спробує знову.
+  Future<void> presencePing() async {
+    try {
+      await http.post(_uri('/presence/ping'), headers: await _headers(auth: true));
+    } catch (_) {}
+  }
+
+  /// Учасники розмови зі статусом 🟢/🔴 (спершу ті, хто в мережі).
+  Future<List<dynamic>> messengerMembers(int conversationId) async {
+    final response = await http.get(_uri('/messenger/$conversationId/members'), headers: await _headers(auth: true));
+    final data = _decode(response) as Map<String, dynamic>;
+    return (data['data'] as Map<String, dynamic>)['members'] as List<dynamic>;
+  }
+
   Future<void> markNotificationRead(int id) async {
     final response = await http.post(_uri('/notifications/$id/read'), headers: await _headers(auth: true));
     _decode(response);

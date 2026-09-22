@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../api_client.dart';
 import '../theme.dart';
+import '../widgets/presence_label.dart';
 import 'messenger/conversation_screen.dart';
 import 'settings_screen.dart';
 
@@ -108,6 +109,10 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
                             style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w400),
                             textAlign: TextAlign.center,
                           ),
+                          if (_profile!['presence'] is Map) ...[
+                            const SizedBox(height: 4),
+                            PresenceLabel(presence: _profile!['presence'] as Map<String, dynamic>, fontSize: 13),
+                          ],
                           if (_profile!['position'] != null) ...[
                             const SizedBox(height: 6),
                             Container(

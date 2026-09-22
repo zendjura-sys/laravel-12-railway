@@ -147,6 +147,8 @@ Route::get('/dashboard', function (Request $request) {
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
+    // Heartbeat онлайн-статусу — саму мітку ставить TrackLastSeen.
+    Route::post('/presence/ping', fn () => response()->noContent())->name('presence.ping');
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::patch('/profile/position', [ProfileController::class, 'updatePosition'])->name('profile.position');

@@ -29,6 +29,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/gallery', [GalleryController::class, 'index']);
     Route::post('/device-tokens', [DeviceTokenController::class, 'store']);
     Route::delete('/device-tokens', [DeviceTokenController::class, 'destroy']);
+    // Heartbeat онлайн-статусу — саму мітку ставить TrackLastSeen.
+    Route::post('/presence/ping', fn () => response()->noContent());
 
     // Мінімальна нативна адмінка (лише ядро, без аддон-специфічних дій) —
     // доступ гейтиться в самому контролері (users.manage / будь-який *.manage).

@@ -14,6 +14,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../api_client.dart';
 import '../../services/e2ee.dart';
 import '../../theme.dart';
+import '../../widgets/presence_label.dart';
 import '../member_profile_screen.dart';
 import '../photo_viewer_screen.dart';
 import 'emoji_data.dart';
@@ -37,6 +38,11 @@ class _ConversationScreenState extends State<ConversationScreen> {
   String _type = 'direct';
   int? _otherUserId;
   int? _otherLastReadMessageId;
+  // Статус 🟢/🔴: direct — співрозмовник, групи — хто з авторів у мережі.
+  // Оновлюється тим самим _poll(), що й повідомлення.
+  Map<String, dynamic>? _presence;
+  int? _onlineCount;
+  Set<int> _onlineIds = {};
   List<dynamic> _messages = [];
   bool _loading = true;
   bool _sending = false;
@@ -114,6 +120,9 @@ class _ConversationScreenState extends State<ConversationScreen> {
           _type = conversation['type'] as String;
           _messages = messages;
           _otherLastReadMessageId = conversation['otherLastReadMessageId'] as int?;
+          _presence = conversation['presence'] as Map<String, dynamic>?;
+          _onlineCount = conversation['onlineCount'] as int?;
+          _onlineIds = _idSet(data['onlineUserIds']);
         });
       }
       _scrollToBottom();
@@ -126,12 +135,44 @@ class _ConversationScreenState extends State<ConversationScreen> {
     }
   }
 
+  static Set<int> _idSet(dynamic ids) =>
+      ids is List ? ids.whereType<num>().map((e) => e.toInt()).toSet() : <int>{};
+
+  void _applyPresence(Map<String, dynamic> data) {
+    final presence = data['presence'] as Map<String, dynamic>?;
+    final onlineCount = data['onlineCount'] as int?;
+    final onlineIds = _idSet(data['onlineUserIds']);
+    final changed = presence?['label'] != _presence?['label'] ||
+        presence?['online'] != _presence?['online'] ||
+        onlineCount != _onlineCount ||
+        onlineIds.length != _onlineIds.length ||
+        !onlineIds.containsAll(_onlineIds);
+    if (changed) {
+      setState(() {
+        _presence = presence;
+        _onlineCount = onlineCount;
+        _onlineIds = onlineIds;
+      });
+    }
+  }
+
+  void _openMembers() {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppColors.obsidian900,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (_) => _MembersSheet(conversationId: widget.conversationId),
+    );
+  }
+
   Future<void> _poll() async {
     try {
       final data = await ApiClient.instance.messengerMessagesSince(widget.conversationId, _lastId);
       final fresh = data['messages'] as List<dynamic>;
       final otherLastRead = data['otherLastReadMessageId'] as int?;
       if (!mounted) return;
+      _applyPresence(data);
 
       if (fresh.isNotEmpty) {
         final decrypted = await _decryptIncoming(fresh);
@@ -659,18 +700,31 @@ class _ConversationScreenState extends State<ConversationScreen> {
           onTap: _type == 'direct' && _otherUserId != null
               ? () => Navigator.of(context)
                   .push(MaterialPageRoute(builder: (_) => MemberProfileScreen(userId: _otherUserId!)))
-              : null,
-          child: Row(
+              : (_type == 'family' || _type == 'deputies')
+                  ? _openMembers
+                  : null,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Flexible(child: Text(_title, overflow: TextOverflow.ellipsis)),
-              if (_type == 'direct') ...[
-                const SizedBox(width: 8),
-                Tooltip(
-                  message: 'Наскрізне шифрування',
-                  child: Icon(Icons.lock_outline, size: 16, color: AppColors.gold300.withValues(alpha: 0.7)),
-                ),
-              ],
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Flexible(child: Text(_title, overflow: TextOverflow.ellipsis)),
+                  if (_type == 'direct') ...[
+                    const SizedBox(width: 8),
+                    Tooltip(
+                      message: 'Наскрізне шифрування',
+                      child: Icon(Icons.lock_outline, size: 16, color: AppColors.gold300.withValues(alpha: 0.7)),
+                    ),
+                  ],
+                ],
+              ),
+              if (_type == 'direct' && _presence != null)
+                PresenceLabel(presence: _presence)
+              else if (_onlineCount != null)
+                Text('🟢 $_onlineCount у мережі · учасники',
+                    style: const TextStyle(fontSize: 12, color: Colors.white54)),
             ],
           ),
         ),
@@ -741,6 +795,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
                                 child: _MessageBubble(
                                   message: m,
                                   showSenderName: _type == 'family' || _type == 'deputies',
+                                  senderOnline: m['senderId'] is int ? _onlineIds.contains(m['senderId']) : null,
                                   showReadReceipt: _type == 'direct',
                                   otherLastReadMessageId: _otherLastReadMessageId,
                                   formatTime: _formatTime,
@@ -856,6 +911,7 @@ Map<String, dynamic> _decodeMessageBody(String raw) {
 class _MessageBubble extends StatelessWidget {
   final Map<String, dynamic> message;
   final bool showSenderName;
+  final bool? senderOnline;
   final bool showReadReceipt;
   final int? otherLastReadMessageId;
   final String Function(String) formatTime;
@@ -863,6 +919,7 @@ class _MessageBubble extends StatelessWidget {
   const _MessageBubble({
     required this.message,
     required this.showSenderName,
+    this.senderOnline,
     this.showReadReceipt = false,
     this.otherLastReadMessageId,
     required this.formatTime,
@@ -960,6 +1017,10 @@ class _MessageBubble extends StatelessWidget {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  if (senderOnline != null) ...[
+                    Text(senderOnline! ? '🟢' : '🔴', style: const TextStyle(fontSize: 8)),
+                    const SizedBox(width: 4),
+                  ],
                   Text(message['senderName'] as String? ?? '',
                       style: TextStyle(color: AppColors.gold300, fontSize: 11, fontWeight: FontWeight.w500)),
                   if ((message['senderPosition'] as String?)?.isNotEmpty == true) ...[
@@ -1393,6 +1454,9 @@ class _ContactPickerSheetState extends State<_ContactPickerSheet> {
                                 : null,
                           ),
                           title: Text(m['name'] as String? ?? '', style: const TextStyle(color: Colors.white)),
+                          subtitle: m['presence'] is Map
+                              ? PresenceLabel(presence: m['presence'] as Map<String, dynamic>)
+                              : null,
                           onTap: () => Navigator.of(context).pop(m),
                         );
                       },
@@ -1592,6 +1656,122 @@ class _StickerPickerSheetState extends State<_StickerPickerSheet> {
                                 padding: const EdgeInsets.all(6),
                                 child: Image.network(sticker['url'] as String, fit: BoxFit.contain),
                               ),
+                            );
+                          },
+                        ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Учасники групи (сімейний чат / заступники) зі статусом 🟢/🔴 і
+/// "був(-ла) у мережі …" — спершу ті, хто зараз у мережі.
+class _MembersSheet extends StatefulWidget {
+  final int conversationId;
+  const _MembersSheet({required this.conversationId});
+
+  @override
+  State<_MembersSheet> createState() => _MembersSheetState();
+}
+
+class _MembersSheetState extends State<_MembersSheet> {
+  List<dynamic>? _members;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final members = await ApiClient.instance.messengerMembers(widget.conversationId);
+      if (mounted) setState(() => _members = members);
+    } catch (_) {
+      if (mounted) setState(() => _error = 'Не вдалося завантажити учасників.');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final online = _members?.where((m) => (m['presence'] as Map?)?['online'] == true).length ?? 0;
+    return SafeArea(
+      child: SizedBox(
+        height: MediaQuery.sizeOf(context).height * 0.7,
+        child: Column(
+          children: [
+            const SizedBox(height: 12),
+            Container(
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2)),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+              child: Row(
+                children: [
+                  const Text('Учасники', style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w600)),
+                  const Spacer(),
+                  if (_members != null)
+                    Text('🟢 $online з ${_members!.length}', style: const TextStyle(color: Colors.white54, fontSize: 13)),
+                ],
+              ),
+            ),
+            Expanded(
+              child: _error != null
+                  ? Center(child: Text(_error!, style: const TextStyle(color: Colors.white54)))
+                  : _members == null
+                      ? const Center(child: CircularProgressIndicator())
+                      : ListView.builder(
+                          itemCount: _members!.length,
+                          itemBuilder: (context, i) {
+                            final m = _members![i] as Map<String, dynamic>;
+                            final name = m['name'] as String? ?? '';
+                            final avatar = m['avatarUrl'] as String?;
+                            final position = m['position'] as String?;
+                            return ListTile(
+                              leading: CircleAvatar(
+                                backgroundColor: AppColors.obsidian800,
+                                backgroundImage: avatar != null ? NetworkImage(avatar) : null,
+                                child: avatar == null
+                                    ? Text(name.isEmpty ? '?' : name.substring(0, 1).toUpperCase(),
+                                        style: TextStyle(color: AppColors.gold300))
+                                    : null,
+                              ),
+                              title: Text(
+                                '${PresenceLabel.emojiOf(m['presence'] as Map<String, dynamic>?)} $name${m['isMe'] == true ? ' (ви)' : ''}',
+                                style: const TextStyle(color: Colors.white),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              subtitle: Row(
+                                children: [
+                                  Flexible(
+                                    child: PresenceLabel(
+                                        presence: m['presence'] as Map<String, dynamic>?, showEmoji: false),
+                                  ),
+                                  if (position != null && position.isNotEmpty)
+                                    Flexible(
+                                      child: Text(' · $position',
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(color: Colors.white38, fontSize: 12)),
+                                    ),
+                                ],
+                              ),
+                              onTap: m['isMe'] == true
+                                  ? null
+                                  : () {
+                                      // Navigator — до pop(): після нього context
+                                      // шторки вже демонтований.
+                                      final nav = Navigator.of(context);
+                                      nav.pop();
+                                      nav.push(MaterialPageRoute(
+                                          builder: (_) => MemberProfileScreen(userId: m['id'] as int)));
+                                    },
                             );
                           },
                         ),

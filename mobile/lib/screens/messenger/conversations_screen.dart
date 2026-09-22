@@ -23,14 +23,31 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
   List<dynamic> _conversations = [];
   bool _loading = true;
   String? _error;
+  // Тихе оновлення раз на 30с — статуси 🟢/🔴, лічильники непрочитаних і
+  // останні повідомлення не застигають, поки список відкритий.
+  Timer? _refreshTimer;
 
   @override
   void initState() {
     super.initState();
     _load();
+    _refreshTimer = Timer.periodic(const Duration(seconds: 30), (_) => _load(silent: true));
   }
 
-  Future<void> _load() async {
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _load({bool silent = false}) async {
+    if (silent) {
+      try {
+        final data = await ApiClient.instance.messengerConversations();
+        if (mounted) setState(() => _conversations = data);
+      } catch (_) {}
+      return;
+    }
     setState(() {
       _loading = true;
       _error = null;
@@ -168,8 +185,13 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
                                   children: [
                                     Row(
                                       children: [
+                                        // 🟢/🔴 — співрозмовник у ЛС; у групах —
+                                        // скільки учасників зараз у мережі.
                                         Expanded(
-                                          child: Text(c['title'] as String? ?? '',
+                                          child: Text(
+                                              '${c['presence'] is Map ? '${(c['presence'] as Map)['emoji'] ?? '🔴'} ' : ''}'
+                                              '${c['title'] as String? ?? ''}'
+                                              '${(c['onlineCount'] as int? ?? 0) > 0 ? '  · 🟢 ${c['onlineCount']}' : ''}',
                                               overflow: TextOverflow.ellipsis,
                                               style: const TextStyle(color: Colors.white, fontSize: 14)),
                                         ),

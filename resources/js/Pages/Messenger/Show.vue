@@ -11,9 +11,36 @@ const props = defineProps({
     messages: { type: Array, required: true },
     myId: { type: Number, required: true },
     giphyEnabled: { type: Boolean, default: false },
+    onlineUserIds: { type: Array, default: () => [] },
 });
 
 const list = ref([...props.messages]);
+// Статус 🟢/🔴: direct — співрозмовник, групи — хто з авторів у мережі.
+// Оновлюється тим самим poll(), що й повідомлення.
+const presence = ref(props.conversation.presence ?? null);
+const onlineCount = ref(props.conversation.onlineCount ?? null);
+const onlineIds = ref(new Set(props.onlineUserIds ?? []));
+const isGroup = props.conversation.type === 'family' || props.conversation.type === 'deputies';
+const showMembers = ref(false);
+const members = ref([]);
+const membersLoading = ref(false);
+
+async function openMembers() {
+    showMembers.value = true;
+    membersLoading.value = true;
+    try {
+        const { data } = await window.axios.get(route('messenger.members', props.conversation.id));
+        members.value = data.data.members;
+    } catch {
+        members.value = [];
+    } finally {
+        membersLoading.value = false;
+    }
+}
+
+function presenceEmoji(userId) {
+    return onlineIds.value.has(userId) ? '🟢' : '🔴';
+}
 const draft = ref('');
 const sending = ref(false);
 const scroller = ref(null);
@@ -52,6 +79,9 @@ async function poll() {
             params: { after_id: lastId() },
         });
         const fresh = data.data.messages;
+        if (data.data.presence !== undefined) presence.value = data.data.presence;
+        if (data.data.onlineCount !== undefined) onlineCount.value = data.data.onlineCount;
+        if (data.data.onlineUserIds) onlineIds.value = new Set(data.data.onlineUserIds);
         if (fresh.length) {
             appendMessages(fresh);
             scrollToBottom();
@@ -172,7 +202,23 @@ onBeforeUnmount(() => {
         <template #header>
             <div class="flex items-center gap-3">
                 <Link :href="route('messenger.index')" class="text-white/40 transition hover:text-white/70">←</Link>
-                <h2 class="text-xl font-light tracking-wide text-white">{{ conversation.title }}</h2>
+                <button
+                    type="button"
+                    class="min-w-0 text-left"
+                    :class="conversation.type === 'finance' ? 'cursor-default' : 'cursor-pointer'"
+                    :disabled="conversation.type === 'finance'"
+                    @click="openMembers"
+                >
+                    <h2 class="truncate text-xl font-light tracking-wide text-white">
+                        <span v-if="presence" class="mr-1 text-sm">{{ presence.emoji }}</span>{{ conversation.title }}
+                    </h2>
+                    <p v-if="presence" class="text-xs" :class="presence.online ? 'text-emerald-400/80' : 'text-white/40'">
+                        {{ presence.label }}
+                    </p>
+                    <p v-else-if="onlineCount !== null" class="text-xs text-white/40">
+                        🟢 {{ onlineCount }} у мережі · натисніть, щоб побачити учасників
+                    </p>
+                </button>
             </div>
         </template>
 
@@ -186,7 +232,8 @@ onBeforeUnmount(() => {
                         :class="m.isMine ? 'justify-end' : 'justify-start'"
                     >
                         <div class="max-w-[75%]" :class="m.isMine ? 'text-right' : 'text-left'">
-                            <p v-if="!m.isMine && (conversation.type === 'family' || conversation.type === 'deputies')" class="mb-0.5 flex items-center gap-1.5 px-1 text-[11px] font-medium text-gold-300">
+                            <p v-if="!m.isMine && isGroup" class="mb-0.5 flex items-center gap-1.5 px-1 text-[11px] font-medium text-gold-300">
+                                <span v-if="m.senderId" class="text-[8px]">{{ presenceEmoji(m.senderId) }}</span>
                                 {{ m.senderName }}
                                 <span
                                     v-if="m.senderPosition"
@@ -289,6 +336,36 @@ onBeforeUnmount(() => {
                     </button>
                 </form>
                 </template>
+            </div>
+        </div>
+        <!-- Учасники розмови зі статусом 🟢/🔴 і "був(-ла) у мережі …" -->
+        <div
+            v-if="showMembers"
+            class="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4 backdrop-blur-sm sm:items-center"
+            @click.self="showMembers = false"
+        >
+            <div class="glass-panel max-h-[75svh] w-full max-w-md overflow-hidden rounded-2xl">
+                <div class="flex items-center justify-between border-b border-white/5 px-5 py-4">
+                    <p class="text-sm font-medium text-white">Учасники</p>
+                    <button type="button" class="text-white/40 hover:text-white/70" @click="showMembers = false">✕</button>
+                </div>
+                <div class="max-h-[60svh] space-y-1 overflow-y-auto p-3">
+                    <p v-if="membersLoading" class="px-2 py-4 text-center text-xs text-white/40">Завантаження…</p>
+                    <div v-for="u in members" :key="u.id" class="flex items-center gap-3 rounded-lg px-2 py-2">
+                        <img v-if="u.avatarUrl" :src="u.avatarUrl" class="h-9 w-9 rounded-full object-cover ring-1 ring-white/10" alt="" />
+                        <span v-else class="flex h-9 w-9 items-center justify-center rounded-full bg-gold-400/10 text-xs font-semibold text-gold-300 ring-1 ring-gold-400/30">
+                            {{ u.name.split(' ').map((p) => p[0]).join('').slice(0, 2).toUpperCase() }}
+                        </span>
+                        <div class="min-w-0 flex-1">
+                            <p class="truncate text-sm text-white">
+                                <span class="mr-1 text-[10px]">{{ u.presence?.emoji ?? '🔴' }}</span>{{ u.name }}<span v-if="u.isMe" class="text-white/30"> (ви)</span>
+                            </p>
+                            <p class="truncate text-[11px]" :class="u.presence?.online ? 'text-emerald-400/80' : 'text-white/40'">
+                                {{ u.presence?.label ?? 'не в мережі' }}<template v-if="u.position"> · {{ u.position }}</template>
+                            </p>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </AuthenticatedLayout>

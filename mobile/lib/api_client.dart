@@ -675,6 +675,19 @@ class ApiClient {
     return (data['data'] as Map<String, dynamic>)['message'] as Map<String, dynamic>;
   }
 
+  /// Переписує СВОЇ старі text_e2ee-повідомлення відкритим текстом (щоб
+  /// їх було видно на сайті). Збій ігнорується — спробуємо при наступному
+  /// відкритті чату.
+  Future<void> unlockMessengerMessages(int conversationId, List<Map<String, dynamic>> messages) async {
+    try {
+      await http.post(
+        _uri('/messenger/$conversationId/unlock'),
+        headers: await _headers(auth: true),
+        body: jsonEncode({'messages': messages}),
+      );
+    } catch (_) {}
+  }
+
   /// Публікує власний публічний X25519-ключ (наскрізне шифрування).
   Future<void> publishIdentityKey(String publicKeyBase64) async {
     final response = await http.post(

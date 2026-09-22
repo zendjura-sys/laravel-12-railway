@@ -375,6 +375,37 @@ class MessengerController
      * "видалено для всіх" з плейсхолдером — рядок просто зникає, як
      * власний коментар, який автор прибрав.
      */
+    /**
+     * Застосунок раніше шифрував ЛС наскрізно (text_e2ee) ключем, що є лише
+     * на телефоні, — сайт їх не міг прочитати. Тепер ЛС ідуть відкритим
+     * текстом, а старі застосунок розшифровує й надсилає сюди, щоб і на
+     * сайті вони стали читабельні. ЛИШЕ власні повідомлення (sender_id —
+     * той, хто надсилає запит): інакше співрозмовник міг би "переписати"
+     * чужі слова довільним текстом.
+     */
+    public function unlockMessages(Request $request, Conversation $conversation): JsonResponse
+    {
+        $this->ensureAccess($conversation, $request->user());
+
+        $validated = $request->validate([
+            'messages' => ['required', 'array', 'max:100'],
+            'messages.*.id' => ['required', 'integer'],
+            'messages.*.body' => ['required', 'string', 'max:4000'],
+        ]);
+
+        $updated = 0;
+        foreach ($validated['messages'] as $item) {
+            $updated += Message::query()
+                ->whereKey($item['id'])
+                ->where('conversation_id', $conversation->id)
+                ->where('sender_id', $request->user()->id)
+                ->where('type', 'text_e2ee')
+                ->update(['type' => 'text', 'body' => $item['body']]);
+        }
+
+        return response()->json(['ok' => true, 'message' => null, 'data' => ['updated' => $updated], 'errors' => null, 'redirect' => null]);
+    }
+
     public function destroyMessage(Request $request, Conversation $conversation, Message $message): JsonResponse
     {
         $this->ensureAccess($conversation, $request->user());

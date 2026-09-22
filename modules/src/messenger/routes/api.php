@@ -30,4 +30,5 @@ Route::prefix('api')->middleware(['auth:sanctum', SubstituteBindings::class])->g
     Route::post('/messenger/{conversation}/messages', [MessengerController::class, 'store']);
     Route::delete('/messenger/{conversation}/messages/{message}', [MessengerController::class, 'destroyMessage']);
     Route::post('/messenger/{conversation}/read', [MessengerController::class, 'markRead']);
+    Route::post('/messenger/{conversation}/unlock', [MessengerController::class, 'unlockMessages']);
 });

@@ -200,6 +200,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
     if (_otherUserId == null) return raw;
 
     final result = <dynamic>[];
+    final mineToUnlock = <Map<String, dynamic>>[];
     for (final item in raw) {
       final m = item as Map<String, dynamic>;
       if (m['type'] != 'text_e2ee') {
@@ -207,7 +208,17 @@ class _ConversationScreenState extends State<ConversationScreen> {
         continue;
       }
       final plain = await E2eeService.instance.decryptFrom(_otherUserId!, m['body'] as String);
-      result.add({...m, 'body': plain ?? '🔒 Не вдалося розшифрувати повідомлення'});
+      if (plain != null && m['isMine'] == true) {
+        mineToUnlock.add({'id': m['id'], 'body': plain});
+      }
+      result.add({...m, 'type': plain != null ? 'text' : m['type'], 'body': plain ?? 'Повідомлення недоступне'});
+    }
+    // Старі зашифровані повідомлення, надіслані САМИМ користувачем, —
+    // переписуємо на сервері відкритим текстом, щоб їх було видно й на
+    // сайті. Лише власні: чужі слова так підмінити неможливо (сервер теж
+    // перевіряє sender_id). Тихо, у фоні — збій не заважає читати чат.
+    if (mineToUnlock.isNotEmpty) {
+      ApiClient.instance.unlockMessengerMessages(widget.conversationId, mineToUnlock);
     }
     return result;
   }
@@ -232,20 +243,12 @@ class _ConversationScreenState extends State<ConversationScreen> {
 
     setState(() => _sending = true);
     try {
-      // encryptFor() повертає null, якщо співрозмовник ще не опублікував
-      // публічний ключ (старіша версія застосунку тощо) — тоді просто
-      // надсилаємо нешифрованим, як і раніше, замість блокувати відправку.
-      final encrypted = _type == 'direct' && _otherUserId != null
-          ? await E2eeService.instance.encryptFor(_otherUserId!, body)
-          : null;
-      final message = encrypted != null
-          ? await ApiClient.instance
-              .sendMessengerEncryptedText(widget.conversationId, encrypted, replyToMessageId: replyToId)
-          : await ApiClient.instance.sendMessengerText(widget.conversationId, body, replyToMessageId: replyToId);
-      // Той самий шлях, що й вхідні: сервер повертає рівно те, що
-      // надіслали (шифротекст), і власне повідомлення розшифровується тим
-      // самим спільним ключем (ECDH статика-статика симетрична для обох
-      // напрямків), тож не потрібен окремий "я вже знаю відкритий текст" шлях.
+      // Звичайний текст, без наскрізного шифрування: ключ шифрування
+      // живе лише на телефоні, тож сайт не міг прочитати такі ЛС (показував
+      // сирий шифротекст). Тепер особисті повідомлення однаково читаються
+      // і в застосунку, і на сайті.
+      final message =
+          await ApiClient.instance.sendMessengerText(widget.conversationId, body, replyToMessageId: replyToId);
       final decrypted = await _decryptIncoming([message]);
       setState(() {
         _appendMessages(decrypted);
@@ -711,13 +714,6 @@ class _ConversationScreenState extends State<ConversationScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Flexible(child: Text(_title, overflow: TextOverflow.ellipsis)),
-                  if (_type == 'direct') ...[
-                    const SizedBox(width: 8),
-                    Tooltip(
-                      message: 'Наскрізне шифрування',
-                      child: Icon(Icons.lock_outline, size: 16, color: AppColors.gold300.withValues(alpha: 0.7)),
-                    ),
-                  ],
                 ],
               ),
               if (_type == 'direct' && _presence != null)

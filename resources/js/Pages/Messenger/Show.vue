@@ -27,6 +27,18 @@ function lastId() {
     return list.value.length ? list.value[list.value.length - 1].id : 0;
 }
 
+// Додає нові повідомлення, відкидаючи ті, чий id уже в списку — без
+// цього щойно надіслане повідомлення могло опинитись двічі: раз одразу
+// з відповіді на сам запит відправки, і ще раз через наступний poll(),
+// якщо той встиг підвантажити той самий рядок із сервера, поки відповідь
+// на відправку ще була в дорозі (особливо на повільному з'єднанні).
+function appendMessages(newMessages) {
+    if (!newMessages.length) return;
+    const existingIds = new Set(list.value.map((m) => m.id));
+    const fresh = newMessages.filter((m) => !existingIds.has(m.id));
+    if (fresh.length) list.value.push(...fresh);
+}
+
 async function scrollToBottom() {
     await nextTick();
     if (scroller.value) {
@@ -41,7 +53,7 @@ async function poll() {
         });
         const fresh = data.data.messages;
         if (fresh.length) {
-            list.value.push(...fresh);
+            appendMessages(fresh);
             scrollToBottom();
             window.axios.post(route('messenger.read', props.conversation.id));
         }
@@ -96,7 +108,7 @@ async function sendPayload(data) {
     sending.value = true;
     try {
         const { data: res } = await window.axios.post(route('messenger.messages.store', props.conversation.id), data);
-        list.value.push(res.data.message);
+        appendMessages([res.data.message]);
         scrollToBottom();
     } finally {
         sending.value = false;
@@ -115,7 +127,7 @@ async function send() {
             form.append('photo', photoFile.value);
             if (body) form.append('body', body);
             const { data } = await window.axios.post(route('messenger.messages.store', props.conversation.id), form);
-            list.value.push(data.data.message);
+            appendMessages([data.data.message]);
             draft.value = '';
             cancelPhoto();
             scrollToBottom();

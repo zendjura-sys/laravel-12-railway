@@ -84,6 +84,20 @@ class _ConversationScreenState extends State<ConversationScreen> {
 
   int get _lastId => _messages.isEmpty ? 0 : _messages.last['id'] as int;
 
+  /// Додає нові повідомлення в список, відкидаючи ті, чий id уже є —
+  /// без цього надіслане щойно повідомлення могло потрапити в список
+  /// двічі: раз одразу після відповіді на сам запит відправки (_sendText/
+  /// _sendPhoto/…), і ще раз через наступне опитування (_poll кожні 3с),
+  /// якщо воно встигло підвантажити той самий рядок із сервера, поки
+  /// відповідь на відправку ще була в дорозі (особливо помітно на
+  /// повільному з'єднанні).
+  void _appendMessages(List<dynamic> newMessages) {
+    if (newMessages.isEmpty) return;
+    final existingIds = _messages.map((m) => (m as Map<String, dynamic>)['id']).toSet();
+    final fresh = newMessages.where((m) => !existingIds.contains((m as Map<String, dynamic>)['id']));
+    if (fresh.isNotEmpty) _messages = [..._messages, ...fresh];
+  }
+
   Future<void> _load() async {
     setState(() {
       _loading = true;
@@ -122,7 +136,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
       if (fresh.isNotEmpty) {
         final decrypted = await _decryptIncoming(fresh);
         setState(() {
-          _messages = [..._messages, ...decrypted];
+          _appendMessages(decrypted);
           _otherLastReadMessageId = otherLastRead;
         });
         _scrollToBottom();
@@ -193,7 +207,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
       // напрямків), тож не потрібен окремий "я вже знаю відкритий текст" шлях.
       final decrypted = await _decryptIncoming([message]);
       setState(() {
-        _messages = [..._messages, ...decrypted];
+        _appendMessages(decrypted);
         _draftController.clear();
         _replyingTo = null;
       });
@@ -252,7 +266,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
         caption: _draftController.text.trim(),
       );
       setState(() {
-        _messages = [..._messages, message];
+        _appendMessages([message]);
         _draftController.clear();
         _photo = null;
       });
@@ -274,7 +288,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
     setState(() => _sending = true);
     try {
       final message = await ApiClient.instance.sendMessengerGif(widget.conversationId, url);
-      setState(() => _messages = [..._messages, message]);
+      setState(() => _appendMessages([message]));
       _scrollToBottom();
     } finally {
       if (mounted) setState(() => _sending = false);
@@ -286,7 +300,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
     setState(() => _sending = true);
     try {
       final message = await ApiClient.instance.sendMessengerSticker(widget.conversationId, stickerId);
-      setState(() => _messages = [..._messages, message]);
+      setState(() => _appendMessages([message]));
       _scrollToBottom();
     } finally {
       if (mounted) setState(() => _sending = false);
@@ -359,7 +373,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
     setState(() => _sending = true);
     try {
       final message = await ApiClient.instance.sendMessengerFile(widget.conversationId, file.path!, file.name);
-      setState(() => _messages = [..._messages, message]);
+      setState(() => _appendMessages([message]));
       _scrollToBottom();
     } on ApiException catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
@@ -393,7 +407,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
           await Geolocator.getCurrentPosition(locationSettings: const LocationSettings(accuracy: LocationAccuracy.medium));
       final message =
           await ApiClient.instance.sendMessengerLocation(widget.conversationId, position.latitude, position.longitude);
-      if (mounted) setState(() => _messages = [..._messages, message]);
+      if (mounted) setState(() => _appendMessages([message]));
       _scrollToBottom();
     } on ApiException catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
@@ -418,7 +432,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
     setState(() => _sending = true);
     try {
       final message = await ApiClient.instance.sendMessengerContact(widget.conversationId, selected['id'] as int);
-      setState(() => _messages = [..._messages, message]);
+      setState(() => _appendMessages([message]));
       _scrollToBottom();
     } on ApiException catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
@@ -459,7 +473,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
     setState(() => _sending = true);
     try {
       final message = await ApiClient.instance.sendMessengerVoice(widget.conversationId, path, duration);
-      setState(() => _messages = [..._messages, message]);
+      setState(() => _appendMessages([message]));
       _scrollToBottom();
     } on ApiException catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));

@@ -140,9 +140,11 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: const IslandAppBar(title: 'Звіти на розгляді'),
       body: RefreshIndicator(
         onRefresh: _load,
+        edgeOffset: islandTopInset(context),
         child: _loading
             ? const Center(child: CircularProgressIndicator())
             : _error != null
@@ -160,7 +162,7 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
                     ? const Center(
                         child: Text('Немає звітів на розгляді.', style: TextStyle(color: Colors.white38)))
                     : ListView.builder(
-                        padding: const EdgeInsets.all(16),
+                        padding: islandInsets(context, const EdgeInsets.all(16)),
                         itemCount: _reports.length,
                         itemBuilder: (context, i) {
                           final r = _reports[i] as Map<String, dynamic>;

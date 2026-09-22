@@ -125,6 +125,7 @@ class _AdminFamilyGoalsScreenState extends State<AdminFamilyGoalsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: const IslandAppBar(title: 'Цілі родини'),
       floatingActionButton: FloatingActionButton(
         onPressed: _openCreateSheet,
@@ -134,6 +135,7 @@ class _AdminFamilyGoalsScreenState extends State<AdminFamilyGoalsScreen> {
       ),
       body: RefreshIndicator(
         onRefresh: _load,
+        edgeOffset: islandTopInset(context),
         child: _loading
             ? const Center(child: CircularProgressIndicator())
             : _error != null
@@ -158,7 +160,7 @@ class _AdminFamilyGoalsScreenState extends State<AdminFamilyGoalsScreen> {
                         ],
                       )
                     : ListView.builder(
-                        padding: const EdgeInsets.fromLTRB(20, 20, 20, 90),
+                        padding: islandInsets(context, const EdgeInsets.fromLTRB(20, 20, 20, 90)),
                         itemCount: _goals.length,
                         itemBuilder: (context, i) {
                           final goal = _goals[i] as Map<String, dynamic>;

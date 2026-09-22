@@ -55,11 +55,13 @@ class _GalleryScreenState extends State<GalleryScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: const IslandAppBar(title: 'Галерея'),
       body: RefreshIndicator(
         onRefresh: _load,
+        edgeOffset: islandTopInset(context),
         child: _loading
-            ? const Padding(padding: EdgeInsets.all(20), child: ShimmerGridSkeleton())
+            ? Padding(padding: islandInsets(context, const EdgeInsets.all(20)), child: const ShimmerGridSkeleton())
             : _error != null
                 ? Center(
                     child: Column(
@@ -81,7 +83,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
                         ],
                       )
                     : ListView(
-                        padding: const EdgeInsets.symmetric(vertical: 20),
+                        padding: islandInsets(context, const EdgeInsets.symmetric(vertical: 20)),
                         children: [
                           if (_memberPhotos.isNotEmpty) ...[
                             const Padding(

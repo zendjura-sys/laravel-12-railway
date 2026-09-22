@@ -58,9 +58,11 @@ class _AdminLeaveRequestsScreenState extends State<AdminLeaveRequestsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: const IslandAppBar(title: 'Заявки на відпустку'),
       body: RefreshIndicator(
         onRefresh: _load,
+        edgeOffset: islandTopInset(context),
         child: _loading
             ? const Center(child: CircularProgressIndicator())
             : _error != null
@@ -78,7 +80,7 @@ class _AdminLeaveRequestsScreenState extends State<AdminLeaveRequestsScreen> {
                     ? const Center(
                         child: Text('Немає заявок на розгляді.', style: TextStyle(color: Colors.white38)))
                     : ListView.builder(
-                        padding: const EdgeInsets.all(16),
+                        padding: islandInsets(context, const EdgeInsets.all(16)),
                         itemCount: _requests.length,
                         itemBuilder: (context, i) {
                           final r = _requests[i] as Map<String, dynamic>;

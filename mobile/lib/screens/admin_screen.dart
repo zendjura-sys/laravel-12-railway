@@ -105,9 +105,11 @@ class _AdminScreenState extends State<AdminScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: const IslandAppBar(title: 'Адмін'),
       body: RefreshIndicator(
         onRefresh: _load,
+        edgeOffset: islandTopInset(context),
         child: _loading
             ? const Center(child: CircularProgressIndicator())
             : _error != null
@@ -122,7 +124,7 @@ class _AdminScreenState extends State<AdminScreen> {
                     ),
                   )
                 : ListView(
-                    padding: const EdgeInsets.all(20),
+                    padding: islandInsets(context, const EdgeInsets.all(20)),
                     children: [
                       if (_permissions.contains('reports.manage') ||
                           _permissions.contains('members.manage') ||

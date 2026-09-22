@@ -56,9 +56,11 @@ class _EventsScreenState extends State<EventsScreen> {
     final formatter = DateFormat('dd.MM.yyyy HH:mm');
 
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: const IslandAppBar(title: 'Події родини'),
       body: RefreshIndicator(
         onRefresh: _load,
+        edgeOffset: islandTopInset(context),
         child: _loading
             ? const Center(child: CircularProgressIndicator())
             : _error != null
@@ -83,7 +85,7 @@ class _EventsScreenState extends State<EventsScreen> {
                         ],
                       )
                     : ListView.builder(
-                        padding: const EdgeInsets.all(20),
+                        padding: islandInsets(context, const EdgeInsets.all(20)),
                         itemCount: _events.length,
                         itemBuilder: (context, i) {
                           final event = _events[i] as Map<String, dynamic>;

@@ -101,6 +101,7 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: IslandAppBar(
         title: 'Чат',
         actions: [
@@ -109,8 +110,9 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
       ),
       body: RefreshIndicator(
         onRefresh: _load,
+        edgeOffset: islandTopInset(context),
         child: _loading
-            ? const Padding(padding: EdgeInsets.all(16), child: ShimmerListSkeleton())
+            ? Padding(padding: islandInsets(context, const EdgeInsets.all(16)), child: const ShimmerListSkeleton())
             : _error != null
                 ? Center(
                     child: Column(
@@ -123,7 +125,7 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
                     ),
                   )
                 : ListView.builder(
-                    padding: const EdgeInsets.all(16),
+                    padding: islandInsets(context, const EdgeInsets.all(16)),
                     itemCount: _conversations.length,
                     itemBuilder: (context, i) {
                       final c = _conversations[i] as Map<String, dynamic>;

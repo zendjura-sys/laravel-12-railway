@@ -125,9 +125,10 @@ class _ReportSubmitScreenState extends State<ReportSubmitScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: const IslandAppBar(title: 'Новий звіт'),
       body: ListView(
-        padding: const EdgeInsets.all(20),
+        padding: islandInsets(context, const EdgeInsets.all(20)),
         children: [
           Wrap(
             spacing: 8,

@@ -144,6 +144,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: const IslandAppBar(title: 'Налаштування'),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
@@ -161,7 +162,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                 )
               : ListView(
-                  padding: const EdgeInsets.all(20),
+                  padding: islandInsets(context, const EdgeInsets.all(20)),
                   children: [
                     InkWell(
                       borderRadius: BorderRadius.circular(20),

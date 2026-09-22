@@ -55,9 +55,11 @@ class _HallOfFameScreenState extends State<HallOfFameScreen> {
     final categories = _categoryMeta.keys.where((k) => (_records[k] as List?)?.isNotEmpty ?? false).toList();
 
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: const IslandAppBar(title: 'Зал слави'),
       body: RefreshIndicator(
         onRefresh: _load,
+        edgeOffset: islandTopInset(context),
         child: _loading
             ? const Center(child: CircularProgressIndicator())
             : _error != null
@@ -82,7 +84,7 @@ class _HallOfFameScreenState extends State<HallOfFameScreen> {
                         ],
                       )
                     : ListView(
-                        padding: const EdgeInsets.all(20),
+                        padding: islandInsets(context, const EdgeInsets.all(20)),
                         children: categories.map((key) {
                           final (label, icon, suffix) = _categoryMeta[key]!;
                           final entries = (_records[key] as List).cast<dynamic>();

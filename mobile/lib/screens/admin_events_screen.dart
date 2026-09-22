@@ -94,6 +94,7 @@ class _AdminEventsScreenState extends State<AdminEventsScreen> {
     final formatter = DateFormat('dd.MM.yyyy HH:mm');
 
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: IslandAppBar(
         title: 'Події родини',
         actions: [
@@ -114,6 +115,7 @@ class _AdminEventsScreenState extends State<AdminEventsScreen> {
       ),
       body: RefreshIndicator(
         onRefresh: _load,
+        edgeOffset: islandTopInset(context),
         child: _loading
             ? const Center(child: CircularProgressIndicator())
             : _error != null
@@ -138,7 +140,7 @@ class _AdminEventsScreenState extends State<AdminEventsScreen> {
                         ],
                       )
                     : ListView.builder(
-                        padding: const EdgeInsets.fromLTRB(20, 20, 20, 90),
+                        padding: islandInsets(context, const EdgeInsets.fromLTRB(20, 20, 20, 90)),
                         itemCount: _events.length,
                         itemBuilder: (context, i) {
                           final event = _events[i] as Map<String, dynamic>;

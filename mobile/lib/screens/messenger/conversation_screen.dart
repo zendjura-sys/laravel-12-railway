@@ -699,6 +699,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: IslandAppBar(
         title: _title,
         onTitleTap: _type == 'direct' && _otherUserId != null
@@ -731,7 +732,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
                     Expanded(
                       child: ListView.builder(
                         controller: _scrollController,
-                        padding: const EdgeInsets.all(16),
+                        padding: islandInsets(context, const EdgeInsets.all(16)),
                         itemCount: _messages.length,
                         itemBuilder: (context, i) {
                           final m = _messages[i] as Map<String, dynamic>;

@@ -52,13 +52,15 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
     final entries = (_data?['leaderboard'] as List<dynamic>?) ?? [];
 
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: const IslandAppBar(title: 'Рейтинг родини'),
       body: RefreshIndicator(
         onRefresh: () => _load(_category),
+        edgeOffset: islandTopInset(context),
         child: _error != null
             ? _ErrorView(message: _error!, onRetry: () => _load(_category))
             : ListView(
-                padding: const EdgeInsets.all(20),
+                padding: islandInsets(context, const EdgeInsets.all(20)),
                 children: [
                   if (categories.isNotEmpty)
                     SizedBox(

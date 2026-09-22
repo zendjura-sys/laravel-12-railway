@@ -133,6 +133,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     final hasUnread = _notifications.any((n) => (n as Map<String, dynamic>)['read_at'] == null);
 
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: IslandAppBar(
         title: _selecting ? 'Вибрано: ${_selected.length}' : 'Сповіщення',
         actions: [
@@ -156,6 +157,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           : null,
       body: RefreshIndicator(
         onRefresh: _load,
+        edgeOffset: islandTopInset(context),
         child: _loading
             ? const Center(child: CircularProgressIndicator())
             : _error != null
@@ -173,7 +175,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                     ? const Center(
                         child: Text('Сповіщень поки немає.', style: TextStyle(color: Colors.white38)))
                     : ListView.builder(
-                        padding: const EdgeInsets.all(16),
+                        padding: islandInsets(context, const EdgeInsets.all(16)),
                         itemCount: _notifications.length,
                         itemBuilder: (context, i) {
                           final n = _notifications[i] as Map<String, dynamic>;

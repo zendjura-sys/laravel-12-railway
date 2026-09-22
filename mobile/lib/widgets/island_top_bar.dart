@@ -306,10 +306,10 @@ class IslandAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.showBack = true,
   });
 
-  static const double _rowHeight = 8 + IslandCircleButton.size + 8;
+  static const double rowHeight = 8 + IslandCircleButton.size + 8;
 
   @override
-  Size get preferredSize => Size.fromHeight(_rowHeight + (bottom?.preferredSize.height ?? 0));
+  Size get preferredSize => Size.fromHeight(rowHeight + (bottom != null ? bottom!.preferredSize.height + 8 : 0));
 
   @override
   Widget build(BuildContext context) {
@@ -342,9 +342,33 @@ class IslandAppBar extends StatelessWidget implements PreferredSizeWidget {
               ),
             ),
           ),
-          if (bottom != null) bottom!,
+          // Вкладки (TabBar) — теж окремим острівцем-пілюлею, без
+          // прямокутної смуги й лінії-роздільника на всю ширину.
+          if (bottom != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: GlassIsland(
+                borderRadius: BorderRadius.circular(999),
+                child: TabBarTheme(
+                  data: const TabBarThemeData(dividerColor: Colors.transparent),
+                  child: bottom!,
+                ),
+              ),
+            ),
         ],
       ),
     );
   }
 }
+
+/// Висота зони шапки-острівця (статус-бар + ряд острівців) — для екранів з
+/// extendBodyBehindAppBar: вміст прокручується ПІД шапкою, як під нижнім
+/// меню, а цей відступ лише не дає першому елементу початково сховатися.
+/// Статус-бар — із самого View, а не з MediaQuery: контекст State стоїть
+/// НАД Scaffold, контекст усередині body — ПІД ним (там Scaffold уже
+/// додав висоту шапки), тож MediaQuery дав би різні числа.
+double islandTopInset(BuildContext context) =>
+    MediaQueryData.fromView(View.of(context)).padding.top + IslandAppBar.rowHeight;
+
+EdgeInsets islandInsets(BuildContext context, EdgeInsets base) =>
+    base.copyWith(top: base.top + islandTopInset(context));

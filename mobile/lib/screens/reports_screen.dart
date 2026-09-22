@@ -143,6 +143,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: IslandAppBar(
         title: _selecting ? 'Вибрано: ${_selected.length}' : 'Мої звіти',
         actions: [
@@ -172,6 +173,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
           : null,
       body: RefreshIndicator(
         onRefresh: _load,
+        edgeOffset: islandTopInset(context),
         child: _loading
             ? const Center(child: CircularProgressIndicator())
             : _error != null
@@ -188,7 +190,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         ],
                       )
                     : ListView.builder(
-                        padding: const EdgeInsets.all(20),
+                        padding: islandInsets(context, const EdgeInsets.all(20)),
                         itemCount: _reports!.length,
                         itemBuilder: (context, i) {
                           final r = _reports![i] as Map<String, dynamic>;

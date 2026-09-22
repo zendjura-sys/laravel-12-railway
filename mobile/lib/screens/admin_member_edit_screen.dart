@@ -189,13 +189,14 @@ class _AdminMemberEditScreenState extends State<AdminMemberEditScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: IslandAppBar(title: widget.user['name'] as String? ?? 'Учасник'),
       body: _loadingOptions
           ? const Center(child: CircularProgressIndicator())
           : _error != null
               ? Center(child: Text(_error!, style: const TextStyle(color: Colors.white70)))
               : ListView(
-                  padding: const EdgeInsets.all(20),
+                  padding: islandInsets(context, const EdgeInsets.all(20)),
                   children: [
                     Container(
                       padding: const EdgeInsets.all(16),

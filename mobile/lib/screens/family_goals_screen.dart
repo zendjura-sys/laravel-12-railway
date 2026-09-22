@@ -48,9 +48,11 @@ class _FamilyGoalsScreenState extends State<FamilyGoalsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: const IslandAppBar(title: 'Цілі родини'),
       body: RefreshIndicator(
         onRefresh: _load,
+        edgeOffset: islandTopInset(context),
         child: _loading
             ? const Center(child: CircularProgressIndicator())
             : _error != null
@@ -65,7 +67,7 @@ class _FamilyGoalsScreenState extends State<FamilyGoalsScreen> {
                     ),
                   )
                 : ListView(
-                    padding: const EdgeInsets.all(20),
+                    padding: islandInsets(context, const EdgeInsets.all(20)),
                     children: [
                       if (_goals.isEmpty)
                         const Padding(

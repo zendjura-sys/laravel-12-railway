@@ -71,6 +71,7 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: const IslandAppBar(title: 'Профіль'),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
@@ -86,7 +87,7 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
                   ),
                 )
               : ListView(
-                  padding: const EdgeInsets.all(20),
+                  padding: islandInsets(context, const EdgeInsets.all(20)),
                   children: [
                     Center(
                       child: Column(

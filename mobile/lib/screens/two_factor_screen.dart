@@ -49,6 +49,7 @@ class _TwoFactorScreenState extends State<TwoFactorScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: const IslandAppBar(title: 'Двофакторний захист'),
       body: SafeArea(
         child: Padding(

@@ -104,6 +104,7 @@ class _AdminBroadcastsScreenState extends State<AdminBroadcastsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: const IslandAppBar(title: 'Розсилка'),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
@@ -119,7 +120,7 @@ class _AdminBroadcastsScreenState extends State<AdminBroadcastsScreen> {
                   ),
                 )
               : ListView(
-                  padding: const EdgeInsets.all(20),
+                  padding: islandInsets(context, const EdgeInsets.all(20)),
                   children: [
                     Container(
                       padding: const EdgeInsets.all(16),

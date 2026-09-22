@@ -3,6 +3,8 @@ import '../api_client.dart';
 import '../services/notification_router.dart';
 import '../theme.dart';
 import '../widgets/fade_slide_in.dart';
+import '../widgets/island_top_bar.dart';
+import '../widgets/selection_delete_bar.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -15,6 +17,57 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   List<dynamic> _notifications = [];
   bool _loading = true;
   String? _error;
+  // Режим вибору — вмикається кнопкою 🗑 у шапці: кружечки біля
+  // сповіщень і нижня панель "Видалити всі / Видалити (N)".
+  bool _selecting = false;
+  final Set<int> _selected = {};
+  bool _deleting = false;
+
+  void _toggleSelecting() => setState(() {
+        _selecting = !_selecting;
+        _selected.clear();
+      });
+
+  void _toggle(int id) => setState(() => _selected.contains(id) ? _selected.remove(id) : _selected.add(id));
+
+  Future<void> _deleteSelected() async {
+    final ids = _selected.toList();
+    if (!await confirmDeletion(context,
+        title: 'Видалити сповіщення?', message: 'Буде видалено вибрані сповіщення (${ids.length}).')) {
+      return;
+    }
+    await _bulkDelete(() => ApiClient.instance.bulkDeleteNotifications(ids: ids),
+        (n) => ids.contains(n['id']));
+  }
+
+  Future<void> _deleteAll() async {
+    if (!await confirmDeletion(context,
+        title: 'Видалити всі сповіщення?', message: 'Буде видалено всі сповіщення (${_notifications.length}).')) {
+      return;
+    }
+    await _bulkDelete(() => ApiClient.instance.bulkDeleteNotifications(all: true), (_) => true);
+  }
+
+  Future<void> _bulkDelete(Future<void> Function() request, bool Function(Map<String, dynamic>) removed) async {
+    setState(() => _deleting = true);
+    try {
+      await request();
+      if (!mounted) return;
+      setState(() {
+        _notifications = _notifications.where((n) => !removed(n as Map<String, dynamic>)).toList();
+        _selecting = false;
+        _selected.clear();
+      });
+    } on ApiException catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Не вдалося видалити.')));
+      }
+    } finally {
+      if (mounted) setState(() => _deleting = false);
+    }
+  }
 
   @override
   void initState() {
@@ -80,13 +133,27 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     final hasUnread = _notifications.any((n) => (n as Map<String, dynamic>)['read_at'] == null);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Сповіщення'),
+      appBar: IslandAppBar(
+        title: _selecting ? 'Вибрано: ${_selected.length}' : 'Сповіщення',
         actions: [
-          if (hasUnread)
-            TextButton(onPressed: _markAllRead, child: const Text('Прочитати все')),
+          if (hasUnread && !_selecting)
+            IslandCircleButton(icon: const Icon(Icons.done_all_rounded), tooltip: 'Прочитати все', onTap: _markAllRead),
+          if (_notifications.isNotEmpty || _selecting)
+            IslandCircleButton(
+              icon: Icon(_selecting ? Icons.close_rounded : Icons.delete_outline_rounded),
+              tooltip: _selecting ? 'Скасувати' : 'Видалити',
+              onTap: _toggleSelecting,
+            ),
         ],
       ),
+      bottomNavigationBar: _selecting
+          ? SelectionDeleteBar(
+              selectedCount: _selected.length,
+              busy: _deleting,
+              onDeleteAll: _deleteAll,
+              onDeleteSelected: _deleteSelected,
+            )
+          : null,
       body: RefreshIndicator(
         onRefresh: _load,
         child: _loading
@@ -115,7 +182,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                             index: i,
                             child: Dismissible(
                               key: ValueKey(n['id']),
-                              direction: DismissDirection.endToStart,
+                              direction: _selecting ? DismissDirection.none : DismissDirection.endToStart,
                               onDismissed: (_) => _delete(n),
                               background: Container(
                                 margin: const EdgeInsets.only(bottom: 8),
@@ -129,7 +196,15 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                               ),
                               child: InkWell(
                                 borderRadius: BorderRadius.circular(14),
-                                onTap: () => _open(n),
+                                onTap: () => _selecting ? _toggle(n['id'] as int) : _open(n),
+                                onLongPress: _selecting
+                                    ? null
+                                    : () => setState(() {
+                                          _selecting = true;
+                                          _selected
+                                            ..clear()
+                                            ..add(n['id'] as int);
+                                        }),
                                 child: Container(
                                   margin: const EdgeInsets.only(bottom: 8),
                                   padding: const EdgeInsets.all(14),
@@ -139,6 +214,11 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                   child: Row(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
+                                      if (_selecting)
+                                        Padding(
+                                          padding: const EdgeInsets.only(right: 12),
+                                          child: SelectionMark(selected: _selected.contains(n['id'])),
+                                        ),
                                       if (unread)
                                         Container(
                                           margin: const EdgeInsets.only(top: 5, right: 10),

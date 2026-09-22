@@ -6,6 +6,7 @@ import '../services/push_notifications.dart';
 import '../theme.dart';
 import 'login_screen.dart';
 import 'member_profile_screen.dart';
+import '../widgets/island_top_bar.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -143,7 +144,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Налаштування')),
+      appBar: const IslandAppBar(title: 'Налаштування'),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null

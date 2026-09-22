@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../api_client.dart';
 import '../theme.dart';
+import '../widgets/island_top_bar.dart';
 
 class AdminLeaveRequestsScreen extends StatefulWidget {
   const AdminLeaveRequestsScreen({super.key});
@@ -57,7 +58,7 @@ class _AdminLeaveRequestsScreenState extends State<AdminLeaveRequestsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Заявки на відпустку')),
+      appBar: const IslandAppBar(title: 'Заявки на відпустку'),
       body: RefreshIndicator(
         onRefresh: _load,
         child: _loading

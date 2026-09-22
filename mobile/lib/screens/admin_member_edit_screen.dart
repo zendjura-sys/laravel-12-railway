@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../api_client.dart';
 import '../theme.dart';
+import '../widgets/island_top_bar.dart';
 
 /// Редагування учасника з мобільної адмінки — ім'я/email, посада, ролі
 /// доступу, скидання пароля й видалення акаунту. Ті самі write-методи
@@ -188,7 +189,7 @@ class _AdminMemberEditScreenState extends State<AdminMemberEditScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(widget.user['name'] as String? ?? 'Учасник')),
+      appBar: IslandAppBar(title: widget.user['name'] as String? ?? 'Учасник'),
       body: _loadingOptions
           ? const Center(child: CircularProgressIndicator())
           : _error != null

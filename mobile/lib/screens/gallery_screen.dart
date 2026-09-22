@@ -3,6 +3,7 @@ import '../api_client.dart';
 import '../theme.dart';
 import '../widgets/shimmer_skeleton.dart';
 import 'photo_viewer_screen.dart';
+import '../widgets/island_top_bar.dart';
 
 class GalleryScreen extends StatefulWidget {
   const GalleryScreen({super.key});
@@ -54,7 +55,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Галерея')),
+      appBar: const IslandAppBar(title: 'Галерея'),
       body: RefreshIndicator(
         onRefresh: _load,
         child: _loading

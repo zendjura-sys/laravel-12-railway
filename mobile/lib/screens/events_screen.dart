@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../api_client.dart';
 import '../theme.dart';
+import '../widgets/island_top_bar.dart';
 
 class EventsScreen extends StatefulWidget {
   const EventsScreen({super.key});
@@ -55,7 +56,7 @@ class _EventsScreenState extends State<EventsScreen> {
     final formatter = DateFormat('dd.MM.yyyy HH:mm');
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Події родини')),
+      appBar: const IslandAppBar(title: 'Події родини'),
       body: RefreshIndicator(
         onRefresh: _load,
         child: _loading

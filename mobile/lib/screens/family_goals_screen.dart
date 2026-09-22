@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../api_client.dart';
 import '../theme.dart';
+import '../widgets/island_top_bar.dart';
 
 class FamilyGoalsScreen extends StatefulWidget {
   const FamilyGoalsScreen({super.key});
@@ -47,7 +48,7 @@ class _FamilyGoalsScreenState extends State<FamilyGoalsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Цілі родини')),
+      appBar: const IslandAppBar(title: 'Цілі родини'),
       body: RefreshIndicator(
         onRefresh: _load,
         child: _loading

@@ -604,6 +604,35 @@ class ApiClient {
     return (data['data'] as Map<String, dynamic>)['members'] as List<dynamic>;
   }
 
+  /// Масове видалення сповіщень: вибрані [ids] або всі ([all]).
+  Future<void> bulkDeleteNotifications({List<int> ids = const [], bool all = false}) async {
+    final response = await http.post(
+      _uri('/notifications/bulk-delete'),
+      headers: await _headers(auth: true),
+      body: jsonEncode(all ? {'all': true} : {'ids': ids}),
+    );
+    _decode(response);
+  }
+
+  /// Видалення власних звітів (лише на розгляді/відхилені — затверджені
+  /// сервер пропускає). Повертає {deleted, skipped} і повідомлення, якщо
+  /// частину пропущено.
+  Future<({int deleted, int skipped, String? message})> bulkDeleteReports(
+      {List<int> ids = const [], bool all = false}) async {
+    final response = await http.post(
+      _uri('/reports/bulk-delete'),
+      headers: await _headers(auth: true),
+      body: jsonEncode(all ? {'all': true} : {'ids': ids}),
+    );
+    final data = _decode(response) as Map<String, dynamic>;
+    final d = data['data'] as Map<String, dynamic>? ?? {};
+    return (
+      deleted: d['deleted'] as int? ?? 0,
+      skipped: d['skipped'] as int? ?? 0,
+      message: data['message'] as String?,
+    );
+  }
+
   Future<void> markNotificationRead(int id) async {
     final response = await http.post(_uri('/notifications/$id/read'), headers: await _headers(auth: true));
     _decode(response);

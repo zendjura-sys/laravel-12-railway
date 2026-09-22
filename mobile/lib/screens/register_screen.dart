@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../api_client.dart';
 import '../theme.dart';
 import 'home_shell.dart';
+import '../widgets/island_top_bar.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -70,7 +71,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Реєстрація')),
+      appBar: const IslandAppBar(title: 'Реєстрація'),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),

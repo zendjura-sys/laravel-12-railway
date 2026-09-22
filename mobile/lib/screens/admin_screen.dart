@@ -8,6 +8,7 @@ import 'admin_family_goals_screen.dart';
 import 'admin_leave_requests_screen.dart';
 import 'admin_member_edit_screen.dart';
 import 'admin_reports_screen.dart';
+import '../widgets/island_top_bar.dart';
 
 /// Мінімальна нативна адмінка — ядро (статистика родини й список
 /// учасників) плюс модерація з модулів Reports/Member Center, якщо в
@@ -104,7 +105,7 @@ class _AdminScreenState extends State<AdminScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Адмін')),
+      appBar: const IslandAppBar(title: 'Адмін'),
       body: RefreshIndicator(
         onRefresh: _load,
         child: _loading

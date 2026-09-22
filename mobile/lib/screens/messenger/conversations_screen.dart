@@ -6,6 +6,7 @@ import '../../widgets/fade_slide_in.dart';
 import '../../widgets/shimmer_skeleton.dart';
 import '../member_profile_screen.dart';
 import 'conversation_screen.dart';
+import '../../widgets/island_top_bar.dart';
 
 String _initial(String? name) {
   final trimmed = (name ?? '').trim();
@@ -100,10 +101,10 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Чат'),
+      appBar: IslandAppBar(
+        title: 'Чат',
         actions: [
-          IconButton(icon: const Icon(Icons.add_comment_outlined), onPressed: _openNewChat),
+          IslandCircleButton(icon: const Icon(Icons.add_comment_outlined), tooltip: 'Новий чат', onTap: _openNewChat),
         ],
       ),
       body: RefreshIndicator(

@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import '../api_client.dart';
 import '../theme.dart';
 import '../widgets/shimmer_skeleton.dart';
+import '../widgets/island_top_bar.dart';
 
 class LeaderboardScreen extends StatefulWidget {
   const LeaderboardScreen({super.key});
@@ -51,7 +52,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
     final entries = (_data?['leaderboard'] as List<dynamic>?) ?? [];
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Рейтинг родини')),
+      appBar: const IslandAppBar(title: 'Рейтинг родини'),
       body: RefreshIndicator(
         onRefresh: () => _load(_category),
         child: _error != null

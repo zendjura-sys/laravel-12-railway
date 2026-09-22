@@ -236,3 +236,115 @@ class UpdateBannerIsland extends StatelessWidget {
     );
   }
 }
+
+/// Пілюля з назвою розділу (без логотипа) — центральний острівець шапки
+/// вкладених екранів. Тягнеться на всю вільну ширину: де праворуч немає
+/// кнопки дії, вона займає і її місце.
+class IslandSectionPill extends StatelessWidget {
+  final String title;
+  final Widget? subtitle;
+  final VoidCallback? onTap;
+
+  const IslandSectionPill({super.key, required this.title, this.subtitle, this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GlassIsland(
+      borderRadius: BorderRadius.circular(IslandCircleButton.size / 2),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w500, height: 1.15),
+                ),
+                if (subtitle != null) ...[
+                  const SizedBox(height: 2),
+                  DefaultTextStyle.merge(
+                    style: const TextStyle(fontSize: 12.5, color: Colors.white54, height: 1.1),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    child: subtitle!,
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Шапка вкладених екранів у концепції острівців (як на Кабінеті):
+/// ( ← ) ( Назва розділу ) ( дія ). Дії — IslandCircleButton; немає дій —
+/// пілюля з назвою розтягується на їхнє місце. [bottom] — напр. TabBar.
+class IslandAppBar extends StatelessWidget implements PreferredSizeWidget {
+  final String title;
+  final Widget? subtitle;
+  final VoidCallback? onTitleTap;
+  final List<Widget> actions;
+  final PreferredSizeWidget? bottom;
+  final bool showBack;
+
+  const IslandAppBar({
+    super.key,
+    required this.title,
+    this.subtitle,
+    this.onTitleTap,
+    this.actions = const [],
+    this.bottom,
+    this.showBack = true,
+  });
+
+  static const double _rowHeight = 8 + IslandCircleButton.size + 8;
+
+  @override
+  Size get preferredSize => Size.fromHeight(_rowHeight + (bottom?.preferredSize.height ?? 0));
+
+  @override
+  Widget build(BuildContext context) {
+    final canPop = showBack && (ModalRoute.of(context)?.canPop ?? false);
+    return SafeArea(
+      bottom: false,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+            child: SizedBox(
+              height: IslandCircleButton.size,
+              child: Row(
+                children: [
+                  if (canPop) ...[
+                    IslandCircleButton(
+                      icon: const Icon(Icons.arrow_back_rounded),
+                      tooltip: 'Назад',
+                      onTap: () => Navigator.of(context).maybePop(),
+                    ),
+                    const SizedBox(width: 8),
+                  ],
+                  Expanded(child: IslandSectionPill(title: title, subtitle: subtitle, onTap: onTitleTap)),
+                  for (final action in actions) ...[
+                    const SizedBox(width: 8),
+                    action,
+                  ],
+                ],
+              ),
+            ),
+          ),
+          if (bottom != null) bottom!,
+        ],
+      ),
+    );
+  }
+}

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../api_client.dart';
 import '../theme.dart';
+import '../widgets/island_top_bar.dart';
 
 final _fmt = NumberFormat.decimalPattern('uk');
 String _money(dynamic v) => '${_fmt.format(v ?? 0)}₴';
@@ -59,8 +60,8 @@ class _AdminBonusesScreenState extends State<AdminBonusesScreen> with SingleTick
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Премії'),
+      appBar: IslandAppBar(
+        title: 'Премії',
         bottom: TabBar(
           controller: _tabController,
           isScrollable: true,

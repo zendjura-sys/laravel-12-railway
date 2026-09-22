@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../api_client.dart';
 import '../theme.dart';
+import '../widgets/island_top_bar.dart';
 
 class AdminEventsScreen extends StatefulWidget {
   const AdminEventsScreen({super.key});
@@ -93,15 +94,15 @@ class _AdminEventsScreenState extends State<AdminEventsScreen> {
     final formatter = DateFormat('dd.MM.yyyy HH:mm');
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Події родини'),
+      appBar: IslandAppBar(
+        title: 'Події родини',
         actions: [
-          IconButton(
+          IslandCircleButton(
             icon: _sendingDigest
                 ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
                 : const Icon(Icons.campaign_outlined),
             tooltip: 'Надіслати дайджест усіх подій',
-            onPressed: _sendingDigest ? null : _sendDigest,
+            onTap: _sendingDigest ? null : _sendDigest,
           ),
         ],
       ),

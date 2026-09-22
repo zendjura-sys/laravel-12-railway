@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../api_client.dart';
 import '../theme.dart';
+import '../widgets/island_top_bar.dart';
 
 class AdminBroadcastsScreen extends StatefulWidget {
   const AdminBroadcastsScreen({super.key});
@@ -103,7 +104,7 @@ class _AdminBroadcastsScreenState extends State<AdminBroadcastsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Розсилка')),
+      appBar: const IslandAppBar(title: 'Розсилка'),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null

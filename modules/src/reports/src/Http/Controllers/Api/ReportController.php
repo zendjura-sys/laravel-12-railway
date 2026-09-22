@@ -7,6 +7,8 @@ use Addons\Reports\Models\Report;
 use Addons\Reports\Models\ReportAttachment;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
@@ -125,5 +127,48 @@ class ReportController
         ReportCreated::dispatch($report);
 
         return response()->json(['message' => 'Звіт подано, очікує на модерацію.', 'id' => $report->id]);
+    }
+
+    /**
+     * Видалення власних звітів (мобільний режим вибору): {ids: [...]} чи
+     * {all: true}. Лише ті, що ще на розгляді або відхилені: затверджений
+     * звіт уже нарахував досвід, премії й прогрес цілей родини — його
+     * видалення "заднім числом" змінило б гроші й рейтинги, тож такі
+     * звіти пропускаються (skipped у відповіді).
+     */
+    public function bulkDestroy(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'all' => ['sometimes', 'boolean'],
+            'ids' => ['required_without:all', 'array', 'max:200'],
+            'ids.*' => ['integer'],
+        ]);
+
+        $reports = Report::query()
+            ->with('attachments')
+            ->where('user_id', $request->user()->id)
+            ->when(! ($data['all'] ?? false), fn ($q) => $q->whereIn('id', $data['ids'] ?? []))
+            ->get();
+
+        $deletable = $reports->whereIn('status', ['pending', 'rejected']);
+        $paths = $deletable->flatMap(fn (Report $r) => $r->attachments->pluck('disk_path'))->filter()->values();
+
+        DB::transaction(fn () => Report::query()->whereIn('id', $deletable->pluck('id'))->delete());
+        // Файли — після коміту: відкат транзакції не повинен лишити звіт без фото.
+        if ($paths->isNotEmpty()) {
+            Storage::disk('public')->delete($paths->all());
+        }
+
+        $skipped = $reports->count() - $deletable->count();
+
+        return response()->json([
+            'ok' => true,
+            'message' => $skipped > 0
+                ? "Затверджені звіти ({$skipped}) не видаляються — за них уже нараховано досвід і премії."
+                : null,
+            'data' => ['deleted' => $deletable->count(), 'skipped' => $skipped],
+            'errors' => null,
+            'redirect' => null,
+        ]);
     }
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../api_client.dart';
 import '../theme.dart';
 import '../widgets/photo_thumbnails.dart';
+import '../widgets/island_top_bar.dart';
 
 const _grades = ['S', 'A', 'B', 'C', 'D', 'F', 'G'];
 const _lowGrades = ['D', 'F', 'G'];
@@ -139,7 +140,7 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Звіти на розгляді')),
+      appBar: const IslandAppBar(title: 'Звіти на розгляді'),
       body: RefreshIndicator(
         onRefresh: _load,
         child: _loading

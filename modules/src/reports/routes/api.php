@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('api')->middleware('auth:sanctum')->group(function () {
     Route::get('/reports', [ReportController::class, 'index']);
     Route::post('/reports', [ReportController::class, 'store']);
+    Route::post('/reports/bulk-delete', [ReportController::class, 'bulkDestroy']);
 });
 
 // Мінімальна адмінка в застосунку: лише розгляд звітів на очікуванні.

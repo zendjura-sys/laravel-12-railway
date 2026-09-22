@@ -18,6 +18,7 @@ import '../../widgets/presence_label.dart';
 import '../member_profile_screen.dart';
 import '../photo_viewer_screen.dart';
 import 'emoji_data.dart';
+import '../../widgets/island_top_bar.dart';
 
 class ConversationScreen extends StatefulWidget {
   final int conversationId;
@@ -698,32 +699,19 @@ class _ConversationScreenState extends State<ConversationScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: InkWell(
-          onTap: _type == 'direct' && _otherUserId != null
-              ? () => Navigator.of(context)
-                  .push(MaterialPageRoute(builder: (_) => MemberProfileScreen(userId: _otherUserId!)))
-              : (_type == 'family' || _type == 'deputies')
-                  ? _openMembers
-                  : null,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Flexible(child: Text(_title, overflow: TextOverflow.ellipsis)),
-                ],
-              ),
-              if (_type == 'direct' && _presence != null)
-                PresenceLabel(presence: _presence)
-              else if (_onlineCount != null)
-                Text('🟢 $_onlineCount у мережі · учасники',
-                    style: const TextStyle(fontSize: 12, color: Colors.white54)),
-            ],
-          ),
-        ),
+      appBar: IslandAppBar(
+        title: _title,
+        onTitleTap: _type == 'direct' && _otherUserId != null
+            ? () => Navigator.of(context)
+                .push(MaterialPageRoute(builder: (_) => MemberProfileScreen(userId: _otherUserId!)))
+            : (_type == 'family' || _type == 'deputies')
+                ? _openMembers
+                : null,
+        subtitle: _type == 'direct' && _presence != null
+            ? PresenceLabel(presence: _presence)
+            : _onlineCount != null
+                ? Text('🟢 $_onlineCount у мережі · учасники')
+                : null,
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())

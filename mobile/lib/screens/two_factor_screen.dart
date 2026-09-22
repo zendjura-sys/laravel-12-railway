@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../api_client.dart';
 import 'home_shell.dart';
+import '../widgets/island_top_bar.dart';
 
 class TwoFactorScreen extends StatefulWidget {
   final String challengeToken;
@@ -48,7 +49,7 @@ class _TwoFactorScreenState extends State<TwoFactorScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Двофакторний захист')),
+      appBar: const IslandAppBar(title: 'Двофакторний захист'),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24),

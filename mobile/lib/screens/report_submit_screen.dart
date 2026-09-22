@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../api_client.dart';
 import '../theme.dart';
+import '../widgets/island_top_bar.dart';
 
 const _kaptTimes = [
   '10:00',
@@ -124,7 +125,7 @@ class _ReportSubmitScreenState extends State<ReportSubmitScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Новий звіт')),
+      appBar: const IslandAppBar(title: 'Новий звіт'),
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [

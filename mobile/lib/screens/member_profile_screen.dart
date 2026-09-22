@@ -4,6 +4,7 @@ import '../theme.dart';
 import '../widgets/presence_label.dart';
 import 'messenger/conversation_screen.dart';
 import 'settings_screen.dart';
+import '../widgets/island_top_bar.dart';
 
 /// Профіль учасника — свій чи чужий. Свій відкривається з Кабінету чи
 /// Налаштувань і веде далі в Налаштування; чужий — звідусіль, де є ім'я
@@ -70,7 +71,7 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Профіль')),
+      appBar: const IslandAppBar(title: 'Профіль'),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null

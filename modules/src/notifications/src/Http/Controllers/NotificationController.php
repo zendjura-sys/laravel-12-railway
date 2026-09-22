@@ -73,4 +73,31 @@ class NotificationController
             'redirect' => null,
         ]);
     }
+
+    /**
+     * Масове видалення власних сповіщень (мобільний режим вибору):
+     * {ids: [...]} — вибрані, {all: true} — усі. Чужі id мовчки
+     * ігноруються — фільтр за user_id у самому запиті.
+     */
+    public function bulkDestroy(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'all' => ['sometimes', 'boolean'],
+            'ids' => ['required_without:all', 'array', 'max:500'],
+            'ids.*' => ['integer'],
+        ]);
+
+        $deleted = Notification::query()
+            ->where('user_id', $request->user()->id)
+            ->when(! ($data['all'] ?? false), fn ($q) => $q->whereIn('id', $data['ids'] ?? []))
+            ->delete();
+
+        return response()->json([
+            'ok' => true,
+            'message' => null,
+            'data' => ['deleted' => $deleted],
+            'errors' => null,
+            'redirect' => null,
+        ]);
+    }
 }

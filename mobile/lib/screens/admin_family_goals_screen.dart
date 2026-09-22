@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../api_client.dart';
 import '../theme.dart';
+import '../widgets/island_top_bar.dart';
 
 class AdminFamilyGoalsScreen extends StatefulWidget {
   const AdminFamilyGoalsScreen({super.key});
@@ -124,7 +125,7 @@ class _AdminFamilyGoalsScreenState extends State<AdminFamilyGoalsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Цілі родини')),
+      appBar: const IslandAppBar(title: 'Цілі родини'),
       floatingActionButton: FloatingActionButton(
         onPressed: _openCreateSheet,
         backgroundColor: AppColors.gold400,

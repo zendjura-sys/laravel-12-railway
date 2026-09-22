@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../api_client.dart';
 import '../theme.dart';
+import '../widgets/island_top_bar.dart';
 
 const _categoryMeta = {
   'xp': ('Досвід', Icons.military_tech_outlined, ''),
@@ -54,7 +55,7 @@ class _HallOfFameScreenState extends State<HallOfFameScreen> {
     final categories = _categoryMeta.keys.where((k) => (_records[k] as List?)?.isNotEmpty ?? false).toList();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Зал слави')),
+      appBar: const IslandAppBar(title: 'Зал слави'),
       body: RefreshIndicator(
         onRefresh: _load,
         child: _loading

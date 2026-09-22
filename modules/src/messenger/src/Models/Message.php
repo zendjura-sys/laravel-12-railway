@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Storage;
 class Message extends Model
 {
     protected $fillable = [
-        'conversation_id', 'sender_id', 'reply_to_message_id', 'body', 'type', 'attachment_path', 'attachment_url',
+        'conversation_id', 'sender_id', 'reply_to_message_id', 'body', 'type', 'platform', 'attachment_path', 'attachment_url',
     ];
 
     public function conversation(): BelongsTo

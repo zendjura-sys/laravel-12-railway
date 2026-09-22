@@ -2,10 +2,12 @@
 
 namespace Addons\MemberCenter\Http\Controllers;
 
+use Addons\MemberCenter\Events\LeaveRequestCreated;
 use Addons\MemberCenter\Models\LeaveRequest;
 use Addons\MemberCenter\Models\MemberProfile;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Event;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -39,11 +41,16 @@ class MemberCenterController
             'reason' => ['nullable', 'string', 'max:1000'],
         ]);
 
-        LeaveRequest::create([
+        $leaveRequest = LeaveRequest::create([
             ...$data,
             'user_id' => $request->user()->id,
             'status' => 'pending',
         ]);
+
+        // Раніше нова заявка нікого не сповіщала — той, у кого є право
+        // members.manage, дізнавався про неї, лише сам зайшовши в
+        // адмінку. Той самий патерн, що й ReportCreated у Reports.
+        Event::dispatch(new LeaveRequestCreated($leaveRequest));
 
         return back()->with('success', 'Заявку подано, очікує на розгляд.');
     }

@@ -307,6 +307,11 @@ class MessengerController
             'reply_to_message_id' => $replyToId,
             'body' => $body,
             'type' => $type,
+            // Бейдж "звідки" в чаті: мобільний застосунок завжди шле
+            // Sanctum bearer-токен, веб — лише сесійну кулю, без
+            // Authorization-заголовка — цього достатньо, щоб розрізнити,
+            // окремого поля в запиті клієнти не передають.
+            'platform' => $request->bearerToken() ? 'mobile' : 'web',
             'attachment_path' => $attachmentPath,
             'attachment_url' => $attachmentUrl,
         ]);
@@ -700,6 +705,7 @@ class MessengerController
             'id' => $m->id,
             'body' => $m->body,
             'type' => $m->type,
+            'platform' => $m->platform,
             'attachmentUrl' => $m->attachment_url,
             // Лише для type=contact — готовий профіль замість того, щоб
             // клієнт робив окремий запит на GET /users/{id} для кожної

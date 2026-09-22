@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../screens/admin_leave_requests_screen.dart';
 import '../screens/admin_reports_screen.dart';
 import '../screens/messenger/conversation_screen.dart';
 
@@ -30,6 +31,14 @@ Future<bool> openNotificationTarget(BuildContext context, String? url) async {
 
   if (_matches(path, '/admin/reports')) {
     await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AdminReportsScreen()));
+    return true;
+  }
+
+  // /admin/members — та сама сторінка на сайті, де адмін бачить і
+  // заявки на відпустку; у застосунку для цього є окремий, зручніший
+  // екран (список саме заявок на розгляді), тож ведемо туди.
+  if (_matches(path, '/admin/members')) {
+    await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AdminLeaveRequestsScreen()));
     return true;
   }
 

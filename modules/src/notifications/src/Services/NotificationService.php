@@ -29,6 +29,7 @@ class NotificationService
     private const TYPE_EMOJI = [
         'report_reviewed' => '📋',
         'report_created' => '📥',
+        'leave_request_created' => '📥',
         'leave_request_reviewed' => '🏖',
         'achievement_unlocked' => '🏆',
         'investment_tier_unlocked' => '💎',

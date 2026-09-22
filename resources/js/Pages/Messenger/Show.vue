@@ -134,6 +134,14 @@ function formatTime(iso) {
     return new Date(iso).toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' });
 }
 
+// Бейдж "звідки" повідомлення — сервер сам визначає платформу
+// (MessengerController::store, за наявністю Sanctum bearer-токена),
+// тут лише показуємо іконку. null для повідомлень до цього релізу.
+const PLATFORM_ICON = { mobile: '📱', web: '🌐', desktop: '💻' };
+function platformIcon(platform) {
+    return PLATFORM_ICON[platform] ?? null;
+}
+
 onMounted(() => {
     scrollToBottom();
     pollTimer = setInterval(poll, 3000);
@@ -211,7 +219,10 @@ onBeforeUnmount(() => {
                                 <p class="whitespace-pre-wrap break-words">{{ m.body }}</p>
                             </div>
 
-                            <p class="mt-0.5 px-1 text-[10px] text-white/25">{{ formatTime(m.createdAt) }}</p>
+                            <p class="mt-0.5 px-1 text-[10px] text-white/25">
+                                <span v-if="platformIcon(m.platform)">{{ platformIcon(m.platform) }}</span>
+                                {{ formatTime(m.createdAt) }}
+                            </p>
                         </div>
                     </div>
                     <p v-if="!list.length" class="py-10 text-center text-sm text-white/30">

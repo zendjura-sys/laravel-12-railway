@@ -804,6 +804,19 @@ class _ConversationScreenState extends State<ConversationScreen> {
   }
 }
 
+/// Бейдж "звідки" повідомлення — сервер визначає платформу сам
+/// (наявність Sanctum bearer-токена), клієнту лишається тільки показати
+/// іконку. null для повідомлень до цього релізу (платформа невідома) —
+/// бейдж просто не показується.
+String? _platformIcon(String? platform) {
+  return switch (platform) {
+    'mobile' => '📱',
+    'web' => '🌐',
+    'desktop' => '💻',
+    _ => null,
+  };
+}
+
 Map<String, dynamic> _decodeMessageBody(String raw) {
   if (raw.isEmpty) return const {};
   try {
@@ -978,6 +991,11 @@ class _MessageBubble extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
+                if (_platformIcon(message['platform'] as String?) != null) ...[
+                  Text(_platformIcon(message['platform'] as String?)!,
+                      style: const TextStyle(fontSize: 10)),
+                  const SizedBox(width: 3),
+                ],
                 Text(formatTime(message['createdAt'] as String),
                     style: const TextStyle(color: Colors.white24, fontSize: 10)),
                 if (isMine && showReadReceipt) ...[

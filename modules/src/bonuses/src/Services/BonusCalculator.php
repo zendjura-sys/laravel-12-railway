@@ -24,11 +24,25 @@ use Illuminate\Support\Carbon as SupportCarbon;
  */
 class BonusCalculator
 {
-    public function runWeeklyPayouts(): void
+    /**
+     * @param  SupportCarbon|null  $week  Початок тижня (субота 23:00 Europe/Kyiv); за замовчуванням — поточний.
+     * @param  bool  $credit  Одразу зарахувати на рахунок (paid=true) — так робить суботній scheduled-прогін
+     *                        за щойно завершений тиждень. Ручний запуск з адмінки рахує поточний, ще не
+     *                        завершений тиждень, тож лишає його чернеткою: зараховане вже не перераховується.
+     * @return \Illuminate\Support\Collection<int, BonusPayout> Щойно зараховані виплати (порожньо без $credit).
+     */
+    public function runWeeklyPayouts(?SupportCarbon $week = null, bool $credit = false): \Illuminate\Support\Collection
     {
-        $weekStart = $this->currentWeekStart();
+        $week ??= $this->currentWeekStart();
+        // reviewed_at зберігається в UTC (app.timezone), а прив'язка Carbon у
+        // запиті часовий пояс не переводить — межа "субота 23:00 Київ"
+        // інакше зсувалась на 2–3 години, і звіти, затверджені в суботу
+        // після 20:00, випадали з обох тижнів.
+        $weekStart = $week->copy()->utc();
         $weekEnd = $weekStart->copy()->addWeek();
+        $weekDate = $week->toDateString();
         $settings = BonusSettings::current();
+        $credited = collect();
 
         $activeUserIds = Report::query()
             ->where('status', 'approved')
@@ -58,7 +72,7 @@ class BonusCalculator
             // наступного тижня.
             $existing = BonusPayout::query()
                 ->where('user_id', $userId)
-                ->where('week_start', $weekStart->toDateString())
+                ->where('week_start', $weekDate)
                 ->first();
             if ($existing?->paid) {
                 continue;
@@ -75,8 +89,8 @@ class BonusCalculator
 
             $total = $bizwar['amount'] + $contracts['amount'] + $streakBonus + $contractsCountBonus + $investmentBonus;
 
-            BonusPayout::updateOrCreate(
-                ['user_id' => $userId, 'week_start' => $weekStart->toDateString()],
+            $payout = BonusPayout::updateOrCreate(
+                ['user_id' => $userId, 'week_start' => $weekDate],
                 [
                     'bizwar_amount' => $bizwar['amount'],
                     'bizwar_winrate' => $bizwar['winrate'],
@@ -86,9 +100,17 @@ class BonusCalculator
                     'contracts_count_bonus_amount' => $contractsCountBonus,
                     'investment_bonus_amount' => $investmentBonus,
                     'total_amount' => $total,
+                    // paid_by лишається null — зарахувала система, не адмін.
+                    ...($credit ? ['paid' => true, 'paid_at' => now()] : []),
                 ],
             );
+
+            if ($credit && $total > 0) {
+                $credited->push($payout->setRelation('user', $user));
+            }
         }
+
+        return $credited;
     }
 
     /**
@@ -104,7 +126,7 @@ class BonusCalculator
      */
     public function previewCurrentWeek(User $user): array
     {
-        $weekStart = $this->currentWeekStart();
+        $weekStart = $this->currentWeekStart()->utc();
         $weekEnd = $weekStart->copy()->addWeek();
         $settings = BonusSettings::current();
 

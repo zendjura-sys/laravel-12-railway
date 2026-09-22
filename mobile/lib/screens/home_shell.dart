@@ -101,16 +101,13 @@ class _HomeShellState extends State<HomeShell> {
             child: Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: AppColors.obsidian900.withValues(alpha: 0.78),
+                // Фон — той самий, що в головного вікна: легкий
+                // напівпрозорий obsidian950 поверх AuroraBackground, тож
+                // крізь панель видно те саме золоте світіння, а не
+                // суцільний темний блок, що "відрізав" низ екрана.
+                color: AppColors.obsidian950.withValues(alpha: 0.3),
                 borderRadius: BorderRadius.circular(36),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.09)),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.35),
-                    blurRadius: 28,
-                    offset: const Offset(0, 10),
-                  ),
-                ],
+                border: Border.all(color: AppColors.gold400.withValues(alpha: 0.14)),
               ),
               child: Row(
                 mainAxisAlignment: destinations.length > 2

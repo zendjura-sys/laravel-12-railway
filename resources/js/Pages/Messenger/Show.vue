@@ -38,6 +38,29 @@ async function openMembers() {
     }
 }
 
+function parseBody(m) {
+    try {
+        return JSON.parse(m.body) ?? {};
+    } catch {
+        return {};
+    }
+}
+
+function richLink(m) {
+    if (m.type === 'location') {
+        const { lat, lng } = parseBody(m);
+        return `https://www.google.com/maps?q=${lat},${lng}`;
+    }
+    return m.attachmentUrl;
+}
+
+function richLabel(m) {
+    if (m.type === 'location') return '📍 Геопозиція — відкрити на мапі';
+    const { name, size } = parseBody(m);
+    const kb = size ? ` · ${size >= 1048576 ? (size / 1048576).toFixed(1) + ' МБ' : Math.max(1, Math.round(size / 1024)) + ' КБ'}` : '';
+    return `📎 ${name ?? 'Файл'}${kb}`;
+}
+
 function presenceEmoji(userId) {
     return onlineIds.value.has(userId) ? '🟢' : '🔴';
 }
@@ -231,7 +254,7 @@ onBeforeUnmount(() => {
                         class="flex"
                         :class="m.isMine ? 'justify-end' : 'justify-start'"
                     >
-                        <div class="max-w-[75%]" :class="m.isMine ? 'text-right' : 'text-left'">
+                        <div class="min-w-0 max-w-[75%]" :class="m.isMine ? 'text-right' : 'text-left'">
                             <p v-if="!m.isMine && isGroup" class="mb-0.5 flex items-center gap-1.5 px-1 text-[11px] font-medium text-gold-300">
                                 <span v-if="m.senderId" class="text-[8px]">{{ presenceEmoji(m.senderId) }}</span>
                                 {{ m.senderName }}
@@ -260,22 +283,60 @@ onBeforeUnmount(() => {
                                 <img :src="m.attachmentUrl" alt="" class="max-h-72 w-full object-cover" />
                                 <p
                                     v-if="m.body"
-                                    class="whitespace-pre-wrap break-words px-4 py-2 text-sm"
+                                    class="whitespace-pre-wrap px-4 py-2 text-sm [overflow-wrap:anywhere]"
                                     :class="m.isMine ? 'text-obsidian-950' : 'text-white/85'"
                                 >
                                     {{ m.body }}
                                 </p>
                             </div>
 
-                            <!-- звичайний текст -->
+                            <!-- голосове (надіслане із застосунку) -->
                             <div
-                                v-else
-                                class="inline-block rounded-2xl px-4 py-2 text-sm"
+                                v-else-if="m.type === 'voice'"
+                                class="inline-flex max-w-full items-center gap-2 rounded-2xl px-3 py-2"
+                                :class="m.isMine ? 'bg-gold-400/90' : 'bg-white/5 ring-1 ring-white/10'"
+                            >
+                                <span>🎤</span>
+                                <audio :src="m.attachmentUrl" controls preload="none" class="h-9 max-w-[220px]"></audio>
+                            </div>
+
+                            <!-- файл / геопозиція / контакт — картка з посиланням -->
+                            <a
+                                v-else-if="m.type === 'file' || m.type === 'location'"
+                                :href="richLink(m)"
+                                target="_blank"
+                                rel="noopener"
+                                class="inline-flex max-w-full items-center gap-2 rounded-2xl px-4 py-2 text-sm underline-offset-2 hover:underline"
                                 :class="m.isMine
                                     ? 'bg-gold-400/90 text-obsidian-950'
                                     : 'bg-white/5 text-white/85 ring-1 ring-white/10'"
                             >
-                                <p class="whitespace-pre-wrap break-words">{{ m.body }}</p>
+                                <span class="min-w-0 [overflow-wrap:anywhere]">{{ richLabel(m) }}</span>
+                            </a>
+                            <div
+                                v-else-if="m.type === 'contact'"
+                                class="inline-flex max-w-full items-center gap-2 rounded-2xl px-4 py-2 text-sm"
+                                :class="m.isMine
+                                    ? 'bg-gold-400/90 text-obsidian-950'
+                                    : 'bg-white/5 text-white/85 ring-1 ring-white/10'"
+                            >
+                                👤 <span class="min-w-0 [overflow-wrap:anywhere]">{{ m.contact?.name ?? 'Контакт' }}<template v-if="m.contact?.position"> · {{ m.contact.position }}</template></span>
+                            </div>
+
+                            <!-- звичайний текст. overflow-wrap:anywhere — інакше довгий
+                                 рядок без пробілів (посилання тощо) розпирав бульбашку
+                                 за межі екрана. -->
+                            <div
+                                v-else
+                                class="inline-block max-w-full rounded-2xl px-4 py-2 text-sm"
+                                :class="m.isMine
+                                    ? 'bg-gold-400/90 text-obsidian-950'
+                                    : 'bg-white/5 text-white/85 ring-1 ring-white/10'"
+                            >
+                                <p v-if="m.type === 'text_e2ee'" class="italic opacity-70">
+                                    Повідомлення з застосунку — відкрийте його в Monsory Connect
+                                </p>
+                                <p v-else class="whitespace-pre-wrap [overflow-wrap:anywhere]">{{ m.body }}</p>
                             </div>
 
                             <p class="mt-0.5 px-1 text-[10px] text-white/25">

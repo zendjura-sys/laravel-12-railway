@@ -23,6 +23,11 @@ class ConversationScreen extends StatefulWidget {
 
   const ConversationScreen({super.key, required this.conversationId});
 
+  /// Розмова, яку користувач зараз реально бачить на екрані — push-банер
+  /// (push_notifications.dart) звіряється з цим перед показом, щоб не
+  /// дублювати повідомлення, яке й так щойно з'явилось у відкритому чаті.
+  static int? currentlyOpenConversationId;
+
   @override
   State<ConversationScreen> createState() => _ConversationScreenState();
 }
@@ -50,6 +55,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
   @override
   void initState() {
     super.initState();
+    ConversationScreen.currentlyOpenConversationId = widget.conversationId;
     _load();
     _pollTimer = Timer.periodic(const Duration(seconds: 3), (_) => _poll());
     // Кнопка "надіслати" вмикається/вимикається залежно від тексту —
@@ -61,6 +67,12 @@ class _ConversationScreenState extends State<ConversationScreen> {
 
   @override
   void dispose() {
+    // Лише якщо це досі ТА САМА розмова — навігація вглиб (наприклад,
+    // у профіль учасника) не повинна скидати позначку "відкрито",
+    // інакше push-банер знову з'явиться, поки чат просто позаду в стеку.
+    if (ConversationScreen.currentlyOpenConversationId == widget.conversationId) {
+      ConversationScreen.currentlyOpenConversationId = null;
+    }
     _pollTimer?.cancel();
     _recordTimer?.cancel();
     _voiceRecorder.dispose();
@@ -687,7 +699,18 @@ class _ConversationScreenState extends State<ConversationScreen> {
                             // false, — стандартний спосіб зробити "своп для
                             // дії" (тут — відповісти), не видаляючи елемент:
                             // бульбашка пружинить назад одразу після свопу.
-                            child: Dismissible(
+                            //
+                            // Align зовні — обов'язковий: Dismissible всередині
+                            // сам є Stack'ом, який "розслаблює" (loosen)
+                            // обмеження ширини для свого child і позиціонує
+                            // його за замовчуванням по лівому краю
+                            // (AlignmentDirectional.topStart), повністю
+                            // ігноруючи crossAxisAlignment бульбашки всередині
+                            // — без цього Align усі повідомлення (свої й
+                            // чужі) прилипали ліворуч, різнились лише кольором.
+                            child: Align(
+                              alignment: m['isMine'] == true ? Alignment.centerRight : Alignment.centerLeft,
+                              child: Dismissible(
                               key: ValueKey('reply-${m['id']}'),
                               direction: DismissDirection.startToEnd,
                               confirmDismiss: (_) async {
@@ -708,6 +731,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
                                   formatTime: _formatTime,
                                 ),
                               ),
+                            ),
                             ),
                           );
                         },

@@ -43,7 +43,11 @@ class NotificationService
      */
     public function notify(User $user, string $type, string $title, ?string $body = null, ?array $telegramButton = null): Notification
     {
-        $notification = Notification::notify($user->id, $type, $title, $body);
+        // Та сама url, що йде під кнопкою в Telegram і в data-пейлоуд
+        // push — тепер зберігається і у власній web-копії, щоб "дзвіночок"
+        // у мобільному застосунку теж міг вести за призначенням, а не
+        // лише позначати сповіщення прочитаним.
+        $notification = Notification::notify($user->id, $type, $title, $body, $telegramButton['url'] ?? null);
 
         $this->deliverToTelegram($user, $type, $title, $body, $telegramButton);
         $this->deliverToWebPush($user, $title, $body, $telegramButton['url'] ?? null);

@@ -6,6 +6,7 @@ import '../widgets/animated_counter.dart';
 import '../widgets/fade_slide_in.dart';
 import '../widgets/member_card_widget.dart';
 import '../widgets/shimmer_skeleton.dart';
+import 'admin_reports_screen.dart';
 import 'login_screen.dart';
 import 'member_profile_screen.dart';
 import 'messenger/conversations_screen.dart';
@@ -25,6 +26,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Map<String, dynamic>? _data;
   Map<String, dynamic>? _profile;
   int _unreadNotifications = 0;
+  bool _canManageReports = false;
   bool _loading = true;
   String? _error;
 
@@ -53,6 +55,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
       try {
         final notifications = await ApiClient.instance.notifications();
         if (mounted) setState(() => _unreadNotifications = notifications['unreadCount'] as int? ?? 0);
+      } catch (_) {}
+      try {
+        final me = await ApiClient.instance.me();
+        final permissions = (me['permissions'] as List?)?.cast<String>() ?? [];
+        if (mounted) setState(() => _canManageReports = permissions.contains('reports.manage'));
       } catch (_) {}
     } on ApiException catch (e) {
       if (e.statusCode == 401) {
@@ -208,6 +215,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 ),
                               ),
                             ],
+                            if (_canManageReports) ...[
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: _QuickActionButton(
+                                  icon: Icons.fact_check_outlined,
+                                  label: 'Перевірити звіти',
+                                  onTap: () => Navigator.of(context)
+                                      .push(MaterialPageRoute(builder: (_) => const AdminReportsScreen())),
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                       ),
@@ -237,7 +255,13 @@ class _QuickActionButton extends StatelessWidget {
           children: [
             Icon(icon, color: AppColors.gold300),
             const SizedBox(height: 6),
-            Text(label, style: const TextStyle(color: Colors.white70, fontSize: 13)),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(color: Colors.white70, fontSize: 13),
+            ),
           ],
         ),
       ),

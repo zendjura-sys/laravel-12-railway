@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../api_client.dart';
+import '../services/notification_router.dart';
 import '../theme.dart';
 import '../widgets/fade_slide_in.dart';
 
@@ -42,6 +43,11 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     if (notification['read_at'] != null) return;
     setState(() => notification['read_at'] = DateTime.now().toIso8601String());
     await ApiClient.instance.markNotificationRead(notification['id'] as int);
+  }
+
+  Future<void> _open(Map<String, dynamic> notification) async {
+    _markRead(notification);
+    await openNotificationTarget(context, notification['url'] as String?);
   }
 
   Future<void> _markAllRead() async {
@@ -123,7 +129,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                               ),
                               child: InkWell(
                                 borderRadius: BorderRadius.circular(14),
-                                onTap: () => _markRead(n),
+                                onTap: () => _open(n),
                                 child: Container(
                                   margin: const EdgeInsets.only(bottom: 8),
                                   padding: const EdgeInsets.all(14),

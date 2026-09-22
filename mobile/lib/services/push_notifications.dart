@@ -1,7 +1,9 @@
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import '../api_client.dart';
+import '../screens/messenger/conversation_screen.dart';
 import '../screens/notifications_screen.dart';
+import 'notification_router.dart';
 
 /// Мобільний push (FCM) — четвертий канал доставки поруч із web-копією,
 /// Telegram і браузерним push (див. серверний
@@ -42,6 +44,12 @@ class PushNotifications {
         final body = message.notification?.body;
         if (title == null) return;
 
+        final url = message.data['url'] as String?;
+        // Повідомлення саме в ту розмову, яку користувач і так дивиться
+        // зараз, — воно вже з'явилось у чаті через опитування, репліка
+        // зверху тут лише дублює те, що й так видно.
+        if (url != null && _isCurrentlyOpenConversation(url)) return;
+
         final context = navigatorKey.currentContext;
         if (context == null) return;
         // Контекст береться наживо всередині синхронного колбека listen(),
@@ -50,15 +58,23 @@ class PushNotifications {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(body != null ? '$title\n$body' : title),
           behavior: SnackBarBehavior.floating,
+          action: url == null
+              ? null
+              : SnackBarAction(
+                  label: 'Відкрити',
+                  // ignore: use_build_context_synchronously
+                  onPressed: () => openNotificationTarget(context, url),
+                ),
         ));
       });
 
       // Застосунок був згорнутий і його відкрили тапом по сповіщенню —
-      // ведемо одразу в список сповіщень.
-      FirebaseMessaging.onMessageOpenedApp.listen((_) => _openNotifications(navigatorKey));
+      // ведемо за призначенням (конкретний чат, звіти на розгляд тощо),
+      // якщо url розпізнано, інакше — у загальний список сповіщень.
+      FirebaseMessaging.onMessageOpenedApp.listen((message) => _openTarget(navigatorKey, message));
 
       final initialMessage = await _messaging.getInitialMessage();
-      if (initialMessage != null) _openNotifications(navigatorKey);
+      if (initialMessage != null) _openTarget(navigatorKey, initialMessage);
     } catch (_) {
       // Немає Google Play Services на пристрої, дозвіл відхилено назавжди
       // тощо — push просто не працює, решта застосунку не повинна падати.
@@ -68,6 +84,21 @@ class PushNotifications {
   void _openNotifications(GlobalKey<NavigatorState> navigatorKey) {
     navigatorKey.currentState?.push(
         MaterialPageRoute(builder: (_) => const NotificationsScreen()));
+  }
+
+  bool _isCurrentlyOpenConversation(String url) {
+    final path = Uri.tryParse(url)?.path ?? url;
+    if (!path.startsWith('/messenger/')) return false;
+    final id = int.tryParse(path.replaceFirst('/messenger/', ''));
+    return id != null && id == ConversationScreen.currentlyOpenConversationId;
+  }
+
+  Future<void> _openTarget(GlobalKey<NavigatorState> navigatorKey, RemoteMessage message) async {
+    final context = navigatorKey.currentContext;
+    if (context == null) return;
+    // ignore: use_build_context_synchronously
+    final opened = await openNotificationTarget(context, message.data['url'] as String?);
+    if (!opened) _openNotifications(navigatorKey);
   }
 
   Future<void> _registerToken(String token) async {

@@ -1,0 +1,74 @@
+name: Unity Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'BusinessTycoon/**'
+      - '.github/workflows/unity-android.yml'
+
+jobs:
+  core-tests:
+    name: Тесты игровой логики
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Установить Mono
+        run: sudo apt-get update -q && sudo apt-get install -y -q mono-mcs mono-runtime
+      - name: Собрать и запустить тесты
+        working-directory: BusinessTycoon/CoreTests
+        run: |
+          mcs -out:core-tests.exe CoreTests.cs ../Assets/Scripts/Core/*.cs
+          mono core-tests.exe
+
+  build-android:
+    name: Сборка APK
+    needs: core-tests
+    runs-on: ubuntu-latest
+    env:
+      HAS_LICENSE: ${{ secrets.UNITY_LICENSE != '' && secrets.UNITY_EMAIL != '' && secrets.UNITY_PASSWORD != '' }}
+    steps:
+      - name: Нет лицензии Unity
+        if: env.HAS_LICENSE != 'true'
+        run: |
+          echo "::warning::Добавьте секреты UNITY_LICENSE, UNITY_EMAIL и UNITY_PASSWORD (см. BusinessTycoon/README.md), чтобы собрать APK."
+
+      - name: Освободить место на диске
+        if: env.HAS_LICENSE == 'true'
+        uses: jlumbroso/free-disk-space@v1.3.1
+        with:
+          android: false
+          large-packages: false
+
+      - uses: actions/checkout@v4
+        if: env.HAS_LICENSE == 'true'
+
+      - name: Кэш Library
+        if: env.HAS_LICENSE == 'true'
+        uses: actions/cache@v4
+        with:
+          path: BusinessTycoon/Library
+          key: Library-Android-${{ hashFiles('BusinessTycoon/Assets/**', 'BusinessTycoon/Packages/**', 'BusinessTycoon/ProjectSettings/**') }}
+          restore-keys: Library-Android-
+
+      - name: Сборка Unity
+        if: env.HAS_LICENSE == 'true'
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          projectPath: BusinessTycoon
+          targetPlatform: Android
+          buildName: BusinessTycoon
+          buildMethod: BuildScript.BuildAndroidCI
+          androidExportType: androidPackage
+
+      - name: Загрузить APK
+        if: env.HAS_LICENSE == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: BusinessTycoon-apk
+          path: build/Android
+          if-no-files-found: error

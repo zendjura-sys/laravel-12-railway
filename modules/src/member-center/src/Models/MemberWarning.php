@@ -108,6 +108,10 @@ class MemberWarning extends Model
             'typeLabel' => $this->label(),
             'emoji' => self::TYPE_EMOJI[$this->type] ?? '⚠️',
             'ruleCode' => $this->rule_code,
+            // Коротка назва порушення ("НРП нік") — з ядра (App\Support\FamilyRules);
+            // зі старим ядром без SHORT_LABELS просто null.
+            'ruleLabel' => $this->rule_code && method_exists(\App\Support\FamilyRules::class, 'shortLabel')
+                ? \App\Support\FamilyRules::shortLabel($this->rule_code) : null,
             'reason' => $this->reason,
             'amount' => $this->amount,
             'originalAmount' => $this->original_amount,

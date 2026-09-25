@@ -295,7 +295,7 @@ function fmt(iso) {
                                     <span v-if="p.type === 'fine'" class="text-sm text-amber-200">{{ money(p.amount) }}</span>
                                     <span v-if="p.originalAmount" class="text-xs text-white/30 line-through">{{ money(p.originalAmount) }}</span>
                                     <span class="text-sm text-white">{{ p.user?.name }}</span>
-                                    <span v-if="p.ruleCode" class="font-mono text-xs text-gold-300">п. {{ p.ruleCode }}</span>
+                                    <span v-if="p.ruleCode" class="text-xs text-gold-300"><span class="font-mono">п. {{ p.ruleCode }}</span><template v-if="p.ruleLabel"> · {{ p.ruleLabel }}</template></span>
                                     <span v-if="p.auto" class="text-[11px] text-white/40">авто</span>
                                 </div>
                                 <p class="mt-2 text-sm text-white/70 [overflow-wrap:anywhere]">{{ p.reason }}</p>

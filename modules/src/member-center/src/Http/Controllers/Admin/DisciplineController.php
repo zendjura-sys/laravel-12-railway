@@ -125,17 +125,24 @@ class DisciplineController
         ];
     }
 
-    /** Пункти правил родини для вибору в формі — code + короткий текст. */
+    /**
+     * Пункти правил родини для вибору в формі — лише порушення з короткою
+     * назвою ("2.1 — НРП нік"), без повного тексту правила; penalty —
+     * підказка, що передбачено правилами за цей пункт.
+     */
     private function ruleOptions(): array
     {
         $book = collect(FamilyRules::payload()['books'])->firstWhere('slug', 'monsory');
+        $penalties = collect($book['sections'] ?? [])
+            ->flatMap(fn ($s) => $s['rules'])
+            ->mapWithKeys(fn ($r) => [$r['code'] => $r['penalties'][0]['text'] ?? null]);
 
-        return collect($book['sections'] ?? [])
-            ->flatMap(fn ($s) => collect($s['rules'])->map(fn ($r) => [
-                'code' => $r['code'],
-                'text' => mb_strimwidth($r['text'], 0, 110, '…'),
-                'penalty' => $r['penalties'][0]['text'] ?? null,
-            ]))
+        return collect(FamilyRules::SHORT_LABELS)
+            ->map(fn (string $label, string $code) => [
+                'code' => (string) $code,
+                'text' => $label,
+                'penalty' => $penalties[$code] ?? null,
+            ])
             ->values()
             ->all();
     }

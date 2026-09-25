@@ -64,7 +64,9 @@ class NotifyOnMemberWarningIssued
     /** @return array{0:string,1:string} */
     public static function texts(MemberWarning $w): array
     {
-        $rule = $w->rule_code ? "п. {$w->rule_code} правил родини" : 'правила родини';
+        $short = $w->rule_code && method_exists(\App\Support\FamilyRules::class, 'shortLabel')
+            ? \App\Support\FamilyRules::shortLabel($w->rule_code) : null;
+        $rule = $w->rule_code ? "п. {$w->rule_code}".($short ? " · {$short}" : '') : 'правила родини';
         $reason = trim((string) $w->reason);
         $count = fn (string $type) => MemberWarning::query()
             ->where('user_id', $w->user_id)->where('type', $type)->where('status', 'active')->count();

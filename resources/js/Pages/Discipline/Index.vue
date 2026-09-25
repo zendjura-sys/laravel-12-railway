@@ -107,7 +107,7 @@ function dots(count, limit) {
                                     <span class="rounded-full border px-2.5 py-0.5 text-xs" :class="typeStyle[p.type]">{{ p.emoji }} {{ p.typeLabel }}</span>
                                     <span v-if="p.type === 'fine'" class="text-base text-amber-200">{{ money(p.amount) }}</span>
                                     <span v-if="p.originalAmount" class="text-xs text-white/30 line-through">{{ money(p.originalAmount) }}</span>
-                                    <Link v-if="p.ruleCode && route().has('rules')" :href="route('rules')" class="font-mono text-xs text-gold-300 hover:underline">п. {{ p.ruleCode }}</Link>
+                                    <Link v-if="p.ruleCode && route().has('rules')" :href="route('rules')" class="text-xs text-gold-300 hover:underline"><span class="font-mono">п. {{ p.ruleCode }}</span><template v-if="p.ruleLabel"> · {{ p.ruleLabel }}</template></Link>
                                 </div>
                                 <p class="mt-2 text-sm text-white/75 [overflow-wrap:anywhere]">{{ p.reason }}</p>
                                 <p class="mt-1 text-[11px] text-white/35">

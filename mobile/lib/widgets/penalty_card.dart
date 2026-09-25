@@ -84,7 +84,8 @@ class PenaltyCard extends StatelessWidget {
                   Text((p['user'] as Map)['name'] as String? ?? '',
                       style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500)),
                 if (p['ruleCode'] != null)
-                  Text('п. ${p['ruleCode']}', style: TextStyle(color: AppColors.gold300, fontSize: 12)),
+                  Text('п. ${p['ruleCode']}${p['ruleLabel'] != null ? ' · ${p['ruleLabel']}' : ''}',
+                      style: TextStyle(color: AppColors.gold300, fontSize: 12)),
               ],
             ),
             const SizedBox(height: 8),

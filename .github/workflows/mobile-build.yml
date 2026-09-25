@@ -1,0 +1,95 @@
+name: Mobile — Build Android APK
+
+on:
+  push:
+    branches: ['**']
+    paths:
+      - 'mobile/**'
+      - '.github/workflows/mobile-build.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.27.1'
+          channel: 'stable'
+
+      - run: flutter pub get
+
+      - run: flutter analyze
+
+      - run: flutter test
+
+      # Стабільний підпис релізу — без цього кроку кожна збірка йде під
+      # випадковим дебаг-ключем чистого runner'а, і Android відмовляється
+      # ставити нову версію поверх старої ("конфліктує з іншим пакетом").
+      # Секрет ANDROID_KEYSTORE_BASE64 відсутній (форк, інший репозиторій
+      # без секретів) — крок просто нічого не пише, і build.gradle сам
+      # падає назад на дебаг-підпис.
+      - name: Decode release keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 --decode > android/app/upload-keystore.jks
+            cat > android/key.properties <<EOF
+          storePassword=$KEYSTORE_PASSWORD
+          keyPassword=$KEYSTORE_PASSWORD
+          keyAlias=$KEY_ALIAS
+          storeFile=upload-keystore.jks
+          EOF
+          fi
+
+      # run_number росте на +1 з кожним прогоном цього workflow — просте й
+      # гарантовано зростаюче джерело "номера збірки", без ручного стеження
+      # за версією в pubspec.yaml. Пишеться і в сам застосунок (--build-number,
+      # dart-define), і поруч у реліз (build.txt), щоб деплой на сервері міг
+      # прочитати "яка збірка щойно вийшла" й виставити м'яку пропозицію
+      # оновитись (mobile_app_latest_build) без участі адміна.
+      - name: Build release APK
+        run: |
+          flutter build apk --release \
+            --build-number=${{ github.run_number }} \
+            --dart-define=API_BASE_URL=https://monsory.net \
+            --dart-define=BUILD_NUMBER=${{ github.run_number }}
+
+      - name: Rename APK for a stable filename
+        run: |
+          cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/monsory-connect.apk
+          echo -n "${{ github.run_number }}" > build/app/outputs/flutter-apk/build.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: monsory-connect-apk
+          path: mobile/build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 30
+
+      # Публікуємо в GitHub Release з фіксованим тегом "mobile-latest" —
+      # кожна успішна збірка перезаписує той самий реліз, тож посилання на
+      # .apk (.../releases/latest/download/monsory-connect.apk) лишається
+      # незмінним і доступним БЕЗ логіну в GitHub, на відміну від Actions
+      # Artifacts вище (ті — для налагодження конкретного прогону).
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: mobile-latest
+          name: Monsory Connect (Android)
+          body: |
+            Автоматична збірка #${{ github.run_number }} з коміту ${{ github.sha }} (${{ github.ref_name }}).
+            Завантажте monsory-connect.apk нижче й встановіть на Android (потрібно дозволити встановлення з невідомих джерел).
+          make_latest: true
+          files: |
+            mobile/build/app/outputs/flutter-apk/monsory-connect.apk
+            mobile/build/app/outputs/flutter-apk/build.txt

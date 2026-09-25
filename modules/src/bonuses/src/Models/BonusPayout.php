@@ -15,6 +15,7 @@ class BonusPayout extends Model
         'bizwar_amount', 'bizwar_winrate',
         'contract_amount', 'contracts_count',
         'streak_bonus_amount', 'contracts_count_bonus_amount', 'investment_bonus_amount',
+        'discipline_deduction_amount',
         'total_amount',
         'paid', 'paid_at', 'paid_by',
     ];

@@ -87,7 +87,10 @@ class BonusCalculator
                 : 0;
             $investmentBonus = $this->calculateInvestmentBonus($user, $weekStart, $weekEnd);
 
-            $total = $bizwar['amount'] + $contracts['amount'] + $streakBonus + $contractsCountBonus + $investmentBonus;
+            $gross = $bizwar['amount'] + $contracts['amount'] + $streakBonus + $contractsCountBonus + $investmentBonus;
+            // Правила родини: поки діє догана — премія на 50% (Кадровий центр).
+            $deduction = \Addons\Bonuses\Support\DisciplineFines::hasActiveReprimand($userId) ? intdiv($gross, 2) : 0;
+            $total = $gross - $deduction;
 
             $payout = BonusPayout::updateOrCreate(
                 ['user_id' => $userId, 'week_start' => $weekDate],
@@ -99,6 +102,8 @@ class BonusCalculator
                     'streak_bonus_amount' => $streakBonus,
                     'contracts_count_bonus_amount' => $contractsCountBonus,
                     'investment_bonus_amount' => $investmentBonus,
+                    ...(\Illuminate\Support\Facades\Schema::hasColumn('bonus_payouts', 'discipline_deduction_amount')
+                        ? ['discipline_deduction_amount' => $deduction] : []),
                     'total_amount' => $total,
                     // paid_by лишається null — зарахувала система, не адмін.
                     ...($credit ? ['paid' => true, 'paid_at' => now()] : []),

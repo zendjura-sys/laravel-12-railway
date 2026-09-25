@@ -130,6 +130,13 @@ onBeforeUnmount(() => {
                                 Правила
                             </NavLink>
                             <NavLink
+                                v-if="route().has('discipline.index')"
+                                :href="route('discipline.index')"
+                                :active="route().current('discipline.*')"
+                            >
+                                Покарання
+                            </NavLink>
+                            <NavLink
                                 :href="route('guide')"
                                 :active="route().current('guide')"
                             >
@@ -339,6 +346,13 @@ onBeforeUnmount(() => {
                         :active="route().current('rules')"
                     >
                         Правила
+                    </ResponsiveNavLink>
+                    <ResponsiveNavLink
+                        v-if="route().has('discipline.index')"
+                        :href="route('discipline.index')"
+                        :active="route().current('discipline.*')"
+                    >
+                        Мої покарання
                     </ResponsiveNavLink>
                     <ResponsiveNavLink
                         :href="route('guide')"

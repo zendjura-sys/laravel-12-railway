@@ -33,7 +33,9 @@ class NotificationService
         'leave_request_reviewed' => '🏖',
         'achievement_unlocked' => '🏆',
         'investment_tier_unlocked' => '💎',
-        'member_warning_issued' => '⚠️',
+        'member_warning_issued' => '⚖️',
+        'member_penalty_updated' => '⚖️',
+        'member_reprimand_limit' => '🚨',
     ];
 
     /**

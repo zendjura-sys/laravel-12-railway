@@ -3,7 +3,7 @@ import ApplicationLogo from '@/Components/ApplicationLogo.vue';
 import AmbientBackground from '@/Components/AmbientBackground.vue';
 import { Link } from '@inertiajs/vue3';
 import { ref } from 'vue';
-import { AlertTriangle, Blocks, CalendarDays, Handshake, History, IdCard, LayoutDashboard, Megaphone, Menu, MessageCircle, Palette, ScrollText, Settings, ShieldCheck, ShieldOff, Target, TrendingUp, Users, Wallet, X } from '@lucide/vue';
+import { AlertTriangle, Blocks, CalendarDays, Handshake, History, IdCard, LayoutDashboard, Megaphone, Menu, MessageCircle, Palette, Scale, ScrollText, Settings, ShieldCheck, ShieldOff, Target, TrendingUp, Users, Wallet, X } from '@lucide/vue';
 
 defineProps({
     title: { type: String, default: '' },
@@ -22,6 +22,7 @@ const navGroups = [
             { name: 'admin.reports.index', label: 'Модерація звітів', can: 'manageReports', icon: ScrollText },
             { name: 'admin.progression.index', label: 'Прогресія', can: 'manageProgression', icon: TrendingUp },
             { name: 'admin.members.index', label: 'Кадровий облік', can: 'manageMembers', icon: IdCard },
+            { name: 'admin.discipline.index', label: 'Покарання', can: 'manageMembers', icon: Scale },
             { name: 'admin.family-goals.index', label: 'Цілі родини', can: 'manageGoals', icon: Target },
             { name: 'admin.family-events.index', label: 'Події родини', can: 'manageEvents', icon: CalendarDays },
             { name: 'admin.broadcasts.index', label: 'Розсилки', can: 'manageBroadcasts', icon: Megaphone },

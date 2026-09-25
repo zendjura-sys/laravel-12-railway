@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import '../screens/admin_discipline_screen.dart';
 import '../screens/admin_leave_requests_screen.dart';
 import '../screens/admin_reports_screen.dart';
+import '../screens/discipline_screen.dart';
 import '../screens/messenger/conversation_screen.dart';
 
 /// Куди веде url зі сповіщення (push-даних чи запису в "дзвіночку") —
@@ -27,6 +29,16 @@ Future<bool> openNotificationTarget(BuildContext context, String? url) async {
       return true;
     }
     return false;
+  }
+
+  if (_matches(path, '/discipline')) {
+    await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const DisciplineScreen()));
+    return true;
+  }
+
+  if (_matches(path, '/admin/discipline')) {
+    await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AdminDisciplineScreen()));
+    return true;
   }
 
   if (_matches(path, '/admin/reports')) {

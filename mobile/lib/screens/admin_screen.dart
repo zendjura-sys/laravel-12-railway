@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../api_client.dart';
 import '../theme.dart';
 import 'admin_bonuses_screen.dart';
+import 'admin_discipline_screen.dart';
 import 'admin_broadcasts_screen.dart';
 import 'admin_events_screen.dart';
 import 'admin_family_goals_screen.dart';
@@ -28,6 +29,7 @@ class _AdminScreenState extends State<AdminScreen> {
   List<String> _permissions = [];
   int? _pendingReports;
   int? _pendingLeaveRequests;
+  int? _unpaidFines;
   int? _pendingCashRequests;
   bool _loading = true;
   String? _error;
@@ -67,6 +69,11 @@ class _AdminScreenState extends State<AdminScreen> {
         try {
           final pending = await ApiClient.instance.adminPendingLeaveRequests();
           if (mounted) setState(() => _pendingLeaveRequests = pending.length);
+        } catch (_) {}
+        try {
+          final discipline = await ApiClient.instance.adminDiscipline(status: 'fines');
+          final stats = discipline['stats'] as Map<String, dynamic>? ?? {};
+          if (mounted) setState(() => _unpaidFines = stats['unpaidFines'] as int? ?? 0);
         } catch (_) {}
       }
       if (permissions.contains('bonuses.manage')) {
@@ -154,6 +161,17 @@ class _AdminScreenState extends State<AdminScreen> {
                             onTap: () async {
                               await Navigator.of(context)
                                   .push(MaterialPageRoute(builder: (_) => const AdminLeaveRequestsScreen()));
+                              _load();
+                            },
+                          ),
+                        if (_permissions.contains('members.manage'))
+                          _ModerationTile(
+                            icon: Icons.balance_outlined,
+                            label: 'Покарання',
+                            count: _unpaidFines,
+                            onTap: () async {
+                              await Navigator.of(context)
+                                  .push(MaterialPageRoute(builder: (_) => const AdminDisciplineScreen()));
                               _load();
                             },
                           ),

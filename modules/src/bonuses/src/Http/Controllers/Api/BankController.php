@@ -78,7 +78,9 @@ class BankController
                 'sign' => '+',
                 'amount' => $p->total_amount,
                 'label' => 'Тижнева премія',
-                'detail' => 'Тиждень від '.\Illuminate\Support\Carbon::parse($p->week_start)->format('d.m.Y'),
+                'detail' => 'Тиждень від '.\Illuminate\Support\Carbon::parse($p->week_start)->format('d.m.Y')
+                    .(($p->discipline_deduction_amount ?? 0) > 0
+                        ? ' · утримано '.number_format($p->discipline_deduction_amount, 0, ',', ' ').'₴ (активна догана)' : ''),
                 'at' => $p->paid_at ?? $p->created_at,
             ]);
         }
@@ -143,6 +145,8 @@ class BankController
                 'at' => $r['resolved_at'] ?? $r['created_at'],
             ]);
         }
+
+        $transactions = $transactions->concat(\Addons\Bonuses\Support\DisciplineFines::statementEntries($userId));
 
         $transactions = $transactions->sortByDesc('at')->values()->take(60);
 

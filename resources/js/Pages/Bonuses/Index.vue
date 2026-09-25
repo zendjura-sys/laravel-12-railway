@@ -113,6 +113,7 @@ const transactionIcon = {
     deposit_open: '🔒',
     deposit_close: '🔓',
     cash_request: '🤝',
+    fine: '🧾',
 };
 </script>
 

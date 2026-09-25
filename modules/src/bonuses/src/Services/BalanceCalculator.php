@@ -7,6 +7,7 @@ use Addons\Bonuses\Models\BankTransfer;
 use Addons\Bonuses\Models\BonusPayout;
 use Addons\Bonuses\Models\CashRequest;
 use Addons\Bonuses\Models\ManualBonusAward;
+use Addons\Bonuses\Support\DisciplineFines;
 
 /**
  * Баланс картки — не сума всіх нарахувань "за все життя", а РЕАЛЬНО
@@ -39,6 +40,9 @@ class BalanceCalculator
         // cancelled повертає — той самий принцип, що й у депозитів.
         $cashedOut = (int) CashRequest::query()->where('user_id', $userId)->whereIn('status', ['pending', 'completed'])->sum('amount');
 
-        return $earned - $sent + $received - $locked + $returned - $cashedOut;
+        // Штрафи з Кадрового центру, сплачені учасником з рахунку.
+        $fines = DisciplineFines::paidFromBank($userId);
+
+        return $earned - $sent + $received - $locked + $returned - $cashedOut - $fines;
     }
 }

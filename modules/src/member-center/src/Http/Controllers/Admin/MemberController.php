@@ -3,11 +3,11 @@
 namespace Addons\MemberCenter\Http\Controllers\Admin;
 
 use Addons\MemberCenter\Events\LeaveRequestReviewed;
-use Addons\MemberCenter\Events\MemberWarningIssued;
 use Addons\MemberCenter\Models\LeaveRequest;
 use Addons\MemberCenter\Models\MemberNote;
 use Addons\MemberCenter\Models\MemberProfile;
 use Addons\MemberCenter\Models\MemberWarning;
+use Addons\MemberCenter\Services\DisciplineService;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -37,7 +37,7 @@ class MemberController
                 'notes_count',
             )
             ->selectSub(
-                MemberWarning::query()->selectRaw('count(*)')->whereColumn('user_id', 'users.id'),
+                MemberWarning::query()->selectRaw('count(*)')->whereColumn('user_id', 'users.id')->whereIn('status', ['active', 'overdue']),
                 'warnings_count',
             )
             ->when($search, fn ($q) => $q->where(fn ($q2) => $q2
@@ -129,10 +129,11 @@ class MemberController
     public function warnings(User $user): JsonResponse
     {
         $warnings = MemberWarning::query()
-            ->with('author:id,name')
+            ->with('author:id,name', 'resolver:id,name')
             ->where('user_id', $user->id)
-            ->latest()
-            ->get();
+            ->latest('id')
+            ->get()
+            ->map(fn (MemberWarning $w) => $w->toPayload());
 
         return response()->json([
             'ok' => true,
@@ -144,29 +145,34 @@ class MemberController
     }
 
     /**
-     * На відміну від storeNote (приватно, ніхто не дізнається) — тут
-     * дисциплінарна дія: учасника одразу сповіщають (web + Telegram, якщо
-     * встановлено Notifications) через MemberWarningIssued.
+     * Видача з панелі кадрового обліку — той самий DisciplineService, що й
+     * у розділі «Покарання» (строки, ескалація, сповіщення). Легасі-поле
+     * severity (старий UI) мапиться на новий тип.
      */
     public function storeWarning(Request $request, User $user): JsonResponse
     {
         $data = $request->validate([
-            'severity' => ['required', Rule::in(MemberWarning::SEVERITIES)],
+            'type' => ['required_without:severity', 'nullable', Rule::in(MemberWarning::TYPES)],
+            'severity' => ['nullable', Rule::in(MemberWarning::SEVERITIES)],
+            'rule_code' => ['nullable', 'string', 'max:20'],
             'reason' => ['required', 'string', 'max:2000'],
+            'amount' => ['required_if:type,fine', 'nullable', 'integer', 'min:1'],
         ]);
 
-        $warning = MemberWarning::create([
-            ...$data,
-            'user_id' => $user->id,
-            'author_id' => $request->user()->id,
-        ]);
-
-        Event::dispatch(new MemberWarningIssued($warning));
+        $type = $data['type'] ?? ($data['severity'] === 'severe' ? 'reprimand' : 'remark');
+        $warning = app(DisciplineService::class)->issue(
+            $user,
+            $request->user(),
+            $type,
+            $data['reason'],
+            $data['rule_code'] ?? null,
+            isset($data['amount']) ? (int) $data['amount'] : null,
+        );
 
         return response()->json([
             'ok' => true,
-            'message' => 'Попередження видано.',
-            'data' => ['warning' => $warning->load('author:id,name')],
+            'message' => MemberWarning::TYPE_LABELS[$type].' видано.',
+            'data' => ['warning' => $warning->load('author:id,name')->toPayload()],
             'errors' => null,
             'redirect' => null,
         ]);

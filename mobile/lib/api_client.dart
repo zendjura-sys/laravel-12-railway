@@ -509,6 +509,77 @@ class ApiClient {
     return data['data'] as Map<String, dynamic>;
   }
 
+  // ---------- Покарання (Кадровий центр) ----------
+
+  /// Власні покарання: {summary, bankAvailable, penalties}.
+  Future<Map<String, dynamic>> discipline() async {
+    final response = await http.get(_uri('/discipline'), headers: await _headers(auth: true));
+    final data = _decode(response) as Map<String, dynamic>;
+    return data['data'] as Map<String, dynamic>;
+  }
+
+  /// Сплатити штраф з рахунку в банку родини. Повертає повідомлення сервера.
+  Future<String> payPenalty(int id) async {
+    final response = await http.post(_uri('/discipline/$id/pay'), headers: await _headers(auth: true));
+    final data = _decode(response) as Map<String, dynamic>;
+    return data['message'] as String? ?? 'Штраф сплачено.';
+  }
+
+  /// Адмінка: {penalties, stats, types, rules}. status: open | fines | closed | all.
+  Future<Map<String, dynamic>> adminDiscipline({String status = 'open', int? userId}) async {
+    final response = await http.get(
+      _uri('/admin/discipline').replace(queryParameters: {'status': status, if (userId != null) 'user': '$userId'}),
+      headers: await _headers(auth: true),
+    );
+    final data = _decode(response) as Map<String, dynamic>;
+    return data['data'] as Map<String, dynamic>;
+  }
+
+  Future<List<dynamic>> adminDisciplineSearchMembers(String query) async {
+    final response = await http.get(
+      _uri('/admin/discipline/members/search').replace(queryParameters: {'q': query}),
+      headers: await _headers(auth: true),
+    );
+    final data = _decode(response) as Map<String, dynamic>;
+    return (data['data'] as Map<String, dynamic>)['members'] as List<dynamic>;
+  }
+
+  Future<String> adminIssuePenalty({
+    required int userId,
+    required String type,
+    required String reason,
+    String? ruleCode,
+    int? amount,
+  }) async {
+    final response = await http.post(
+      _uri('/admin/discipline'),
+      headers: await _headers(auth: true),
+      body: jsonEncode({
+        'user_id': userId,
+        'type': type,
+        'reason': reason,
+        if (ruleCode != null && ruleCode.isNotEmpty) 'rule_code': ruleCode,
+        if (amount != null) 'amount': amount,
+      }),
+    );
+    final data = _decode(response) as Map<String, dynamic>;
+    return data['message'] as String? ?? 'Покарання видано.';
+  }
+
+  Future<void> adminRevokePenalty(int id, String note) async {
+    final response = await http.post(
+      _uri('/admin/discipline/$id/revoke'),
+      headers: await _headers(auth: true),
+      body: jsonEncode({'note': note}),
+    );
+    _decode(response);
+  }
+
+  Future<void> adminMarkPenaltyPaid(int id) async {
+    final response = await http.post(_uri('/admin/discipline/$id/mark-paid'), headers: await _headers(auth: true));
+    _decode(response);
+  }
+
   Future<List<dynamic>> adminBonusesSearchMembers(String query) async {
     final response = await http.get(
       _uri('/admin/bonuses/members/search').replace(queryParameters: {'q': query}),

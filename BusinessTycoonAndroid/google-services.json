@@ -1,34 +1,34 @@
 {
   "project_info": {
-    "project_number": "936644250685",
-    "firebase_url": "https://vags-188209.firebaseio.com",
-    "project_id": "vags-188209",
-    "storage_bucket": "vags-188209.firebasestorage.app"
+    "project_number": "142512043248",
+    "firebase_url": "https://gamedev-f1e84-default-rtdb.firebaseio.com",
+    "project_id": "gamedev-f1e84",
+    "storage_bucket": "gamedev-f1e84.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:936644250685:android:f6249ce446797e3fef6e54",
+        "mobilesdk_app_id": "1:142512043248:android:369943192e8a31a5ac7e35",
         "android_client_info": {
           "package_name": "com.tycoongames.bizmagnat"
         }
       },
       "oauth_client": [
         {
-          "client_id": "936644250685-pk8dntd1diuehk8n0lq5t1n8056hpahn.apps.googleusercontent.com",
+          "client_id": "142512043248-9aa67rq1ki4lucintlei0fena6hm98iq.apps.googleusercontent.com",
           "client_type": 3
         }
       ],
       "api_key": [
         {
-          "current_key": "AIzaSyDPg1R3F0VJbCRR6bSjy6lYFpQhhn7FvYE"
+          "current_key": "AIzaSyDfGBz_2pXbPqYQaE3rpS3mqKGx7V1l1mY"
         }
       ],
       "services": {
         "appinvite_service": {
           "other_platform_oauth_client": [
             {
-              "client_id": "936644250685-1cdkjtrj1beob7099nmlo1n510rthh59.apps.googleusercontent.com",
+              "client_id": "142512043248-9aa67rq1ki4lucintlei0fena6hm98iq.apps.googleusercontent.com",
               "client_type": 3
             }
           ]

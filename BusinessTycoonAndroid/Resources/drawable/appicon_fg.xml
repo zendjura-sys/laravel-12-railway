@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+  <!-- тень монеты (объёмный «бортик», как у кнопок) -->
+  <path android:fillColor="@color/gold_lip"
+      android:pathData="M54,34 A24,24 0 1,1 53.99,34 Z" />
+  <!-- монета -->
+  <path android:fillColor="@color/gold"
+      android:pathData="M54,30 A24,24 0 1,1 53.99,30 Z" />
+  <!-- знак $ -->
+  <path android:fillColor="@color/gold_lip"
+      android:pathData="M51,38 L57,38 L57,41.5 C60.5,42.2 63,44.5 63.5,47.5 L58,47.5 C57.5,46 56,45.3 54,45.3 C51.8,45.3 50.5,46.2 50.5,47.6 C50.5,49 51.8,49.6 55,50.3 C60,51.4 64,53 64,58 C64,61.5 61.2,64.2 57,64.9 L57,68 L51,68 L51,64.8 C47,64.1 44.3,61.6 44,58 L49.5,58 C49.9,59.9 51.6,60.8 54.2,60.8 C56.7,60.8 58.3,59.9 58.3,58.3 C58.3,56.8 57,56.1 53.5,55.4 C48.6,54.4 45,52.7 45,48 C45,44.8 47.4,42.3 51,41.6 Z" />
+</vector>

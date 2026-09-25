@@ -1,0 +1,85 @@
+name: Android APK (.NET)
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'BusinessTycoonAndroid/**'
+      - 'BusinessTycoon/Assets/Scripts/Core/**'
+      - 'BusinessTycoon/CoreTests/**'
+      - '.github/workflows/android-apk.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-apk-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Сборка APK
+    runs-on: ubuntu-latest
+    env:
+      PROJECT: BusinessTycoonAndroid/BusinessTycoon.Android.csproj
+      ANDROID_SDK_DIR: ${{ github.workspace }}/../android-sdk
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Тесты игровой логики
+        run: |
+          sudo apt-get update -q && sudo apt-get install -y -q mono-mcs mono-runtime
+          cd BusinessTycoon/CoreTests
+          mcs -out:core-tests.exe CoreTests.cs ../Assets/Scripts/Core/*.cs
+          mono core-tests.exe
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: microsoft
+          java-version: '21'
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Установить workload Android
+        run: dotnet workload install android
+
+      - name: Установить Android SDK
+        run: >
+          dotnet build "$PROJECT" -t:InstallAndroidDependencies -f net10.0-android
+          -p:AndroidSdkDirectory="$ANDROID_SDK_DIR" -p:JavaSdkDirectory="$JAVA_HOME"
+          -p:AcceptAndroidSdkLicenses=True
+
+      - name: Собрать APK
+        run: >
+          dotnet publish "$PROJECT" -c Release -f net10.0-android
+          -p:AndroidSdkDirectory="$ANDROID_SDK_DIR" -p:JavaSdkDirectory="$JAVA_HOME"
+          -o out
+
+      - name: Подготовить файл
+        run: |
+          ls -la out
+          cp "$(ls out/*-Signed.apk | head -1)" BusinessTycoon.apk
+
+      - name: Загрузить артефакт
+        uses: actions/upload-artifact@v4
+        with:
+          name: BusinessTycoon-apk
+          path: BusinessTycoon.apk
+          if-no-files-found: error
+
+      # Постоянная ссылка для скачивания прямо на телефон: Releases → apk-latest
+      - name: Обновить релиз apk-latest
+        if: github.event_name != 'pull_request'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: apk-latest
+          name: Бизнес Магнат — последняя сборка
+          target_commitish: ${{ github.sha }}
+          prerelease: true
+          make_latest: false
+          body: |
+            Автоматическая сборка из ветки `${{ github.ref_name }}`, коммит ${{ github.sha }}.
+            Скачайте **BusinessTycoon.apk** на телефон и установите (разрешите установку из неизвестных источников).
+          files: BusinessTycoon.apk

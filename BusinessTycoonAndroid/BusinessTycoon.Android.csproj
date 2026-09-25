@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0-android</TargetFramework>
+    <SupportedOSPlatformVersion>26</SupportedOSPlatformVersion>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>Tycoon</RootNamespace>
+    <AssemblyName>BusinessTycoon</AssemblyName>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+
+    <ApplicationId>com.tycoongames.bizmagnat</ApplicationId>
+    <ApplicationTitle>Бизнес Магнат</ApplicationTitle>
+    <ApplicationVersion>1</ApplicationVersion>
+    <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
+
+    <!-- Готовый к установке APK (не AAB), подписанный отладочным ключом -->
+    <AndroidPackageFormat>apk</AndroidPackageFormat>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Игровая логика общая с Unity-версией: без зависимостей от движка -->
+    <Compile Include="..\BusinessTycoon\Assets\Scripts\Core\*.cs" Link="Core\%(Filename)%(Extension)" />
+  </ItemGroup>
+
+</Project>

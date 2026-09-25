@@ -26,8 +26,9 @@ namespace Tycoon.Droid
         protected override void Build()
         {
             var hint = Ui.Body(Content, 13);
-            hint.Text = "Сырьё копится на складе: продавайте его или пускайте в переработку и на улучшения. " +
-                        "Каждые 10/25/50/100… точек удваивают производство.";
+            hint.Text = "Новые бизнесы открываются с ростом уровня. Сырьё копится на складе: продавайте его или пускайте " +
+                        "в переработку и на улучшения. Каждые 10/25/50/100… точек удваивают производство. " +
+                        "Улучшение выше 5-го уровня требует «Комплектов модернизации» из магазина.";
 
             var mrow = Ui.Row(Content, 46, 8);
             modeBtns = new Btn[Modes.Length];
@@ -73,14 +74,14 @@ namespace Tycoon.Droid
         {
             for (int m = 0; m < Modes.Length; m++) modeBtns[m].SetColor(Modes[m] == mode ? Pal.Green : Pal.Btn);
 
-            // Показываем открытые бизнесы и по одному «замку» в каждой категории
+            // Показываем открытые по уровню бизнесы и по одному «замку» в каждой категории
             var teaserShown = new bool[GameData.CategoryNames.Length];
             for (int i = 0; i < items.Length; i++)
             {
                 var d = GameData.Businesses[i];
                 var b = S.biz[i];
                 var it = items[i];
-                bool open = b.seen || b.n > 0;
+                bool open = E.BizUnlocked(i) || b.n > 0;
                 int cat = (int)d.Cat;
                 bool teaser = !open && !teaserShown[cat];
                 if (teaser) teaserShown[cat] = true;
@@ -92,7 +93,7 @@ namespace Tycoon.Droid
                         Ui.Show(it.Details, false);
                         Ui.Show(it.Prod, false);
                         Ui.Show(it.Locked, true);
-                        Ui.Set(it.Locked, "🔒 Откроется при " + Fmt.Money(d.Cost * 0.6));
+                        Ui.Set(it.Locked, "🔒 Нужен уровень " + d.ReqLevel + " · цена от " + Fmt.Money(d.Cost));
                     }
                     continue;
                 }

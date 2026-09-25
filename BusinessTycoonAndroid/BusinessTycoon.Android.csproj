@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>net10.0-android</TargetFramework>
-    <SupportedOSPlatformVersion>26</SupportedOSPlatformVersion>
+    <SupportedOSPlatformVersion>28</SupportedOSPlatformVersion>
     <OutputType>Exe</OutputType>
     <RootNamespace>Tycoon</RootNamespace>
     <AssemblyName>BusinessTycoon</AssemblyName>
@@ -12,16 +12,33 @@
 
     <ApplicationId>com.tycoongames.bizmagnat</ApplicationId>
     <ApplicationTitle>Бизнес Магнат</ApplicationTitle>
-    <ApplicationVersion>1</ApplicationVersion>
-    <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
+    <ApplicationVersion>2</ApplicationVersion>
+    <ApplicationDisplayVersion>2.0</ApplicationDisplayVersion>
 
-    <!-- Готовый к установке APK (не AAB), подписанный отладочным ключом -->
+    <!-- Готовый к установке APK (не AAB) -->
     <AndroidPackageFormat>apk</AndroidPackageFormat>
   </PropertyGroup>
 
+  <!-- Подпись постоянным ключом (нужна для входа через Google): задаётся из GitHub Secrets -->
+  <PropertyGroup Condition="'$(AndroidSigningKeyStore)' != ''">
+    <AndroidKeyStore>true</AndroidKeyStore>
+  </PropertyGroup>
+
   <ItemGroup>
-    <!-- Игровая логика общая с Unity-версией: без зависимостей от движка -->
-    <Compile Include="..\BusinessTycoon\Assets\Scripts\Core\*.cs" Link="Core\%(Filename)%(Extension)" />
+    <!-- Консольные тесты ядра собираются отдельно (mono) -->
+    <Compile Remove="Tests\**" />
+    <None Remove="Tests\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Настройки Firebase: скачайте из Firebase Console и положите рядом с проектом -->
+    <AndroidAsset Include="google-services.json" Condition="Exists('google-services.json')" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Xamarin.AndroidX.Credentials" Version="1.6.0.1" />
+    <PackageReference Include="Xamarin.AndroidX.Credentials.PlayServicesAuth" Version="1.6.0.2" />
+    <PackageReference Include="Xamarin.GoogleAndroid.Libraries.Identity.GoogleId" Version="1.1.0.13" />
   </ItemGroup>
 
 </Project>

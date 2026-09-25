@@ -61,14 +61,30 @@ namespace Tycoon.Droid
 
         protected LinearLayout Cell() { return Ui.Card(Content); }
 
-        // «$1.2K + 12 Древесина»; нехватка подсвечивается красным
+        // «$1.2K + 12 Древесина (+ 2 Комплекта)»; нехватка подсвечивается красным
         protected Rich Cost(Rich r, UpgradeCost c)
         {
             r.C(Fmt.Money(c.Money), S.money >= c.Money ? Pal.Text : Pal.Red);
             r.T(" + ");
             r.C(Fmt.Num(c.Mat.Count) + " " + GameData.Resources[c.Mat.Res].Name, E.HasMat(c.Mat) ? Pal.Text : Pal.Red);
+            if (c.Item >= 0)
+                r.T(" + ").C(Icons.Of(GameData.Items[c.Item].Id) + "×" + c.ItemCount, E.HasItems(c) ? Pal.Text : Pal.Red);
             return r;
         }
+
+        // Список условий с галочками
+        protected static Rich ReqText(System.Collections.Generic.List<Req> reqs)
+        {
+            var r = new Rich();
+            for (int i = 0; i < reqs.Count; i++)
+            {
+                if (i > 0) r.N();
+                r.C(reqs[i].Ok ? "✓ " : "✗ ", reqs[i].Ok ? Pal.Green : Pal.Red).T(reqs[i].Text);
+            }
+            return r;
+        }
+
+        protected static string IconOf(string id) { return Icons.Of(id); }
     }
 
     public class Shell
@@ -76,6 +92,7 @@ namespace Tycoon.Droid
         readonly MainActivity activity;
         public GameEngine Engine { get { return activity.Engine; } }
         public MainActivity Activity { get { return activity; } }
+        public CloudService Cloud { get { return activity.Cloud; } }
 
         public FrameLayout Root;
         FrameLayout overlay;
@@ -85,8 +102,9 @@ namespace Tycoon.Droid
         int current = -1;
         View modal;
 
-        static readonly string[] TabNames = { "Главная", "Бизнес", "Склад", "Биржа", "Компании", "Банк" };
-        static readonly string[] TabIcons = { "🏠", "🏭", "📦", "📈", "🚀", "🏦" };
+        public const int TabHome = 0, TabBusiness = 1, TabStore = 2, TabShop = 3, TabFirms = 4, TabFinance = 5;
+        static readonly string[] TabNames = { "Главная", "Бизнес", "Склад", "Магазин", "Фирмы", "Финансы" };
+        static readonly string[] TabIcons = { "🏠", "🏭", "📦", "🛒", "🚀", "📈" };
 
         public Shell(MainActivity a) { activity = a; }
 
@@ -154,9 +172,9 @@ namespace Tycoon.Droid
                 new HomeScreen(this),
                 new BusinessScreen(this),
                 new WarehouseScreen(this),
-                new MarketScreen(this),
+                new ShopScreen(this),
                 new CompanyScreen(this),
-                new BankScreen(this),
+                new MarketScreen(this),
             };
             foreach (var s in screens) s.Create(area);
         }
@@ -174,7 +192,8 @@ namespace Tycoon.Droid
             for (int i = 0; i < TabNames.Length; i++)
             {
                 int idx = i;
-                tabs[i] = Ui.Button(bar, TabIcons[i] + "\n" + TabNames[i], Pal.Btn, () => SwitchTab(idx), 12, 0);
+                tabs[i] = Ui.Button(bar, TabIcons[i] + "\n" + TabNames[i], Pal.Btn, () => SwitchTab(idx), 11, 0);
+                tabs[i].View.SetPadding(Ui.Dp(1), Ui.Dp(2), Ui.Dp(1), Ui.Dp(6));
             }
         }
 
@@ -201,6 +220,8 @@ namespace Tycoon.Droid
                 foreach (var s in screens) s.ForceRebuild();
             }
             if (current >= 0) screens[current].Refresh();
+
+            while (e.Toasts.Count > 0) Toast(e.Toasts.Dequeue());
         }
 
         public void Toast(string text)

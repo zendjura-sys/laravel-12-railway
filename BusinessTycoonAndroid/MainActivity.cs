@@ -18,13 +18,15 @@ namespace Tycoon.Droid
         const double TickStep = 0.1;
         const double UiStep = 0.2;
         const double SaveStep = 10;
+        const double CloudStep = 120;
 
         public GameEngine Engine { get; private set; }
+        public CloudService Cloud { get; private set; }
         Shell shell;
         Handler handler;
         bool running;
         long lastMs;
-        double tickAcc, uiAcc, saveAcc;
+        double tickAcc, uiAcc, saveAcc, cloudAcc;
 
         static long Now { get { return DateTimeOffset.UtcNow.ToUnixTimeSeconds(); } }
 
@@ -41,6 +43,7 @@ namespace Tycoon.Droid
                 Engine.AddNews("Добро пожаловать! Кликайте, покупайте первую ферму и стройте империю.", 1);
             }
 
+            Cloud = new CloudService(this);
             shell = new Shell(this);
             shell.Build();
             SetContentView(shell.Root);
@@ -80,6 +83,7 @@ namespace Tycoon.Droid
         {
             running = false;
             Save();
+            CloudSave(false);
             base.OnPause();
         }
 
@@ -111,6 +115,13 @@ namespace Tycoon.Droid
                 Save();
             }
 
+            cloudAcc += dt;
+            if (cloudAcc >= CloudStep)
+            {
+                cloudAcc = 0;
+                CloudSave(false);
+            }
+
             handler.PostDelayed(Loop, 33);
         }
 
@@ -119,6 +130,95 @@ namespace Tycoon.Droid
             if (Engine == null) return;
             Engine.S.lastSeenUnix = Now;
             SaveStore.Save(this, Engine.S);
+        }
+
+        // ---------- Облако (Firebase) ----------
+        public async void CloudSave(bool manual)
+        {
+            if (!Cloud.Configured || !Cloud.SignedIn || Cloud.Busy) return;
+            Cloud.Busy = true;
+            try
+            {
+                Engine.S.lastSeenUnix = Now;
+                await Cloud.Upload(SaveStore.Serialize(Engine.S), Engine.NetWorth(), Engine.S.level);
+                Cloud.Status = "Сохранено в облако в " + DateTime.Now.ToString("HH:mm");
+                if (manual) shell.Toast("Сохранено в облако");
+            }
+            catch (Exception e)
+            {
+                Cloud.Status = "Ошибка облака: " + e.Message;
+                if (manual) shell.Toast(Cloud.Status);
+            }
+            finally { Cloud.Busy = false; }
+        }
+
+        public async void SignIn()
+        {
+            if (!Cloud.Configured || Cloud.Busy) return;
+            Cloud.Busy = true;
+            try
+            {
+                await Cloud.SignIn(this);
+                shell.Toast(Cloud.Status);
+            }
+            catch (Exception e)
+            {
+                Cloud.Status = "Не удалось войти: " + e.Message;
+                shell.Toast(Cloud.Status);
+                return;
+            }
+            finally { Cloud.Busy = false; }
+            // после входа сверяемся с облаком: там может быть прогресс с другого устройства
+            CloudLoad(auto: true);
+        }
+
+        public async void CloudLoad(bool auto = false)
+        {
+            if (!Cloud.Configured || !Cloud.SignedIn || Cloud.Busy) return;
+            Cloud.Busy = true;
+            GameState remote;
+            try
+            {
+                var json = await Cloud.Download();
+                remote = json == null ? null : SaveStore.Parse(json);
+            }
+            catch (Exception e)
+            {
+                Cloud.Status = "Ошибка облака: " + e.Message;
+                shell.Toast(Cloud.Status);
+                return;
+            }
+            finally { Cloud.Busy = false; }
+
+            if (remote == null)
+            {
+                if (!auto) shell.Toast("В облаке пока нет сохранения");
+                CloudSave(false);
+                return;
+            }
+            bool better = remote.totalEarned > Engine.S.totalEarned;
+            if (auto && !better) { CloudSave(false); return; }
+            var r = new Rich()
+                .T("В облаке: уровень " + remote.level + ", заработано " + Fmt.Money(remote.totalEarned)).N()
+                .T("На телефоне: уровень " + Engine.S.level + ", заработано " + Fmt.Money(Engine.S.totalEarned)).N().N()
+                .C("Прогресс на телефоне будет заменён.", Pal.Gold);
+            shell.ShowModal("Облачное сохранение", r, "Загрузить", () => ApplyState(remote), "Отмена");
+        }
+
+        void ApplyState(GameState s)
+        {
+            s.lastSeenUnix = Now;
+            Engine.S = s;
+            Engine.IncomePerSec = 0;
+            Engine.StructureDirty = true;
+            Save();
+            shell.Toast("Прогресс загружен из облака");
+        }
+
+        public void SignOut()
+        {
+            Cloud.SignOut();
+            shell.Toast("Вы вышли из аккаунта");
         }
 
         public void ResetGame()

@@ -51,13 +51,7 @@ namespace Tycoon.Droid
             it.Amount = Ui.Label(stack, "", 13, Pal.Muted);
             it.Price = Ui.Label(top, "", 15, Pal.Gold, true, GravityFlags.End | GravityFlags.CenterVertical);
 
-            // полоска заполненности склада
-            it.Fill = new ProgressBar(Ui.Ctx, null, Android.Resource.Attribute.ProgressBarStyleHorizontal)
-            {
-                Max = 1000,
-                ProgressDrawable = FillDrawable(),
-            };
-            Ui.Add(it.Root, it.Fill, ViewGroup.LayoutParams.MatchParent, Ui.Dp(8));
+            it.Fill = Ui.Progress(it.Root, Pal.Gold);
 
             var row = Ui.Row(it.Root, 50, 8);
             int idx = r;
@@ -65,17 +59,6 @@ namespace Tycoon.Droid
             it.All = Ui.Button(row, "Продать всё", Pal.Gold, () => Sell(idx, 1), 13, 0);
             it.Auto = Ui.Button(row, "", Pal.Btn, () => { S.auto[idx] = !S.auto[idx]; Sync(); }, 13, 0);
             return it;
-        }
-
-        static Android.Graphics.Drawables.Drawable FillDrawable()
-        {
-            var bg = Ui.Round(Pal.CardAlt, 4);
-            var fg = new Android.Graphics.Drawables.ClipDrawable(Ui.Round(Pal.Gold, 4), GravityFlags.Start,
-                Android.Graphics.Drawables.ClipDrawableOrientation.Horizontal);
-            var ld = new Android.Graphics.Drawables.LayerDrawable(new Android.Graphics.Drawables.Drawable[] { bg, fg });
-            ld.SetId(0, Android.Resource.Id.Background);
-            ld.SetId(1, Android.Resource.Id.Progress);
-            return ld;
         }
 
         void Sell(int r, double frac)

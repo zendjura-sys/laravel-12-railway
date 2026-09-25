@@ -8,9 +8,13 @@ namespace Tycoon.Droid
     public class MarketScreen : GameScreen
     {
         public MarketScreen(Shell ui) : base(ui) { }
-        public override string Title { get { return "Биржа"; } }
+        public override string Title { get { return "Финансы"; } }
 
-        static readonly string[] SubNames = { "Акции", "Опционы", "Портфель" };
+        static readonly string[] SubNames = { "Акции", "Опционы", "Портфель", "Банк" };
+        static readonly string[] SectorChips = { "Все", "Техно", "Энергия", "Финансы", "Потреб.", "Пром.", "Крипто", "Мои" };
+        int sector = 0;   // 0 — все, 1..6 — Sector+1, 7 — мои компании
+        Btn[] sectorBtns;
+        TextView tradeLock;
         static readonly long[] Qtys = { 1, 10, 100, 0 };
         static readonly string[] QtyNames = { "1", "10", "100", "MAX" };
 
@@ -49,6 +53,7 @@ namespace Tycoon.Droid
             sb.Append(sub).Append('|');
             foreach (var st in S.stocks) sb.Append(st.t).Append(',');
             if (sub == 1) foreach (var o in S.options) sb.Append(o.id).Append(';');
+            sb.Append(E.CanTrade).Append(E.CanOptions).Append(S.level >= GameData.LevelLoans);
             return sb.ToString();
         }
 
@@ -64,13 +69,17 @@ namespace Tycoon.Droid
             if (E.Stock(selected) == null) selected = S.stocks[0].t;
             if (sub == 0) BuildStocks();
             else if (sub == 1) BuildOptions();
-            else BuildPortfolio();
+            else if (sub == 2) BuildPortfolio();
+            else BuildBank();
         }
 
         // ---------------- Акции ----------------
         void BuildStocks()
         {
             var card = Cell();
+            tradeLock = Ui.Label(card, "", 14, Pal.Gold, true);
+            Ui.Show(tradeLock, !E.CanTrade);
+            tradeLock.Text = "🔒 Брокерский счёт откроется на уровне " + GameData.LevelStocks + ". Пока можно наблюдать за рынком.";
             selTitle = Ui.Label(card, "", 17, Pal.Text, true);
             selPrice = Ui.Label(card, "", 22, Pal.Gold, true);
 
@@ -91,6 +100,15 @@ namespace Tycoon.Droid
             var brow = Ui.Row(card, 56, 10);
             buyBtn = Ui.Button(brow, "", Pal.Green, () => UI.Try(E.BuyStock(selected, BuyQty()), "Недостаточно средств"), 15, 0);
             sellBtn = Ui.Button(brow, "", Pal.Red, () => UI.Try(E.SellStock(selected, SellQty()), "Нет акций для продажи"), 15, 0);
+
+            sectorBtns = new Btn[SectorChips.Length];
+            LinearLayout chips = null;
+            for (int i = 0; i < SectorChips.Length; i++)
+            {
+                if (i % 4 == 0) chips = Ui.Row(Content, 40, 6);
+                int k = i;
+                sectorBtns[i] = Ui.Button(chips, SectorChips[i], Pal.Btn, () => { sector = k; Sync(); }, 12, 0);
+            }
 
             int n = S.stocks.Count;
             paintedSel = null;
@@ -152,15 +170,21 @@ namespace Tycoon.Droid
             for (int i = 0; i < Qtys.Length; i++) qtyBtns[i].SetColor(Qtys[i] == qty ? Pal.Green : Pal.Btn);
             long bq = BuyQty(), sq = System.Math.Min(SellQty(), st.own);
             buyBtn.Text = "Купить " + bq + "\n" + Fmt.Money(bq * st.p * (1 + GameData.TradeFee));
-            buyBtn.Enabled = bq > 0 && E.MaxBuyShares(selected) >= bq;
+            buyBtn.Enabled = E.CanTrade && bq > 0 && E.MaxBuyShares(selected) >= bq;
             sellBtn.Text = "Продать " + sq + "\n" + Fmt.Money(sq * st.p);
             sellBtn.Enabled = st.own > 0;
 
+            for (int i = 0; i < sectorBtns.Length; i++) sectorBtns[i].SetColor(i == sector ? Pal.Green : Pal.Btn);
             bool repaint = paintedSel != selected;
             paintedSel = selected;
             for (int i = 0; i < rowTicker.Length; i++)
             {
                 if (rowTicker[i] == null) continue;
+                var inf = E.Info(rowTicker[i]);
+                bool vis = sector == 0 || (sector == 7 ? inf.Own != null || E.Stock(rowTicker[i]).own > 0
+                                                       : (int)inf.Sector == sector - 1);
+                Ui.Show(rowViews[i], vis);
+                if (!vis) continue;
                 var s = E.Stock(rowTicker[i]);
                 double c = Change(s);
                 Ui.Set(rowPrice[i], new Rich().T(Fmt.Money(s.p)).N().Small(Fmt.Pct(c), Ui.Sign(c)));
@@ -171,6 +195,15 @@ namespace Tycoon.Droid
         // ---------------- Опционы ----------------
         void BuildOptions()
         {
+            if (!E.CanOptions)
+            {
+                var lc = Cell();
+                Ui.Subtitle(lc, "🔒 Опционы");
+                Ui.Body(lc, 14).Text = "Торговля опционами откроется на уровне " + GameData.LevelOptions +
+                                       ". Опцион Call зарабатывает на росте акции, Put — на падении.";
+                optTicker = null;
+                return;
+            }
             var card = Cell();
             Ui.Subtitle(card, "Купить опцион");
             var help = Ui.Body(card, 12);
@@ -238,6 +271,7 @@ namespace Tycoon.Droid
 
         void SyncOptions()
         {
+            if (optTicker == null) return;
             var st = E.Stock(selected);
             optTicker.Text = "Акция: " + st.t + " · " + Fmt.Money(st.p) + "   ⇄";
             optCallBtn.SetColor(optCall ? Pal.Green : Pal.Btn);
@@ -303,12 +337,68 @@ namespace Tycoon.Droid
             Ui.Set(portText, r);
         }
 
+        // ---------------- Банк ----------------
+        TextView depText, loanText;
+        Btn dep25, depAll, wd50, wdAll, loan25, loanMax, repay50, repayAll;
+
+        void BuildBank()
+        {
+            var dc = Cell();
+            Ui.Subtitle(dc, "🏦 Вклад");
+            depText = Ui.Body(dc, 14);
+            var r1 = Ui.Row(dc, 52, 8);
+            dep25 = Ui.Button(r1, "Внести 25%", Pal.Green, () => UI.Try(E.Deposit(S.money * 0.25), "Вклад недоступен"), 15, 0);
+            depAll = Ui.Button(r1, "Внести всё", Pal.Green, () => UI.Try(E.Deposit(S.money), "Вклад недоступен"), 15, 0);
+            var r2 = Ui.Row(dc, 52, 8);
+            wd50 = Ui.Button(r2, "Снять 50%", Pal.Blue, () => UI.Try(E.Withdraw(S.bankDep * 0.5), "Вклад пуст"), 15, 0);
+            wdAll = Ui.Button(r2, "Снять всё", Pal.Blue, () => UI.Try(E.Withdraw(S.bankDep), "Вклад пуст"), 15, 0);
+
+            var lc = Cell();
+            Ui.Subtitle(lc, "💳 Кредит");
+            loanText = Ui.Body(lc, 14);
+            var r3 = Ui.Row(lc, 54, 8);
+            loan25 = Ui.Button(r3, "", Pal.Gold, () => UI.Try(E.TakeLoan((E.LoanLimit - S.bankLoan) * 0.25), "Лимит исчерпан"), 14, 0);
+            loanMax = Ui.Button(r3, "", Pal.Gold, () => UI.Try(E.TakeLoan(E.LoanLimit - S.bankLoan), "Лимит исчерпан"), 14, 0);
+            var r4 = Ui.Row(lc, 52, 8);
+            repay50 = Ui.Button(r4, "Погасить 50%", Pal.Blue, () => UI.Try(E.Repay(S.bankLoan * 0.5), "Нечем гасить"), 15, 0);
+            repayAll = Ui.Button(r4, "Погасить всё", Pal.Blue, () => UI.Try(E.Repay(S.bankLoan), "Нечем гасить"), 15, 0);
+
+            Ui.Body(Content, 12).Text = "Кредит выгоден, если вложения окупаются быстрее, чем растут проценты. " +
+                                        "Вклад — безопасное место для денег, которые пока не на что потратить.";
+        }
+
+        void SyncBank()
+        {
+            bool depOk = S.level >= GameData.LevelDeposit, loanOk = S.level >= GameData.LevelLoans;
+            var d = new Rich();
+            if (!depOk) d.C("🔒 Вклады доступны с уровня " + GameData.LevelDeposit, Pal.Gold).N();
+            d.T("На вкладе: ").B(Fmt.Money(S.bankDep), Pal.Gold).N()
+             .T("Ставка: " + Fmt.Pct(GameData.DepositRate * 60, false) + " в минуту · +" +
+                Fmt.Money(S.bankDep * GameData.DepositRate * 60) + "/мин");
+            Ui.Set(depText, d);
+            dep25.Enabled = depAll.Enabled = depOk && S.money > 0.01;
+            wd50.Enabled = wdAll.Enabled = S.bankDep > 0.01;
+
+            double limit = E.LoanLimit, free = System.Math.Max(0, limit - S.bankLoan);
+            var l = new Rich();
+            if (!loanOk) l.C("🔒 Кредиты доступны с уровня " + GameData.LevelLoans, Pal.Gold).N();
+            l.T("Долг: ").C(Fmt.Money(S.bankLoan), S.bankLoan > 0 ? Pal.Red : Pal.Text).N()
+             .T("Лимит: " + Fmt.Money(limit) + " (50% капитала) · доступно " + Fmt.Money(free)).N()
+             .T("Ставка: " + Fmt.Pct(GameData.LoanRate * 60, false) + " в минуту");
+            Ui.Set(loanText, l);
+            loan25.Text = "Взять 25%\n" + Fmt.Money(free * 0.25);
+            loanMax.Text = "Взять максимум\n" + Fmt.Money(free);
+            loan25.Enabled = loanMax.Enabled = free > 1;
+            repay50.Enabled = repayAll.Enabled = S.bankLoan > 0.01 && S.money > 0.01;
+        }
+
         protected override void Sync()
         {
             for (int i = 0; i < subBtns.Length; i++) subBtns[i].SetColor(i == sub ? Pal.Green : Pal.Btn);
             if (sub == 0) SyncStocks();
             else if (sub == 1) SyncOptions();
-            else SyncPortfolio();
+            else if (sub == 2) SyncPortfolio();
+            else SyncBank();
         }
     }
 }

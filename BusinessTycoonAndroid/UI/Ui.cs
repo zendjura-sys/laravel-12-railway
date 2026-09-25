@@ -96,6 +96,14 @@ namespace Tycoon.Droid
         }
 
         public Rich N() { return T("\n"); }
+
+        // Добавляет другой Rich вместе с цветами
+        public Rich R(Rich other)
+        {
+            sb.Append(other.sb);
+            key.Append(other.Key);
+            return this;
+        }
         public int Length { get { return sb.Length(); } }
         public SpannableStringBuilder Spannable { get { return sb; } }
     }
@@ -331,6 +339,23 @@ namespace Tycoon.Droid
             t.LetterSpacing = 0.05f;
             Add(parent, t, ViewGroup.LayoutParams.MatchParent, Dp(46));
             return t;
+        }
+
+        // Полоска прогресса (0..1000) в цветах интерфейса
+        public static ProgressBar Progress(ViewGroup parent, Color color, int heightDp = 8)
+        {
+            var bg = Round(Pal.CardAlt, 4);
+            var fg = new ClipDrawable(Round(color, 4), GravityFlags.Start, ClipDrawableOrientation.Horizontal);
+            var ld = new LayerDrawable(new Drawable[] { bg, fg });
+            ld.SetId(0, Android.Resource.Id.Background);
+            ld.SetId(1, Android.Resource.Id.Progress);
+            var bar = new ProgressBar(Ctx, null, Android.Resource.Attribute.ProgressBarStyleHorizontal)
+            {
+                Max = 1000,
+                ProgressDrawable = ld,
+            };
+            Add(parent, bar, ViewGroup.LayoutParams.MatchParent, Dp(heightDp));
+            return bar;
         }
 
         public static void Set(TextView t, string s)

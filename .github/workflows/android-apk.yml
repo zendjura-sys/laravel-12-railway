@@ -5,8 +5,6 @@ on:
   push:
     paths:
       - 'BusinessTycoonAndroid/**'
-      - 'BusinessTycoon/Assets/Scripts/Core/**'
-      - 'BusinessTycoon/CoreTests/**'
       - '.github/workflows/android-apk.yml'
 
 permissions:
@@ -29,9 +27,9 @@ jobs:
       - name: Тесты игровой логики
         run: |
           sudo apt-get update -q && sudo apt-get install -y -q mono-mcs mono-runtime
-          cd BusinessTycoon/CoreTests
-          mcs -out:core-tests.exe CoreTests.cs ../Assets/Scripts/Core/*.cs
-          mono core-tests.exe
+          cd BusinessTycoonAndroid/Tests
+          mcs -out:core-tests.exe CoreTests.cs ../Core/*.cs
+          LANG=C.UTF-8 mono core-tests.exe
 
       - uses: actions/setup-java@v4
         with:
@@ -41,6 +39,50 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
+
+      # Постоянный ключ подписи нужен для входа через Google (SHA-1 регистрируется в Firebase).
+      # Если заданы секреты ANDROID_KEYSTORE_BASE64 / ANDROID_KEYSTORE_PASSWORD / ANDROID_KEY_ALIAS —
+      # используется ваш ключ, иначе — dev-ключ из репозитория.
+      - name: Ключ подписи
+        env:
+          KS_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KS_PASS_SECRET: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KS_ALIAS_SECRET: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          if [ -n "$KS_B64" ]; then
+            echo "$KS_B64" | base64 -d > "$RUNNER_TEMP/release.keystore"
+            echo "KS_FILE=$RUNNER_TEMP/release.keystore" >> "$GITHUB_ENV"
+            echo "KS_PASS=$KS_PASS_SECRET" >> "$GITHUB_ENV"
+            echo "KS_ALIAS=$KS_ALIAS_SECRET" >> "$GITHUB_ENV"
+            echo "Подпись: ключ из секретов" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "KS_FILE=$GITHUB_WORKSPACE/BusinessTycoonAndroid/signing/dev.keystore" >> "$GITHUB_ENV"
+            echo "KS_PASS=bizmagnat-dev" >> "$GITHUB_ENV"
+            echo "KS_ALIAS=bizmagnat" >> "$GITHUB_ENV"
+            echo "Подпись: dev-ключ из репозитория" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: SHA-1 ключа (добавьте его в Firebase)
+        run: |
+          {
+            echo '```'
+            keytool -list -v -keystore "$KS_FILE" -storepass "$KS_PASS" -alias "$KS_ALIAS" 2>/dev/null | grep -E "SHA1:|SHA256:"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # google-services.json: файл в репозитории или секрет GOOGLE_SERVICES_JSON
+      - name: Настройки Firebase
+        env:
+          GS_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          if [ ! -f BusinessTycoonAndroid/google-services.json ] && [ -n "$GS_JSON" ]; then
+            echo "$GS_JSON" > BusinessTycoonAndroid/google-services.json
+          fi
+          if [ -f BusinessTycoonAndroid/google-services.json ]; then
+            echo "Firebase: подключён" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Firebase: google-services.json не найден — облако в игре будет отключено" >> "$GITHUB_STEP_SUMMARY"
+          fi
 
       - name: Установить workload Android
         run: dotnet workload install android
@@ -55,6 +97,8 @@ jobs:
         run: >
           dotnet publish "$PROJECT" -c Release -f net10.0-android
           -p:AndroidSdkDirectory="$ANDROID_SDK_DIR" -p:JavaSdkDirectory="$JAVA_HOME"
+          -p:AndroidSigningKeyStore="$KS_FILE" -p:AndroidSigningKeyAlias="$KS_ALIAS"
+          -p:AndroidSigningStorePass=env:KS_PASS -p:AndroidSigningKeyPass=env:KS_PASS
           -o out
 
       - name: Подготовить файл

@@ -16,11 +16,30 @@ namespace Tycoon.Droid
             { "electro", "🔌" }, { "autofab", "🚙" },
             { "kiosk", "🌯" }, { "cafe", "☕" }, { "shop", "🏪" }, { "rest", "🍽️" },
             { "itstudio", "👨‍💻" }, { "bankbiz", "🏛️" }, { "megacorp", "🌐" },
+            // товары магазина
+            { "laptop", "💻" }, { "server", "🖥️" }, { "terminal", "📊" },
+            { "pos", "🧾" }, { "shelving", "🗄️" }, { "fridge", "🧊" }, { "kitchen", "🍳" }, { "coffee", "☕" },
+            { "van", "🚐" }, { "truck", "🚛" }, { "forklift", "🏗️" },
+            { "cnc", "⚙️" }, { "conveyor", "🏭" },
+            { "solar", "☀️" }, { "transformer", "⚡" }, { "turbine", "🌀" },
+            { "office_s", "🏢" }, { "office_b", "🏬" }, { "office_a", "🏙️" }, { "hq", "🌆" },
+            { "warehouse", "📦" }, { "plant", "🏭" },
+            { "lic_bank", "📜" }, { "vault", "🔐" },
+            { "modkit", "🧰" }, { "course", "📘" }, { "iso", "🏅" }, { "mba", "🎓" }, { "club", "💎" }, { "board", "👔" },
             // отрасли
-            { "it", "💻" }, { "retail", "🛒" }, { "food", "🍔" }, { "energy", "⚡" }, { "fin", "💼" },
+            { "it", "💻" }, { "retail", "🛒" }, { "food", "🍔" }, { "logistic", "🚚" }, { "factory", "🏭" },
+            { "energy", "⚡" }, { "finance", "🏦" },
             // акции
-            { "KOLS", "🌾" }, { "TAIG", "🌲" }, { "STAL", "🔩" }, { "NEFT", "🛢️" },
-            { "BANK", "🏦" }, { "MOTR", "🚗" }, { "KREM", "💻" }, { "BLOK", "🪙" },
+            { "YBLK", "🍎" }, { "MKSF", "🪟" }, { "GUGL", "🔎" }, { "NVDM", "🎮" }, { "METV", "🥽" }, { "SMSG", "📱" },
+            { "YNDR", "🧭" }, { "NTFX", "🎬" }, { "KREM", "💻" },
+            { "GZPR", "🔥" }, { "LKOL", "🛢️" }, { "RSNF", "⛽" }, { "RKSH", "🐚" }, { "EKSN", "🛢️" }, { "NRNK", "⛏️" },
+            { "NEFT", "🛢️" }, { "TAIG", "🌲" },
+            { "SBRK", "🏦" }, { "TNKF", "💳" }, { "JPMS", "💼" }, { "BRKH", "🧓" }, { "VIZN", "💳" }, { "BANK", "🏦" },
+            { "AMZK", "📦" }, { "ALIB", "🛍️" }, { "MGNK", "🧲" }, { "KOKA", "🥤" }, { "MKDN", "🍟" }, { "NAIK", "👟" },
+            { "KOLS", "🌾" },
+            { "TSLO", "🔋" }, { "TOYO", "🚗" }, { "BOIN", "✈️" }, { "AERF", "🛫" }, { "RZDL", "🚆" }, { "STAL", "🔩" },
+            { "MOTR", "🚙" },
+            { "BLOK", "🪙" }, { "BTKN", "₿" },
         };
 
         public static string Of(string id, string fallback = "💼")

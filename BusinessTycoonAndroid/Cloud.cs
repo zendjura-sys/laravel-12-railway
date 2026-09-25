@@ -13,7 +13,7 @@ using Xamarin.GoogleAndroid.Libraries.Identity.GoogleId;
 
 // Firebase без нативного SDK:
 //   вход — Google (Credential Manager) → Firebase Auth REST (signInWithIdp);
-//   данные — Realtime Database REST: /users/{uid}/save и /leaderboard/{uid}.
+//   данные — Realtime Database REST: /bizmagnat/users/{uid}/save и /bizmagnat/leaderboard/{uid}.
 // Настройки берутся из google-services.json, который кладётся в папку проекта.
 namespace Tycoon.Droid
 {
@@ -200,9 +200,12 @@ namespace Tycoon.Droid
         }
 
         // ---------- Realtime Database ----------
+        // Все данные игры лежат в отдельной ветке: база может быть общей с другими приложениями проекта
+        const string Root = "bizmagnat/";
+
         string Db(string path, string token, string query = "")
         {
-            return Config.DbUrl.TrimEnd('/') + "/" + path + ".json?auth=" + Uri.EscapeDataString(token) + query;
+            return Config.DbUrl.TrimEnd('/') + "/" + Root + path + ".json?auth=" + Uri.EscapeDataString(token) + query;
         }
 
         // В общем рейтинге показываем только имя, без фамилии

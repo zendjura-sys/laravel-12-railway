@@ -25,7 +25,9 @@ Idle-кликер и симулятор бизнеса. Нативное Android
 
 1. Создайте проект на https://console.firebase.google.com.
 2. **Authentication → Sign-in method → Google** → включить.
-3. **Realtime Database → Create database**. Во вкладке **Rules** вставьте содержимое `database.rules.json` из этой папки и нажмите **Publish**.
+3. **Realtime Database → Create database**. Во вкладке **Rules** добавьте правила из `database.rules.json` и нажмите **Publish**.
+   Все данные игры лежат в ветке `bizmagnat/`. Если база общая с другим приложением, не заменяйте его правила:
+   добавьте блок `"bizmagnat": { ... }` внутрь существующего `"rules": { ... }` рядом с остальными ключами.
 4. **Project settings → Your apps → Add app → Android**:
    - Package name: `com.tycoongames.bizmagnat`
    - SHA-1 ключа, которым подписан APK. Он печатается в отчёте каждой сборки (Actions → запуск → Summary).
@@ -38,8 +40,8 @@ Idle-кликер и симулятор бизнеса. Нативное Android
 6. Запустите сборку (**Actions → Android APK (.NET) → Run workflow**) и установите новый APK.
 
 В базе данные хранятся так:
-- `users/{uid}/save` — сохранение игрока (читать и писать может только он сам);
-- `leaderboard/{uid}` — имя, капитал и уровень для общего рейтинга.
+- `bizmagnat/users/{uid}/save` — сохранение игрока (читать и писать может только он сам);
+- `bizmagnat/leaderboard/{uid}` — имя, капитал и уровень для общего рейтинга.
 
 ### Про ключ подписи
 

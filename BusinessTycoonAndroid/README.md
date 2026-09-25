@@ -28,7 +28,10 @@ Idle-кликер и симулятор бизнеса. Нативное Android
 3. **Realtime Database → Create database**. Во вкладке **Rules** вставьте содержимое `database.rules.json` из этой папки и нажмите **Publish**.
 4. **Project settings → Your apps → Add app → Android**:
    - Package name: `com.tycoongames.bizmagnat`
-   - SHA-1: `D3:A0:FC:4D:5A:A1:C1:C6:FE:C8:F2:FB:0B:3D:44:1F:15:01:79:4B` (dev-ключ, которым CI подписывает APK)
+   - SHA-1 ключа, которым подписан APK. Он печатается в отчёте каждой сборки (Actions → запуск → Summary).
+     Сейчас в репозитории заданы секреты `ANDROID_KEYSTORE_*`, и SHA-1 такой:
+     `A9:E4:5F:19:76:99:C4:28:CA:48:D7:80:43:72:0D:06:B9:A2:68:1F`.
+     Если секреты убрать, APK будет подписан dev-ключом: `D3:A0:FC:4D:5A:A1:C1:C6:FE:C8:F2:FB:0B:3D:44:1F:15:01:79:4B`
 5. Скачайте `google-services.json` **после** создания базы, чтобы в нём был адрес базы. Дальше любой из двух вариантов:
    - положите файл в папку `BusinessTycoonAndroid/` и закоммитьте;
    - или создайте секрет репозитория `GOOGLE_SERVICES_JSON` с содержимым файла (**Settings → Secrets and variables → Actions**).

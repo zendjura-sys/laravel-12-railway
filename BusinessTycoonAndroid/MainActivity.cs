@@ -51,7 +51,7 @@ namespace Tycoon.Droid
 
             handler = new Handler(Looper.MainLooper);
 
-            if (Build.VERSION.SdkInt >= BuildVersionCodes.Tiramisu)
+            if (OperatingSystem.IsAndroidVersionAtLeast(33))
                 OnBackInvokedDispatcher.RegisterOnBackInvokedCallback(0, new BackCallback(this));
         }
 
@@ -252,7 +252,7 @@ namespace Tycoon.Droid
         {
             public WindowInsets OnApplyWindowInsets(View v, WindowInsets insets)
             {
-                if (Build.VERSION.SdkInt >= BuildVersionCodes.R)
+                if (OperatingSystem.IsAndroidVersionAtLeast(30))
                 {
                     var bars = insets.GetInsets(WindowInsets.Type.SystemBars() | WindowInsets.Type.DisplayCutout());
                     var ime = insets.GetInsets(WindowInsets.Type.Ime());

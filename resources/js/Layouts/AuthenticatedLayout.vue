@@ -123,6 +123,13 @@ onBeforeUnmount(() => {
                                 Банк
                             </NavLink>
                             <NavLink
+                                v-if="route().has('rules')"
+                                :href="route('rules')"
+                                :active="route().current('rules')"
+                            >
+                                Правила
+                            </NavLink>
+                            <NavLink
                                 :href="route('guide')"
                                 :active="route().current('guide')"
                             >
@@ -325,6 +332,13 @@ onBeforeUnmount(() => {
                         :active="route().current('bonuses.*')"
                     >
                         Банк
+                    </ResponsiveNavLink>
+                    <ResponsiveNavLink
+                        v-if="route().has('rules')"
+                        :href="route('rules')"
+                        :active="route().current('rules')"
+                    >
+                        Правила
                     </ResponsiveNavLink>
                     <ResponsiveNavLink
                         :href="route('guide')"

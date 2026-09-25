@@ -5,6 +5,7 @@ import 'family_goals_screen.dart';
 import 'gallery_screen.dart';
 import 'hall_of_fame_screen.dart';
 import 'leaderboard_screen.dart';
+import 'rules_screen.dart';
 
 /// Вкладка "Меню" — розділи родини (рейтинг, зал слави, події, цілі,
 /// галерея). Чат і Мої звіти — кнопками на Кабінеті, Налаштування й
@@ -31,6 +32,12 @@ class _MenuScreenState extends State<MenuScreen> {
         // знизу відступ на її висоту.
         padding: navAwareListPadding(context),
         children: [
+          _MenuTile(
+            icon: Icons.gavel_outlined,
+            title: 'Правила',
+            subtitle: 'Правила родини, штрафи й догани, правила проєкту',
+            onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const RulesScreen())),
+          ),
           if (widget.leaderboardEnabled)
             _MenuTile(
               icon: Icons.leaderboard_outlined,

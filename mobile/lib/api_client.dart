@@ -981,6 +981,12 @@ class ApiClient {
     _decode(response);
   }
 
+  /// Правила родини й проєкту — {levels, books: [{slug, title, sections: [...]}]}.
+  Future<Map<String, dynamic>> rules() async {
+    final response = await http.get(_uri('/rules'), headers: await _headers(auth: true));
+    return _decode(response) as Map<String, dynamic>;
+  }
+
   Future<Map<String, dynamic>> gallery() async {
     final response = await http.get(_uri('/gallery'), headers: await _headers(auth: true));
     return _decode(response) as Map<String, dynamic>;

@@ -16,6 +16,7 @@ use App\Http\Controllers\Admin\UnionController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\ChangelogController;
 use App\Http\Controllers\GuideController;
+use App\Http\Controllers\RulesController;
 use App\Http\Controllers\MobileDownloadController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PushSubscriptionController;
@@ -173,6 +174,7 @@ Route::middleware('auth')->group(function () {
     // тоді в людини найбільше питань «що тут де», а лист підтвердження
     // може прийти не миттєво.
     Route::get('/guide', [GuideController::class, 'index'])->name('guide');
+    Route::get('/rules', [RulesController::class, 'index'])->name('rules');
     Route::get('/changelog', [ChangelogController::class, 'index'])->name('changelog');
 
     Route::post('/push-subscriptions', [PushSubscriptionController::class, 'store'])->name('push-subscriptions.store');

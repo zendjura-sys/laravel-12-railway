@@ -13,6 +13,10 @@ permissions:
 
 jobs:
   build:
+    # Ключ підпису (секрети ANDROID_*) є лише тут. У копіях репозиторію
+    # (zendjura-sys/glendale тощо) збірка пішла б під дебаг-ключем і
+    # опублікувала б несумісний APK — тому там job пропускається.
+    if: github.repository == 'zendjura-sys/laravel-12-railway'
     runs-on: ubuntu-latest
     defaults:
       run:

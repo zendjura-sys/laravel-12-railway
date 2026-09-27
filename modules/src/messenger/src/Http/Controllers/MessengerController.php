@@ -1,0 +1,868 @@
+<?php
+
+namespace Addons\Messenger\Http\Controllers;
+
+use Addons\Messenger\Models\Conversation;
+use Addons\Messenger\Models\ConversationParticipant;
+use Addons\Messenger\Models\ConversationRead;
+use Addons\Messenger\Models\Message;
+use Addons\Messenger\Models\Sticker;
+use Addons\Messenger\Models\UserIdentityKey;
+use Addons\Messenger\Services\SystemInbox;
+use App\Models\Setting;
+use App\Models\User;
+use App\Support\Presence;
+use App\Support\MobilePushSender;
+use App\Support\WebPushSender;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
+use Inertia\Inertia;
+use Inertia\Response;
+use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
+
+/**
+ * Один сімейний чат (усі зареєстровані, не тіньові) + особисті між двома.
+ * Без черг/вебсокетів — Vue-сторінка чату сама опитує /messages?after_id=
+ * кожні кілька секунд, поки відкрита. Для клану такого масштабу цього
+ * достатньо, а Reverb/nginx-вебсокет — окрема інфраструктурна зміна, яку
+ * можна додати пізніше, якщо знадобиться миттєвіша доставка.
+ */
+class MessengerController
+{
+    public function index(Request $request): Response
+    {
+        return Inertia::render('Messenger/Index', [
+            'conversations' => $this->conversationListPayload($request->user()),
+        ]);
+    }
+
+    public function show(Request $request, Conversation $conversation): Response
+    {
+        $payload = $this->conversationDetailPayload($request, $conversation);
+        $payload['giphyEnabled'] = (bool) Setting::get('giphy_api_key');
+
+        return Inertia::render('Messenger/Show', $payload);
+    }
+
+    /**
+     * Список розмов для мобільного застосунку (Flutter) — той самий вміст,
+     * що й index(), лише як JSON замість Inertia-сторінки.
+     */
+    protected function conversationListPayload(User $user): Collection
+    {
+        $family = $this->familyConversation();
+
+        $directIds = ConversationParticipant::query()
+            ->where('user_id', $user->id)
+            ->pluck('conversation_id');
+
+        $directs = Conversation::query()
+            ->whereIn('id', $directIds)
+            // Повний User (не id,name,avatar_path) — для статусу 🟢/🔴
+            // потрібні last_seen_at і gender ("був"/"була").
+            ->with(['participants.user'])
+            ->withMax('messages', 'created_at')
+            ->orderByDesc('messages_max_created_at')
+            ->get();
+
+        // Чат заступників — та сама ідея, що й family (один спільний
+        // на всіх, хто підходить, без окремих conversation_participants),
+        // тільки видимий не всім, а лише тим, у кого посада
+        // "Заступник директора" (isDeputy()).
+        $conversations = $this->isDeputy($user)
+            ? collect([$family, $this->deputiesConversation()])->concat($directs)
+            : collect([$family])->concat($directs);
+
+        $reads = ConversationRead::query()
+            ->where('user_id', $user->id)
+            ->whereIn('conversation_id', $conversations->pluck('id'))
+            ->pluck('last_read_message_id', 'conversation_id');
+
+        $group = [
+            'family' => $this->groupPresence('family'),
+            'deputies' => $this->groupPresence('deputies'),
+        ];
+
+        return $conversations->map(function (Conversation $c) use ($user, $reads, $group) {
+            $lastMessage = Message::query()
+                ->where('conversation_id', $c->id)
+                ->with('sender:id,name')
+                ->latest('id')
+                ->first();
+
+            $lastRead = $reads[$c->id] ?? 0;
+            $unread = Message::query()
+                ->where('conversation_id', $c->id)
+                ->where('id', '>', $lastRead)
+                // sender_id NULL — системне повідомлення (чат Monsory Finance):
+                // "NULL != x" у SQL не істинне, тож без whereNull воно не рахувалось би.
+                ->where(fn ($q) => $q->whereNull('sender_id')->orWhere('sender_id', '!=', $user->id))
+                ->count();
+
+            $otherUser = $c->type === 'direct'
+                ? $c->participants->pluck('user')->filter(fn ($u) => $u && $u->id !== $user->id)->first()
+                : null;
+
+            $title = match ($c->type) {
+                'deputies' => 'Заступники',
+                'finance' => SystemInbox::FINANCE_TITLE,
+                'direct' => $otherUser?->name ?? 'Учасник',
+                default => 'Загальний чат родини',
+            };
+
+            return [
+                'id' => $c->id,
+                'type' => $c->type,
+                'title' => $title,
+                // Потрібен мобільному клієнту для наскрізного шифрування
+                // (Фаза 1: лише direct) — щоб отримати публічний ключ
+                // співрозмовника й вивести спільний секрет через ECDH.
+                'otherUserId' => $otherUser?->id,
+                // direct — статус співрозмовника; family/deputies — скільки
+                // учасників групи зараз у мережі.
+                'presence' => $c->type === 'direct' ? $this->presenceOf($otherUser) : null,
+                'onlineCount' => $group[$c->type]['onlineCount'] ?? null,
+                'lastMessage' => $lastMessage ? [
+                    'body' => $this->previewText($lastMessage),
+                    'senderName' => $lastMessage->sender?->name,
+                    'isMine' => $lastMessage->sender_id === $user->id,
+                    'createdAt' => $lastMessage->created_at,
+                ] : null,
+                'unread' => $unread,
+            ];
+        })->sortByDesc(fn ($c) => $c['lastMessage']['createdAt'] ?? null)->values();
+    }
+
+    /**
+     * Тред розмови (заголовок + останні 50 повідомлень), уже позначений
+     * прочитаним — спільне для веб-сторінки Show і мобільного API.
+     */
+    protected function conversationDetailPayload(Request $request, Conversation $conversation): array
+    {
+        $this->ensureAccess($conversation, $request->user());
+
+        $messages = Message::query()
+            ->where('conversation_id', $conversation->id)
+            ->with(['sender:id,name,avatar_path,position_key', 'replyTo.sender:id,name'])
+            ->latest('id')
+            ->limit(50)
+            ->get()
+            ->reverse()
+            ->values();
+
+        $this->markRead($request, $conversation);
+
+        $otherUser = $conversation->type === 'direct'
+            ? ConversationParticipant::query()
+                ->where('conversation_id', $conversation->id)
+                ->where('user_id', '!=', $request->user()->id)
+                ->with('user')
+                ->first()?->user
+            : null;
+
+        $title = match ($conversation->type) {
+            'deputies' => 'Заступники',
+            'finance' => SystemInbox::FINANCE_TITLE,
+            'direct' => $otherUser?->name ?? 'Учасник',
+            default => 'Загальний чат родини',
+        };
+
+        return [
+            'conversation' => [
+                'id' => $conversation->id,
+                'type' => $conversation->type,
+                'title' => $title,
+                'otherUserId' => $otherUser?->id,
+                'otherLastReadMessageId' => $otherUser ? $this->otherParticipantLastRead($conversation, $otherUser->id) : null,
+                'presence' => $conversation->type === 'direct' ? $this->presenceOf($otherUser) : null,
+                'onlineCount' => $this->groupPresence($conversation->type)['onlineCount'] ?? null,
+            ],
+            // Хто з авторів повідомлень зараз у мережі — 🟢/🔴 біля імені
+            // в груповому чаті (клієнт звіряє з message.senderId).
+            'onlineUserIds' => $this->groupPresence($conversation->type)['onlineUserIds'] ?? [],
+            'messages' => $messages->map(fn (Message $m) => $this->formatMessage($m, $request->user()->id)),
+            'myId' => $request->user()->id,
+        ];
+    }
+
+    public function messagesSince(Request $request, Conversation $conversation): JsonResponse
+    {
+        $this->ensureAccess($conversation, $request->user());
+
+        $afterId = (int) $request->query('after_id', 0);
+
+        $messages = Message::query()
+            ->where('conversation_id', $conversation->id)
+            ->where('id', '>', $afterId)
+            ->with(['sender:id,name,avatar_path,position_key', 'replyTo.sender:id,name'])
+            ->oldest('id')
+            ->limit(100)
+            ->get();
+
+        // Для галочок прочитання (direct) — клієнт опитує цей ендпоінт
+        // кожні кілька секунд, тож достатньо віддавати поточне значення
+        // тут же, без окремого запиту.
+        $otherUserId = null;
+        if ($conversation->type === 'direct') {
+            $otherUserId = ConversationParticipant::query()
+                ->where('conversation_id', $conversation->id)
+                ->where('user_id', '!=', $request->user()->id)
+                ->value('user_id');
+        }
+
+        return response()->json([
+            'ok' => true,
+            'message' => null,
+            'data' => [
+                'messages' => $messages->map(fn (Message $m) => $this->formatMessage($m, $request->user()->id)),
+                'otherLastReadMessageId' => $otherUserId ? $this->otherParticipantLastRead($conversation, $otherUserId) : null,
+                // Той самий polling, що й для нових повідомлень, оновлює
+                // і статус — окремого запиту клієнт не робить.
+                'presence' => $otherUserId ? $this->presenceOf(User::query()->find($otherUserId)) : null,
+                'onlineCount' => $this->groupPresence($conversation->type)['onlineCount'] ?? null,
+                'onlineUserIds' => $this->groupPresence($conversation->type)['onlineUserIds'] ?? [],
+            ],
+            'errors' => null,
+            'redirect' => null,
+        ]);
+    }
+
+    protected function otherParticipantLastRead(Conversation $conversation, int $otherUserId): ?int
+    {
+        return ConversationRead::query()
+            ->where('conversation_id', $conversation->id)
+            ->where('user_id', $otherUserId)
+            ->value('last_read_message_id');
+    }
+
+    public function store(Request $request, Conversation $conversation): JsonResponse
+    {
+        $this->ensureAccess($conversation, $request->user());
+
+        // Службовий чат (Monsory Finance) — лише для читання.
+        if ($conversation->type === 'finance') {
+            throw new AccessDeniedHttpException;
+        }
+
+        $validated = $request->validate([
+            'type' => ['nullable', Rule::in(['text', 'text_e2ee', 'photo', 'gif', 'sticker', 'contact', 'location', 'file', 'voice'])],
+            'body' => ['nullable', 'string', 'max:4000'],
+            'photo' => ['required_if:type,photo', 'nullable', 'image', 'max:8192'],
+            'gif_url' => ['required_if:type,gif', 'nullable', 'url'],
+            'sticker_id' => ['required_if:type,sticker', 'nullable', 'integer'],
+            'contact_user_id' => ['required_if:type,contact', 'nullable', 'integer'],
+            'latitude' => ['required_if:type,location', 'nullable', 'numeric', 'between:-90,90'],
+            'longitude' => ['required_if:type,location', 'nullable', 'numeric', 'between:-180,180'],
+            'file' => ['required_if:type,file', 'nullable', 'file', 'max:20480'],
+            'voice' => ['required_if:type,voice', 'nullable', 'file', 'max:8192'],
+            'voice_duration' => ['required_if:type,voice', 'nullable', 'integer', 'min:0'],
+            'reply_to_message_id' => ['nullable', 'integer'],
+        ]);
+
+        // Відповідь має бути на повідомлення з ЦІЄЇ Ж розмови — інакше
+        // можна було б процитувати чуже приватне листування, просто
+        // підставивши чужий id у запит.
+        $replyToId = null;
+        if (! empty($validated['reply_to_message_id'])) {
+            $replyToId = Message::query()
+                ->where('id', $validated['reply_to_message_id'])
+                ->where('conversation_id', $conversation->id)
+                ->value('id');
+        }
+
+        $type = $validated['type'] ?? 'text';
+        $body = trim($validated['body'] ?? '');
+        $attachmentPath = null;
+        $attachmentUrl = null;
+
+        if (in_array($type, ['text', 'text_e2ee'], true) && $body === '') {
+            throw ValidationException::withMessages(['body' => 'Повідомлення не може бути порожнім.']);
+        }
+
+        // Наскрізне шифрування (Фаза 1) — лише особисті розмови. Сервер
+        // все одно не вміє й не пробує розшифрувати text_e2ee (body —
+        // ціле зашифроване повідомлення для клієнта), тому це не про
+        // безпеку, а про те, щоб такий тип не потрапляв туди, де його
+        // ніхто не зможе розшифрувати (сімейний чат, чат заступників).
+        if ($type === 'text_e2ee' && $conversation->type !== 'direct') {
+            throw ValidationException::withMessages(['type' => 'Шифрування доступне лише в особистих розмовах.']);
+        }
+
+        if ($type === 'photo') {
+            $attachmentPath = $request->file('photo')->store('messenger/photos', 'public');
+        }
+
+        if ($type === 'gif') {
+            $attachmentUrl = $validated['gif_url'];
+        }
+
+        if ($type === 'sticker') {
+            $sticker = Sticker::where('user_id', $request->user()->id)->find($validated['sticker_id']);
+            if (! $sticker) {
+                throw ValidationException::withMessages(['sticker_id' => 'Стікер не знайдено.']);
+            }
+            $attachmentPath = $sticker->path;
+        }
+
+        if ($type === 'contact') {
+            $contact = User::query()->where('id', $validated['contact_user_id'])->where('is_shadow', false)->first();
+            if (! $contact) {
+                throw ValidationException::withMessages(['contact_user_id' => 'Учасника не знайдено.']);
+            }
+            $body = json_encode(['userId' => $contact->id]);
+        }
+
+        if ($type === 'location') {
+            $body = json_encode(['lat' => (float) $validated['latitude'], 'lng' => (float) $validated['longitude']]);
+        }
+
+        if ($type === 'file') {
+            $file = $request->file('file');
+            $attachmentPath = $file->store('messenger/files', 'public');
+            $body = json_encode(['name' => $file->getClientOriginalName(), 'size' => $file->getSize()]);
+        }
+
+        if ($type === 'voice') {
+            $attachmentPath = $request->file('voice')->store('messenger/voice', 'public');
+            $body = json_encode(['duration' => (int) $validated['voice_duration']]);
+        }
+
+        $message = Message::create([
+            'conversation_id' => $conversation->id,
+            'sender_id' => $request->user()->id,
+            'reply_to_message_id' => $replyToId,
+            'body' => $body,
+            'type' => $type,
+            // Бейдж "звідки" в чаті: мобільний застосунок завжди шле
+            // Sanctum bearer-токен, веб — лише сесійну кулю, без
+            // Authorization-заголовка — цього достатньо, щоб розрізнити,
+            // окремого поля в запиті клієнти не передають.
+            'platform' => $request->bearerToken() ? 'mobile' : 'web',
+            'attachment_path' => $attachmentPath,
+            'attachment_url' => $attachmentUrl,
+        ]);
+        $message->load(['sender:id,name,avatar_path,position_key', 'replyTo.sender:id,name']);
+
+        $conversation->touch();
+
+        ConversationRead::updateOrCreate(
+            ['conversation_id' => $conversation->id, 'user_id' => $request->user()->id],
+            ['last_read_message_id' => $message->id],
+        );
+
+        $this->notifyNewMessage($conversation, $message, $request->user());
+
+        return response()->json([
+            'ok' => true,
+            'message' => null,
+            'data' => ['message' => $this->formatMessage($message, $request->user()->id)],
+            'errors' => null,
+            'redirect' => null,
+        ]);
+    }
+
+    /**
+     * Видалення власного повідомлення — лише відправник, і лише в межах
+     * тієї розмови, де воно є (інакше можна було б підсунути чужий
+     * message_id з іншої розмови). Жорстке видалення, без soft-delete чи
+     * позначки "видалено": на відміну від Telegram, тут немає версії
+     * "видалено для всіх" з плейсхолдером — рядок просто зникає, як
+     * власний коментар, який автор прибрав.
+     */
+    /**
+     * Застосунок раніше шифрував ЛС наскрізно (text_e2ee) ключем, що є лише
+     * на телефоні, — сайт їх не міг прочитати. Тепер ЛС ідуть відкритим
+     * текстом, а старі застосунок розшифровує й надсилає сюди, щоб і на
+     * сайті вони стали читабельні. ЛИШЕ власні повідомлення (sender_id —
+     * той, хто надсилає запит): інакше співрозмовник міг би "переписати"
+     * чужі слова довільним текстом.
+     */
+    public function unlockMessages(Request $request, Conversation $conversation): JsonResponse
+    {
+        $this->ensureAccess($conversation, $request->user());
+
+        $validated = $request->validate([
+            'messages' => ['required', 'array', 'max:100'],
+            'messages.*.id' => ['required', 'integer'],
+            'messages.*.body' => ['required', 'string', 'max:4000'],
+        ]);
+
+        $updated = 0;
+        foreach ($validated['messages'] as $item) {
+            $updated += Message::query()
+                ->whereKey($item['id'])
+                ->where('conversation_id', $conversation->id)
+                ->where('sender_id', $request->user()->id)
+                ->where('type', 'text_e2ee')
+                ->update(['type' => 'text', 'body' => $item['body']]);
+        }
+
+        return response()->json(['ok' => true, 'message' => null, 'data' => ['updated' => $updated], 'errors' => null, 'redirect' => null]);
+    }
+
+    public function destroyMessage(Request $request, Conversation $conversation, Message $message): JsonResponse
+    {
+        $this->ensureAccess($conversation, $request->user());
+
+        if ($message->conversation_id !== $conversation->id || $message->sender_id !== $request->user()->id) {
+            throw new AccessDeniedHttpException;
+        }
+
+        if ($message->attachment_path) {
+            Storage::disk('public')->delete($message->attachment_path);
+        }
+
+        $message->delete();
+
+        return response()->json(['ok' => true, 'message' => null, 'data' => null, 'errors' => null, 'redirect' => null]);
+    }
+
+    /** Власна бібліотека стікерів того, хто питає — не спільна для всіх. */
+    public function stickers(Request $request): JsonResponse
+    {
+        $stickers = Sticker::where('user_id', $request->user()->id)->latest()->get();
+
+        return response()->json([
+            'ok' => true,
+            'message' => null,
+            'data' => ['stickers' => $stickers],
+            'errors' => null,
+            'redirect' => null,
+        ]);
+    }
+
+    public function storeSticker(Request $request): JsonResponse
+    {
+        $request->validate([
+            'image' => ['required', 'image', 'max:2048'],
+        ]);
+
+        $path = $request->file('image')->store('stickers', 'public');
+        $sticker = Sticker::create(['user_id' => $request->user()->id, 'path' => $path]);
+
+        return response()->json([
+            'ok' => true,
+            'message' => null,
+            'data' => ['sticker' => $sticker],
+            'errors' => null,
+            'redirect' => null,
+        ]);
+    }
+
+    public function destroySticker(Request $request, Sticker $sticker): JsonResponse
+    {
+        if ($sticker->user_id !== $request->user()->id) {
+            throw new AccessDeniedHttpException;
+        }
+
+        Storage::disk('public')->delete($sticker->path);
+        $sticker->delete();
+
+        return response()->json(['ok' => true, 'message' => null, 'data' => null, 'errors' => null, 'redirect' => null]);
+    }
+
+    /**
+     * Проксі до Giphy — ключ лишається на бекенді (Admin → API-ключі),
+     * ніколи не потрапляє на фронт. Без ключа фіча просто вимкнена
+     * (giphyEnabled: false в конфігу сторінки), сюди запит не дійде.
+     */
+    public function searchGifs(Request $request): JsonResponse
+    {
+        $apiKey = Setting::get('giphy_api_key');
+        if (! $apiKey) {
+            return response()->json(['ok' => true, 'message' => null, 'data' => ['gifs' => []], 'errors' => null, 'redirect' => null]);
+        }
+
+        $query = trim((string) $request->query('q', ''));
+        $endpoint = $query === '' ? 'trending' : 'search';
+
+        $response = Http::timeout(6)->get("https://api.giphy.com/v1/gifs/{$endpoint}", array_filter([
+            'api_key' => $apiKey,
+            'q' => $query === '' ? null : $query,
+            'limit' => 24,
+            'rating' => 'pg-13',
+        ]));
+
+        if (! $response->successful()) {
+            return response()->json(['ok' => true, 'message' => null, 'data' => ['gifs' => []], 'errors' => null, 'redirect' => null]);
+        }
+
+        $gifs = collect($response->json('data', []))->map(fn ($gif) => [
+            'id' => $gif['id'],
+            'previewUrl' => $gif['images']['fixed_width_small']['url'] ?? $gif['images']['fixed_width']['url'] ?? null,
+            'url' => $gif['images']['original']['url'] ?? null,
+        ])->filter(fn ($gif) => $gif['previewUrl'] && $gif['url'])->values();
+
+        return response()->json([
+            'ok' => true,
+            'message' => null,
+            'data' => ['gifs' => $gifs],
+            'errors' => null,
+            'redirect' => null,
+        ]);
+    }
+
+    public function markRead(Request $request, Conversation $conversation): JsonResponse
+    {
+        $this->ensureAccess($conversation, $request->user());
+
+        $lastId = Message::query()->where('conversation_id', $conversation->id)->max('id');
+
+        if ($lastId) {
+            ConversationRead::updateOrCreate(
+                ['conversation_id' => $conversation->id, 'user_id' => $request->user()->id],
+                ['last_read_message_id' => $lastId],
+            );
+        }
+
+        return response()->json(['ok' => true, 'message' => null, 'data' => null, 'errors' => null, 'redirect' => null]);
+    }
+
+    /**
+     * Учасники розмови зі статусом 🟢/🔴 — спершу ті, хто в мережі, далі за
+     * тим, хто був нещодавно. family — усі реальні (не тіньові) учасники,
+     * deputies — посада "Заступник директора", direct — двоє.
+     */
+    public function members(Request $request, Conversation $conversation): JsonResponse
+    {
+        $this->ensureAccess($conversation, $request->user());
+
+        $users = match ($conversation->type) {
+            'family' => User::query()->where('is_shadow', false)->get(),
+            'deputies' => User::query()->where('is_shadow', false)->where('position_key', 'deputy-director')->get(),
+            default => User::query()->whereIn('id', ConversationParticipant::query()
+                ->where('conversation_id', $conversation->id)->pluck('user_id'))->get(),
+        };
+
+        $members = $users
+            ->sortBy([
+                fn (User $a, User $b) => ($this->presenceOf($b)['online'] ?? false) <=> ($this->presenceOf($a)['online'] ?? false),
+                fn (User $a, User $b) => ($b->last_seen_at?->getTimestamp() ?? 0) <=> ($a->last_seen_at?->getTimestamp() ?? 0),
+                fn (User $a, User $b) => strcmp($a->name, $b->name),
+            ])
+            ->values()
+            ->map(fn (User $u) => [
+                'id' => $u->id,
+                'name' => $u->name,
+                'position' => $u->position_title,
+                'avatarUrl' => $u->avatar_path ? Storage::url($u->avatar_path) : null,
+                'isMe' => $u->id === $request->user()->id,
+                'presence' => $this->presenceOf($u),
+            ]);
+
+        return response()->json([
+            'ok' => true,
+            'message' => null,
+            'data' => ['members' => $members],
+            'errors' => null,
+            'redirect' => null,
+        ]);
+    }
+
+    public function searchMembers(Request $request): JsonResponse
+    {
+        $query = trim((string) $request->query('q', ''));
+        if (mb_strlen($query) < 2) {
+            return response()->json(['ok' => true, 'message' => null, 'data' => ['members' => []], 'errors' => null, 'redirect' => null]);
+        }
+
+        $members = User::query()
+            ->where('id', '!=', $request->user()->id)
+            ->where('is_shadow', false)
+            ->where('name', 'like', '%'.$query.'%')
+            ->orderBy('name')
+            ->limit(10)
+            ->get()
+            ->map(fn (User $u) => [
+                'id' => $u->id,
+                'name' => $u->name,
+                'avatar_path' => $u->avatar_path,
+                'presence' => $this->presenceOf($u),
+            ]);
+
+        return response()->json([
+            'ok' => true,
+            'message' => null,
+            'data' => ['members' => $members],
+            'errors' => null,
+            'redirect' => null,
+        ]);
+    }
+
+    public function startDirect(Request $request, User $target): RedirectResponse
+    {
+        $conversation = $this->resolveDirectConversation($request->user(), $target);
+
+        return redirect()->route('messenger.show', $conversation->id);
+    }
+
+    /**
+     * Знаходить наявну особисту розмову між двома учасниками або створює
+     * нову — спільне для веб-редіректу і JSON-відповіді мобільного API.
+     */
+    protected function resolveDirectConversation(User $user, User $target): Conversation
+    {
+        if ($target->id === $user->id || $target->is_shadow) {
+            throw ValidationException::withMessages(['target' => 'Неможливо почати чат із цим користувачем.']);
+        }
+
+        $existingId = ConversationParticipant::query()
+            ->where('user_id', $user->id)
+            ->whereIn('conversation_id', function ($q) use ($target) {
+                $q->select('conversation_id')
+                    ->from('conversation_participants')
+                    ->where('user_id', $target->id);
+            })
+            ->whereHas('conversation', fn ($q) => $q->where('type', 'direct'))
+            ->value('conversation_id');
+
+        if ($existingId) {
+            return Conversation::findOrFail($existingId);
+        }
+
+        $conversation = Conversation::create(['type' => 'direct']);
+        ConversationParticipant::insert([
+            ['conversation_id' => $conversation->id, 'user_id' => $user->id, 'created_at' => now(), 'updated_at' => now()],
+            ['conversation_id' => $conversation->id, 'user_id' => $target->id, 'created_at' => now(), 'updated_at' => now()],
+        ]);
+
+        return $conversation;
+    }
+
+    /**
+     * Статус 🟢/🔴 + "був(-ла) у мережі …" (App\Support\Presence з ядра).
+     * null, поки ядро ще не оновлене до версії з Presence — модуль і
+     * ядро оновлюються окремо, і месенджер не повинен від цього впасти.
+     */
+    protected function presenceOf(?User $user): ?array
+    {
+        return $user && class_exists(Presence::class) ? Presence::payload($user) : null;
+    }
+
+    /** @return array{onlineCount: int, onlineUserIds: list<int>}|null Лише для групових чатів. */
+    protected function groupPresence(string $type): ?array
+    {
+        if (! in_array($type, ['family', 'deputies'], true) || ! class_exists(Presence::class)) {
+            return null;
+        }
+
+        $this->onlineIdsCache ??= Presence::onlineUserIds();
+        $ids = $type === 'deputies'
+            ? User::query()->whereIn('id', $this->onlineIdsCache)->where('position_key', 'deputy-director')->pluck('id')
+            : $this->onlineIdsCache;
+
+        return ['onlineCount' => $ids->count(), 'onlineUserIds' => $ids->values()->all()];
+    }
+
+    private ?Collection $onlineIdsCache = null;
+
+    protected function familyConversation(): Conversation
+    {
+        return Conversation::firstOrCreate(['type' => 'family']);
+    }
+
+    protected function deputiesConversation(): Conversation
+    {
+        return Conversation::firstOrCreate(['type' => 'deputies']);
+    }
+
+    /**
+     * "Заступник" тут — конкретна посада ("Заступник директора" у
+     * FamilyContent::positions(), ключ deputy-director), а не окрема
+     * spatie-роль: група чату для заступників має слідувати за тим самим
+     * призначенням посади, яким адмін уже керує в Адмін → Учасники, без
+     * додаткового окремого перемикача.
+     */
+    protected function isDeputy(User $user): bool
+    {
+        return $user->position_key === 'deputy-director';
+    }
+
+    protected function ensureAccess(Conversation $conversation, User $user): void
+    {
+        if ($conversation->type === 'family') {
+            return;
+        }
+
+        if ($conversation->type === 'deputies') {
+            if (! $this->isDeputy($user)) {
+                throw new AccessDeniedHttpException;
+            }
+
+            return;
+        }
+
+        $isParticipant = ConversationParticipant::query()
+            ->where('conversation_id', $conversation->id)
+            ->where('user_id', $user->id)
+            ->exists();
+
+        if (! $isParticipant) {
+            throw new AccessDeniedHttpException;
+        }
+    }
+
+    /**
+     * Push у мобільний застосунок і в браузер про нове повідомлення —
+     * раніше цього не було зовсім (чат покладався лише на бейдж
+     * непрочитаного й опитування відкритої сторінки), тому користувач
+     * дізнавався про нове повідомлення, лише сам відкривши месенджер.
+     * Обидва відправники мовчки no-op, якщо канал не налаштовано
+     * (немає VAPID-ключів / службового акаунта Firebase) — так само,
+     * як у решті застосунку.
+     */
+    protected function notifyNewMessage(Conversation $conversation, Message $message, User $sender): void
+    {
+        $recipientIds = $this->pushRecipientIds($conversation, $sender->id);
+        if ($recipientIds->isEmpty()) {
+            return;
+        }
+
+        $title = match ($conversation->type) {
+            'family' => $sender->name.' · Родина',
+            'deputies' => $sender->name.' · Заступники',
+            default => $sender->name,
+        };
+        $body = $this->pushPreviewText($message);
+        $url = '/messenger/'.$conversation->id;
+
+        (new MobilePushSender())->sendToUserIds($recipientIds, $title, $body, $url);
+
+        $recipients = User::query()->whereIn('id', $recipientIds)->get(['id']);
+        $webPush = new WebPushSender();
+        foreach ($recipients as $recipient) {
+            $webPush->sendToUser($recipient, $title, $body, $url);
+        }
+    }
+
+    /** @return Collection<int,int> */
+    protected function pushRecipientIds(Conversation $conversation, int $senderId): Collection
+    {
+        return match ($conversation->type) {
+            'family' => User::query()->where('is_shadow', false)->where('id', '!=', $senderId)->pluck('id'),
+            'deputies' => User::query()->where('position_key', 'deputy-director')->where('id', '!=', $senderId)->pluck('id'),
+            default => ConversationParticipant::query()
+                ->where('conversation_id', $conversation->id)
+                ->where('user_id', '!=', $senderId)
+                ->pluck('user_id'),
+        };
+    }
+
+    /** Короткий підпис для списку розмов — фото/gif/стікер без тексту не мають порожнього рядка замість прев'ю. */
+    protected function previewText(Message $m): string
+    {
+        return match ($m->type) {
+            'photo' => $m->body !== '' ? '📷 '.$m->body : '📷 Фото',
+            'gif' => '🎞 GIF',
+            'sticker' => '🙂 Стікер',
+            // body тут — зашифрований блок, не текст; показувати його як
+            // прев'ю не можна (і незрозуміло людині, і сервер сам не вміє
+            // його прочитати, щоб перевірити).
+            'text_e2ee' => '💬 Повідомлення',
+            'contact' => '👤 Контакт',
+            'location' => '📍 Геопозиція',
+            'file' => '📎 '.((json_decode($m->body, true) ?? [])['name'] ?? 'Файл'),
+            'voice' => '🎤 Голосове повідомлення',
+            default => $m->body,
+        };
+    }
+
+    /**
+     * Текст для push-сповіщення (банер/шторка ОС) — окремо від previewText(),
+     * бо та лишає слово "Зашифроване" прямо в тексті, який Android показує
+     * на екрані блокування чи в шторці: будь-хто поруч із телефоном бачив би,
+     * що конкретна розмова наскрізно зашифрована. Push має виглядати як
+     * звичайне повідомлення в будь-якому іншому месенджері.
+     */
+    protected function pushPreviewText(Message $m): string
+    {
+        return $m->type === 'text_e2ee' ? 'Надіслав(-ла) нове повідомлення' : $this->previewText($m);
+    }
+
+    /**
+     * Публікує/оновлює власний публічний X25519-ключ — викликається
+     * мобільним клієнтом один раз при першому запуску (чи після
+     * перевстановлення, коли генерується нова пара ключів). updateOrCreate,
+     * не create: новий пристрій/перевстановлення просто заміняє ключ,
+     * старі зашифровані повідомлення після цього нечитабельні — це
+     * свідомо прийнятий компроміс Фази 1 (без окремого бекапу ключів).
+     */
+    public function publishIdentityKey(Request $request): JsonResponse
+    {
+        $data = $request->validate(['public_key' => ['required', 'string', 'max:255']]);
+
+        UserIdentityKey::updateOrCreate(
+            ['user_id' => $request->user()->id],
+            ['public_key' => $data['public_key']],
+        );
+
+        return response()->json(['ok' => true, 'message' => null, 'data' => null, 'errors' => null, 'redirect' => null]);
+    }
+
+    /**
+     * Публічний ключ будь-якого зареєстрованого учасника — потрібен ДО
+     * початку листування (щоб вивести спільний секрет через ECDH), тому
+     * доступ не гейтиться участю в розмові з цим користувачем, так само
+     * як searchMembers() вище.
+     */
+    public function identityKey(Request $request, User $user): JsonResponse
+    {
+        $publicKey = UserIdentityKey::query()->where('user_id', $user->id)->value('public_key');
+
+        return response()->json([
+            'ok' => true,
+            'message' => null,
+            'data' => ['publicKey' => $publicKey],
+            'errors' => null,
+            'redirect' => null,
+        ]);
+    }
+
+    protected function formatMessage(Message $m, int $myId): array
+    {
+        $contact = null;
+        if ($m->type === 'contact') {
+            $contactUserId = (json_decode($m->body, true) ?? [])['userId'] ?? null;
+            $contactUser = $contactUserId ? User::query()->find($contactUserId) : null;
+            $contact = $contactUser ? [
+                'id' => $contactUser->id,
+                'name' => $contactUser->name,
+                'position' => $contactUser->position_title,
+                'avatarUrl' => $contactUser->avatar_path ? Storage::url($contactUser->avatar_path) : null,
+            ] : null;
+        }
+
+        return [
+            'id' => $m->id,
+            'body' => $m->body,
+            'type' => $m->type,
+            'platform' => $m->platform,
+            'attachmentUrl' => $m->attachment_url,
+            // Лише для type=contact — готовий профіль замість того, щоб
+            // клієнт робив окремий запит на GET /users/{id} для кожної
+            // картки контакту в стрічці.
+            'contact' => $contact,
+            'senderId' => $m->sender_id,
+            'senderName' => $m->sender?->name,
+            'senderPosition' => $m->sender?->position_title,
+            'isMine' => $m->sender_id === $myId,
+            'createdAt' => $m->created_at,
+            'replyTo' => $m->replyTo ? [
+                'id' => $m->replyTo->id,
+                'senderName' => $m->replyTo->sender?->name,
+                'type' => $m->replyTo->type,
+                // previewText(), не сирий body: той самий текст, що й у
+                // списку розмов — для text_e2ee це вже "🔒 Зашифроване
+                // повідомлення" (без ciphertext), простіше й безпечніше,
+                // ніж окремо розшифровувати ще й цитату на клієнті.
+                'body' => $this->previewText($m->replyTo),
+            ] : null,
+        ];
+    }
+}

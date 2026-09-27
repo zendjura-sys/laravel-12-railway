@@ -1,11 +1,751 @@
-@import 'tailwindcss';
+@import "tailwindcss";
+/* Тримаємо старий JS-конфіг (кастомні кольори через CSS-змінні, шрифти,
+   @tailwindcss/forms) замість переписування на CSS-native @theme —
+   значення нікуди не рухаються, ризик помилково перекласти щось при
+   ручному переносі нульовий. */
+@config "../../tailwind.config.js";
 
-@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
-@source '../../storage/framework/views/*.php';
-@source '../**/*.blade.php';
-@source '../**/*.js';
+@layer components {
+    /* ---------- шейдерный фон ----------
+       На той же глубине, что и CSS-аврора (-z-30): ниже — и его
+       перекрывали бы собственные фоны секций, а видно было бы только в
+       редких просветах, ради которых его не стоило писать. Холст в DOM
+       идёт первым, поэтому световые пятна авроры ложатся поверх него, а
+       не спорят с ним.
 
-@theme {
-    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
-        'Segoe UI Symbol', 'Noto Color Emoji';
+       Если WebGL недоступен, уровень оформления ниже «повної», стоит
+       prefers-reduced-motion или машина слабая — холста просто нет, и
+       остаётся та же аврора, что была раньше. */
+    .aurora-shader {
+        position: fixed;
+        inset: 0;
+        z-index: -30;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        /* Плавное появление: включённый резко шейдер выглядит как
+           мигание страницы при загрузке. */
+        animation: aurora-shader-in 1.8s ease-out both;
+    }
+
+    @keyframes aurora-shader-in {
+        from { opacity: 0; }
+        to   { opacity: 1; }
+    }
+
+    /* ---------- сезонні прикраси (сніжинки/пелюстки/конфеті) ---------- */
+    .seasonal-decoration {
+        position: fixed;
+        inset: 0;
+        z-index: 50;
+        pointer-events: none;
+        animation: aurora-shader-in 1.2s ease-out both;
+    }
+
+    /* ---------- кастомный курсор ---------- */
+    .cursor-dot,
+    .cursor-ring {
+        position: fixed;
+        top: 0;
+        left: 0;
+        z-index: 9999;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        will-change: transform;
+    }
+
+    .has-custom-cursor .cursor-dot,
+    .has-custom-cursor .cursor-ring {
+        opacity: 1;
+    }
+
+    .cursor-dot {
+        width: 6px;
+        height: 6px;
+        margin: -3px 0 0 -3px;
+        border-radius: 9999px;
+        background: rgb(var(--gold-300));
+        transition: opacity 0.3s ease, width 0.3s ease, height 0.3s ease, margin 0.3s ease;
+    }
+
+    .cursor-dot.is-active {
+        width: 0;
+        height: 0;
+        margin: 0;
+    }
+
+    .cursor-ring {
+        width: 30px;
+        height: 30px;
+        margin: -15px 0 0 -15px;
+        border: 1px solid rgb(var(--gold-400) / 0.5);
+        border-radius: 9999px;
+        transition: opacity 0.3s ease, width 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+            height 0.35s cubic-bezier(0.16, 1, 0.3, 1), margin 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+            background-color 0.35s ease, border-color 0.35s ease;
+    }
+
+    .cursor-ring.is-active {
+        width: 46px;
+        height: 46px;
+        margin: -23px 0 0 -23px;
+        background: rgb(var(--gold-400) / 0.1);
+        border-color: rgb(var(--gold-300) / 0.75);
+    }
+
+    .cursor-ring.is-pressed {
+        width: 22px;
+        height: 22px;
+        margin: -11px 0 0 -11px;
+    }
+
+    /* Родной курсор прячем только там, где его форма ничего не значит:
+       на полях ввода каретка — это подсказка, отнимать её нельзя. */
+    .has-custom-cursor body,
+    .has-custom-cursor a,
+    .has-custom-cursor button {
+        cursor: none;
+    }
 }
+
+@layer base {
+    /* Густина атмосферы задаётся в админке (Дизайн → Оформлення) и
+       приезжает атрибутом на <html>. Правила ниже гасят именно
+       декоративные слои — фон, свечения, зерно, — не трогая содержимое,
+       поэтому «вимкнена» не ломает вёрстку, а только убирает эффекты.
+
+       Оставляем отдельным уровнем от prefers-reduced-motion: там речь про
+       движение, здесь про количество света на странице. */
+    /* Значения абсолютные и подобраны каждому слою отдельно, а не одной
+       долей на всех: своя прозорість у них разная (аврора 0.55, зерно
+       0.045), и общий множитель сделал бы зерно на порядок заметнее, а не
+       тише. */
+    html.lenis-active {
+        scroll-behavior: auto;
+    }
+
+    /* Lenis сам ставит эти классы на время программной прокрутки. */
+    html.lenis-smooth iframe {
+        pointer-events: none;
+    }
+
+    html[data-effects='soft'] .aurora-orb {
+        opacity: 0.3;
+    }
+    html[data-effects='soft'] .film-grain {
+        opacity: 0.02;
+    }
+    html[data-effects='soft'] .glass-sheen {
+        opacity: 0.6;
+    }
+
+    html[data-effects='off'] .aurora-orb,
+    html[data-effects='off'] .film-grain,
+    html[data-effects='off'] .glass-sheen {
+        display: none;
+    }
+}
+
+/* ============ MONTSERRAT (self-hosted) ============
+   Не через fonts.bunny.net: конкретні файли шрифту (варіанти ваги)
+   надав власник проєкту, тому лежать локально в public/fonts, а не
+   тягнуться з CDN. Формат WOFF2 — ті самі TTF, стиснуті fontTools
+   (~80 KB замість ~260 KB за файл), кирилиця (у т.ч. українська)
+   у гарнітурі є нативно. */
+@font-face {
+    font-family: 'Montserrat';
+    font-style: normal;
+    font-weight: 300;
+    font-display: swap;
+    src: url('/fonts/montserrat/montserrat-300.woff2') format('woff2');
+}
+@font-face {
+    font-family: 'Montserrat';
+    font-style: italic;
+    font-weight: 300;
+    font-display: swap;
+    src: url('/fonts/montserrat/montserrat-300-italic.woff2') format('woff2');
+}
+@font-face {
+    font-family: 'Montserrat';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('/fonts/montserrat/montserrat-400.woff2') format('woff2');
+}
+@font-face {
+    font-family: 'Montserrat';
+    font-style: italic;
+    font-weight: 400;
+    font-display: swap;
+    src: url('/fonts/montserrat/montserrat-400-italic.woff2') format('woff2');
+}
+@font-face {
+    font-family: 'Montserrat';
+    font-style: normal;
+    font-weight: 500;
+    font-display: swap;
+    src: url('/fonts/montserrat/montserrat-500.woff2') format('woff2');
+}
+@font-face {
+    font-family: 'Montserrat';
+    font-style: italic;
+    font-weight: 500;
+    font-display: swap;
+    src: url('/fonts/montserrat/montserrat-500-italic.woff2') format('woff2');
+}
+@font-face {
+    font-family: 'Montserrat';
+    font-style: normal;
+    font-weight: 600;
+    font-display: swap;
+    src: url('/fonts/montserrat/montserrat-600.woff2') format('woff2');
+}
+@font-face {
+    font-family: 'Montserrat';
+    font-style: italic;
+    font-weight: 600;
+    font-display: swap;
+    src: url('/fonts/montserrat/montserrat-600-italic.woff2') format('woff2');
+}
+@font-face {
+    font-family: 'Montserrat';
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+    src: url('/fonts/montserrat/montserrat-700.woff2') format('woff2');
+}
+@font-face {
+    font-family: 'Montserrat';
+    font-style: italic;
+    font-weight: 700;
+    font-display: swap;
+    src: url('/fonts/montserrat/montserrat-700-italic.woff2') format('woff2');
+}
+
+@layer base {
+    :root {
+        /* Палитра акцента. Значения совпадают с прежними хексами
+           (#f1e2b8 … #a9822f) — пока цвет в админке не меняли, оформление
+           пиксель в пиксель прежнее. Оттенки пересчитываются из одного
+           акцентного цвета и переопределяются инлайном в <head>. */
+        --gold-100: 248 239 216;
+        --gold-200: 241 226 184;
+        --gold-300: 228 205 143;
+        /* Промежуточная ступень: её использует только градиент .btn-gold,
+           но без неё кнопка «съезжает» с согласованной палитры. */
+        --gold-350: 224 193 105;
+        --gold-400: 212 175 55;
+        --gold-500: 201 162 75;
+        --gold-600: 169 130 47;
+    }
+
+    html {
+        /* Пока Lenis не запустился (тач, «вимкнена», reduced-motion), за
+           плавность отвечает браузер. Когда запустился — класс снимает
+           это правило: два аниматора скролла одновременно дают рывки. */
+        scroll-behavior: smooth;
+        /* Верхний отступ для якорных переходов — иначе фиксированная шапка
+           накрывает заголовок секции, в которую только что проскроллили. */
+        scroll-padding-top: 6rem;
+    }
+
+    body {
+        background-color: #060605;
+        /* Страховка, а не основное лечение. Анимации появления сдвигают
+           элементы по горизонтали (translateX ±40px) ДО того, как они попали
+           во вьюпорт, и секция без своего обрезания от этого становится шире
+           экрана. Прятать это одним лишь overflow-x нельзя: страница всё
+           равно остаётся шире вьюпорта, и при сильном отдалении сбоку видна
+           пустая полоса. Поэтому каждая секция обрезает себя сама
+           (overflow-x-clip), а это правило ловит только то, что могло
+           просочиться мимо.
+           overflow-x именно на body, а не на html: по спецификации overflow
+           с body всплывает на вьюпорт, поэтому html не становится скролл-
+           контейнером и position: sticky внутри продолжает работать. */
+        overflow-x: hidden;
+        /* Оптические правки шрифта: без них Manrope на тёмном фоне выглядит
+           жирнее, чем задумано, и премиальная строгость теряется. */
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        text-rendering: optimizeLegibility;
+    }
+
+    /* Montserrat в крупных кеглях по умолчанию читается чуть свободно —
+       небольшой отрицательный tracking делает крупные заголовки плотнее и
+       увереннее, ближе к премиальной типографике, а не "растянуто". */
+    h1, h2, h3 {
+        letter-spacing: -0.015em;
+        font-feature-settings: 'liga' 1, 'kern' 1;
+    }
+
+    ::selection {
+        background: rgb(var(--gold-400) / 0.3);
+        color: #fff;
+    }
+
+    /* Полоса прокрутки в тон теме — дефолтная светлая разрывает тёмный кадр. */
+    * {
+        scrollbar-width: thin;
+        scrollbar-color: rgb(var(--gold-400) / 0.25) transparent;
+    }
+    *::-webkit-scrollbar {
+        width: 10px;
+        height: 10px;
+    }
+    *::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    *::-webkit-scrollbar-thumb {
+        background: rgb(var(--gold-400) / 0.22);
+        border-radius: 9999px;
+        border: 3px solid transparent;
+        background-clip: content-box;
+    }
+    *::-webkit-scrollbar-thumb:hover {
+        background: rgb(var(--gold-400) / 0.4);
+        background-clip: content-box;
+    }
+
+    /* Уважение к системной настройке: всё «плавное» мгновенно выключается,
+       иначе для людей с вестибулярными нарушениями сайт становится
+       физически некомфортным. */
+    @media (prefers-reduced-motion: reduce) {
+        html {
+            scroll-behavior: auto;
+        }
+        *, *::before, *::after {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.01ms !important;
+        }
+    }
+}
+
+@layer utilities {
+    .text-gradient-gold {
+        background-image: linear-gradient(120deg, rgb(var(--gold-200)) 0%, rgb(var(--gold-400)) 45%, rgb(var(--gold-600)) 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+    }
+
+    .bg-noise {
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");
+    }
+}
+
+/*
+ * Все, що нижче, було поза будь-яким @layer — у Tailwind 3 це не мало
+ * значення (плоский CSS без каскадних шарів), але Tailwind 4 сам
+ * компілюється в НАТИВНІ CSS @layer, а нешаровий (unlayered) CSS завжди
+ * перебиває ЛЮБИЙ шаровий CSS незалежно від специфічності. Через це
+ * :where(.glass-panel) { position: relative } (навмисно нульової
+ * специфічності — див. коментар нижче) все одно перебивав .fixed з
+ * Tailwind, і мобільний сайдбар адмінки не ховався за екран. Загортаємо
+ * решту файлу в components, щоб задум коментаря знову працював.
+ */
+@layer components {
+
+/* ============ LIQUID GLASS ============
+   Настоящий glassmorphism требует трёх вещей одновременно: размытый цветной
+   свет ЗА панелью (иначе backdrop-blur размывает пустоту и выглядит как
+   обычная полупрозрачная заливка), многослойный полупрозрачный градиент
+   САМОЙ панели (не плоский bg-white/5), и тонкий внутренний блик по
+   верхнему краю (имитация преломления света в стекле). Без всех трёх
+   получается плоский "тёмный минимализм", а не стекло. */
+
+.aurora-orb {
+    position: absolute;
+    border-radius: 9999px;
+    filter: blur(90px);
+    pointer-events: none;
+    opacity: 0.55;
+}
+
+/* Кромка стекла. Ключевая деталь всей "премиальности": настоящее стекло
+   ловит свет ребром, и ярче всего — с той стороны, откуда свет падает.
+   Плоский border: 1px rgba(255,255,255,.12) даёт одинаковую линию по всему
+   периметру и читается как нарисованная рамка. Здесь — градиент от яркого
+   блика сверху-слева к золотому рефлексу снизу-справа, вырезанный маской
+   в полоску шириной 1px. */
+:where(.glass-panel, .glass-pill) {
+    position: relative;
+}
+.glass-panel::before,
+.glass-pill::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(
+        140deg,
+        rgba(255, 255, 255, 0.55) 0%,
+        rgba(255, 255, 255, 0.08) 26%,
+        rgba(255, 255, 255, 0) 52%,
+        rgb(var(--gold-400) / 0.28) 100%
+    );
+    -webkit-mask:
+        linear-gradient(#000 0 0) content-box,
+        linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask:
+        linear-gradient(#000 0 0) content-box,
+        linear-gradient(#000 0 0);
+    mask-composite: exclude;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.glass-panel {
+    /* position: relative задаётся выше через :where() — нулевая
+       специфичность, поэтому утилиты fixed/absolute из Tailwind всё равно
+       побеждают (на этом раньше ломался мобильный сайдбар админки). */
+    border-radius: 28px;
+    background:
+        linear-gradient(155deg, rgba(255, 255, 255, 0.085) 0%, rgba(255, 255, 255, 0.018) 45%, rgba(255, 255, 255, 0.04) 100%);
+    -webkit-backdrop-filter: blur(32px) saturate(165%) brightness(1.04);
+    backdrop-filter: blur(32px) saturate(165%) brightness(1.04);
+    /* Рамки как таковой нет — её роль играет градиентная кромка ::before. */
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.1),
+        inset 0 -20px 40px -30px rgba(255, 255, 255, 0.12),
+        0 1px 2px rgba(0, 0, 0, 0.3),
+        0 12px 28px -12px rgba(0, 0, 0, 0.55),
+        0 32px 64px -24px rgba(0, 0, 0, 0.7);
+}
+
+.glass-panel-gold {
+    background:
+        linear-gradient(155deg, rgb(var(--gold-400) / 0.13) 0%, rgba(255, 255, 255, 0.02) 50%, rgb(var(--gold-400) / 0.055) 100%);
+    box-shadow:
+        inset 0 1px 0 rgba(241, 226, 184, 0.28),
+        inset 0 -20px 50px -30px rgb(var(--gold-400) / 0.3),
+        0 1px 2px rgba(0, 0, 0, 0.35),
+        0 16px 34px -14px rgba(0, 0, 0, 0.6),
+        0 36px 70px -26px rgba(0, 0, 0, 0.72),
+        0 0 50px -18px rgb(var(--gold-400) / 0.3);
+}
+.glass-panel-gold::before {
+    background: linear-gradient(
+        140deg,
+        rgba(241, 226, 184, 0.7) 0%,
+        rgb(var(--gold-400) / 0.25) 30%,
+        rgba(255, 255, 255, 0) 58%,
+        rgb(var(--gold-400) / 0.4) 100%
+    );
+}
+
+.glass-pill {
+    border-radius: 9999px;
+    background: linear-gradient(155deg, rgba(255, 255, 255, 0.11) 0%, rgba(255, 255, 255, 0.028) 100%);
+    -webkit-backdrop-filter: blur(22px) saturate(170%);
+    backdrop-filter: blur(22px) saturate(170%);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.18),
+        0 2px 6px rgba(0, 0, 0, 0.35),
+        0 10px 24px -10px rgba(0, 0, 0, 0.5);
+}
+
+/* Блик, который "проезжает" по стеклу при наведении — тот самый liquid-эффект. */
+.glass-sheen {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    overflow: hidden;
+    pointer-events: none;
+}
+.glass-sheen::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -60%;
+    width: 40%;
+    height: 200%;
+    background: linear-gradient(120deg, transparent, rgba(255, 255, 255, 0.16), transparent);
+    transform: rotate(20deg);
+    transition: left 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.group:hover .glass-sheen::before {
+    left: 130%;
+}
+
+/* Курсорне світло: рухається за мишею всередині .glow-tracked, гасне коли
+   курсор іде — ефект "живого" скла, а не статичний блік. */
+/* :where() тримає специфічність на нулі — на відміну від .glass-panel/
+   .glass-pill, тут position: relative дійсно потрібен для ::after, але
+   :where() гарантує, що будь-яка утиліта fixed/absolute з Tailwind все
+   одно переможе, незалежно від порядку в скомпільованому CSS. */
+:where(.glow-tracked) {
+    position: relative;
+}
+.glow-tracked::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    background: radial-gradient(
+        220px circle at var(--glow-x, 50%) var(--glow-y, 50%),
+        rgba(241, 226, 184, 0.14),
+        transparent 70%
+    );
+}
+.glow-tracked:hover::after {
+    opacity: 1;
+}
+
+@keyframes aurora-drift {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    33% { transform: translate(4%, -6%) scale(1.08); }
+    66% { transform: translate(-3%, 4%) scale(0.96); }
+}
+.animate-aurora {
+    animation: aurora-drift 22s ease-in-out infinite;
+}
+
+/* Scroll-reveal: elements start hidden/offset, JS flips .is-visible on intersect */
+[data-reveal] {
+    opacity: 0;
+    transform: translateY(28px);
+    transition: opacity 0.9s cubic-bezier(0.16, 1, 0.3, 1), transform 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+    will-change: opacity, transform;
+}
+[data-reveal].is-visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+[data-reveal="scale"] {
+    transform: scale(0.94);
+}
+[data-reveal="scale"].is-visible {
+    transform: scale(1);
+}
+[data-reveal="left"] {
+    transform: translateX(-40px);
+}
+[data-reveal="left"].is-visible {
+    transform: translateX(0);
+}
+[data-reveal="right"] {
+    transform: translateX(40px);
+}
+[data-reveal="right"].is-visible {
+    transform: translateX(0);
+}
+
+@keyframes float-slow {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-14px); }
+}
+.animate-float-slow {
+    animation: float-slow 7s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+.animate-shimmer {
+    background-size: 200% auto;
+    animation: shimmer 3.2s linear infinite;
+}
+
+@keyframes pulse-glow {
+    0%, 100% { opacity: 0.55; }
+    50% { opacity: 1; }
+}
+.animate-pulse-glow {
+    animation: pulse-glow 2.6s ease-in-out infinite;
+}
+
+@keyframes marquee {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+}
+.animate-marquee {
+    animation: marquee 28s linear infinite;
+}
+
+@keyframes fade-in-up {
+    from { opacity: 0; transform: translateY(22px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in-up {
+    animation: fade-in-up 1s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* ============ КИНЕМАТОГРАФИЧЕСКИЙ ГРЕЙД ФОТО ============
+   Картинки собраны из разных источников: у одной закат малиновый, у другой
+   оранжевый, у третьей ночная сцена в синем. Без общего грейда страница
+   выглядит как папка со скачанными обоями, а не как один бренд. Лёгкий
+   увод в тень, подъём контраста и тёплый тон приводят их к одной палитре. */
+.img-cine {
+    filter: contrast(1.06) saturate(0.9) brightness(0.94);
+    transition: filter 1.2s cubic-bezier(0.16, 1, 0.3, 1), transform 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.group:hover .img-cine {
+    filter: contrast(1.1) saturate(1) brightness(1);
+}
+
+/* Тёплая вуаль поверх фото + виньетка: собирает взгляд в центр кадра и
+   гасит края, чтобы текст поверх читался без чёрной плашки. */
+.cine-veil {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+        linear-gradient(180deg, rgb(var(--gold-400) / 0.07) 0%, transparent 35%),
+        radial-gradient(130% 90% at 50% 15%, transparent 35%, rgba(6, 6, 5, 0.5) 100%);
+}
+
+/* ============ ПЛЁНОЧНОЕ ЗЕРНО ============
+   Ровные градиенты на большом тёмном фоне неизбежно дают бандинг
+   (видимые ступени). Зерно — это и приём "дорогой печати", и заодно
+   техническое лекарство от полос. */
+.film-grain {
+    position: fixed;
+    inset: -150%;
+    z-index: 60;
+    pointer-events: none;
+    opacity: 0.045;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
+    animation: grain-shift 0.9s steps(5) infinite;
+}
+@keyframes grain-shift {
+    0%   { transform: translate(0, 0); }
+    20%  { transform: translate(-3%, 2%); }
+    40%  { transform: translate(2%, -3%); }
+    60%  { transform: translate(-2%, -2%); }
+    80%  { transform: translate(3%, 1%); }
+    100% { transform: translate(0, 0); }
+}
+
+/* ============ ПРЕМИАЛЬНАЯ ЗОЛОТАЯ КНОПКА ============
+   Вместо вечно бегущего shimmer (он читается как распродажа, а не как
+   статус) — статичный металлический бевел: светлая фаска сверху, тень
+   снизу, тёплое свечение под кнопкой. Движение только в ответ на курсор. */
+.btn-gold {
+    position: relative;
+    overflow: hidden;
+    border-radius: 9999px;
+    background: linear-gradient(180deg,
+        rgb(var(--gold-100)) 0%,
+        rgb(var(--gold-350)) 34%,
+        rgb(var(--gold-500)) 64%,
+        rgb(var(--gold-600)) 100%);
+    color: #0b0a09;
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.8),
+        inset 0 -1px 1px rgba(90, 62, 12, 0.35),
+        0 2px 6px rgba(0, 0, 0, 0.3),
+        0 10px 26px -10px rgb(var(--gold-400) / 0.6);
+    transition:
+        transform 0.55s cubic-bezier(0.16, 1, 0.3, 1),
+        box-shadow 0.55s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.btn-gold:hover {
+    transform: translateY(-2px);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.9),
+        inset 0 -1px 1px rgba(90, 62, 12, 0.35),
+        0 4px 10px rgba(0, 0, 0, 0.35),
+        0 18px 44px -12px rgb(var(--gold-400) / 0.75);
+}
+.btn-gold:active {
+    transform: translateY(0);
+    transition-duration: 0.12s;
+}
+/* Блик проезжает по металлу только при наведении. */
+.btn-gold::after {
+    content: '';
+    position: absolute;
+    top: -60%;
+    left: -70%;
+    width: 45%;
+    height: 220%;
+    background: linear-gradient(115deg, transparent, rgba(255, 255, 255, 0.65), transparent);
+    transform: rotate(18deg);
+    transition: left 0.85s cubic-bezier(0.16, 1, 0.3, 1);
+    pointer-events: none;
+}
+.btn-gold:hover::after {
+    left: 130%;
+}
+
+/* Вторичная кнопка: то же стекло, но с золотой реакцией на наведение. */
+.btn-ghost {
+    transition:
+        transform 0.55s cubic-bezier(0.16, 1, 0.3, 1),
+        color 0.4s ease,
+        box-shadow 0.55s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.btn-ghost:hover {
+    transform: translateY(-2px);
+    color: #fff;
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.25),
+        0 14px 34px -14px rgb(var(--gold-400) / 0.5);
+}
+
+/* ============ ПОДЧЁРКИВАНИЕ В НАВИГАЦИИ ============
+   Линия растёт от левого края, а не появляется целиком — мелочь, но именно
+   такие детали отличают «сделано аккуратно» от «сделано быстро». */
+.link-underline {
+    position: relative;
+}
+.link-underline::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    bottom: -6px;
+    height: 1px;
+    width: 100%;
+    background: linear-gradient(90deg, rgb(var(--gold-400) / 0.9), rgba(241, 226, 184, 0.35));
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.55s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.link-underline:hover::after,
+.link-underline[data-active='true']::after {
+    transform: scaleX(1);
+}
+
+/* Волосяной разделитель секций — линия, гаснущая к краям. */
+.hairline {
+    height: 1px;
+    border: 0;
+    background: linear-gradient(90deg, transparent, rgb(var(--gold-400) / 0.35), transparent);
+}
+
+/* Полоса прогресса чтения — тонкая золотая нить под шапкой. */
+.scroll-progress {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 2px;
+    z-index: 70;
+    background: linear-gradient(90deg, rgb(var(--gold-600) / 0.9), rgb(var(--gold-300)), rgb(var(--gold-200) / 0.95));
+    box-shadow: 0 0 14px rgb(var(--gold-400) / 0.65);
+    transform-origin: left;
+    will-change: transform;
+}
+
+/* Контурная типографика для крупных чисел-акцентов (01, 02, ...) —
+   заливка съедает внимание с заголовка, контур держит иерархию. */
+.text-outline-gold {
+    color: transparent;
+    -webkit-text-stroke: 1px rgb(var(--gold-400) / 0.55);
+}
+
+/* Разбалансированные переносы в заголовках выглядят неряшливо: одна
+   строка длинная, вторая в два слова. balance выравнивает длины строк. */
+.text-balance {
+    text-wrap: balance;
+}
+
+} /* закриває @layer components, відкритий вище (LIQUID GLASS) */

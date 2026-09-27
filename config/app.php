@@ -13,7 +13,7 @@ return [
     |
     */
 
-    'name' => env('APP_NAME', 'Laravel'),
+    'name' => env('APP_NAME', 'Monsory Connect'),
 
     /*
     |--------------------------------------------------------------------------
@@ -78,11 +78,20 @@ return [
     |
     */
 
-    'locale' => env('APP_LOCALE', 'en'),
+    'locale' => env('APP_LOCALE', 'uk'),
 
     'fallback_locale' => env('APP_FALLBACK_LOCALE', 'en'),
 
-    'faker_locale' => env('APP_FAKER_LOCALE', 'en_US'),
+    'faker_locale' => env('APP_FAKER_LOCALE', 'uk_UA'),
+
+    /*
+     * Другий публічний вхід — union.monsory.net, для союзників родини.
+     * Той самий застосунок, база, логін і адмінка, що й на основному
+     * домені; різниться лише головна сторінка до логіну (routes/web.php
+     * реєструє її окремо через Route::domain()). Порожньо — другий домен
+     * просто вимкнено, нічого зайвого не станеться.
+     */
+    'union_domain' => env('UNION_DOMAIN'),
 
     /*
     |--------------------------------------------------------------------------

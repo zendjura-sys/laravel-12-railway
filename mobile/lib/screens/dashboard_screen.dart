@@ -1,0 +1,355 @@
+import 'package:flutter/material.dart';
+import '../api_client.dart';
+import '../services/push_notifications.dart';
+import '../services/update_notifier.dart';
+import '../theme.dart';
+import '../widgets/animated_counter.dart';
+import '../widgets/fade_slide_in.dart';
+import '../widgets/member_card_widget.dart';
+import '../widgets/shimmer_skeleton.dart';
+import 'admin_reports_screen.dart';
+import 'login_screen.dart';
+import 'member_profile_screen.dart';
+import 'messenger/conversations_screen.dart';
+import 'reports_screen.dart';
+
+class DashboardScreen extends StatefulWidget {
+  final bool reportsEnabled;
+
+  const DashboardScreen({super.key, this.reportsEnabled = true});
+
+  @override
+  State<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends State<DashboardScreen> {
+  Map<String, dynamic>? _data;
+  Map<String, dynamic>? _profile;
+  bool _canManageReports = false;
+  bool _loading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final data = await ApiClient.instance.dashboard();
+      if (mounted) setState(() => _data = data);
+
+      // Прогрес і сповіщення — не критичні для решти екрана: якщо
+      // модуль не встановлено чи запит не вдався, кабінет усе одно
+      // показує картку й вітання, просто без цих секцій/бейджа.
+      try {
+        final progress = await ApiClient.instance.progress();
+        if (mounted) setState(() => _profile = progress['profile'] as Map<String, dynamic>?);
+      } catch (_) {}
+      try {
+        final notifications = await ApiClient.instance.notifications();
+        AppBadges.unreadNotifications.value = notifications['unreadCount'] as int? ?? 0;
+      } catch (_) {}
+      try {
+        final me = await ApiClient.instance.me();
+        final permissions = (me['permissions'] as List?)?.cast<String>() ?? [];
+        if (mounted) setState(() => _canManageReports = permissions.contains('reports.manage'));
+      } catch (_) {}
+    } on ApiException catch (e) {
+      if (e.statusCode == 401) {
+        await _logout();
+        return;
+      }
+      setState(() => _error = e.message);
+    } catch (_) {
+      setState(() => _error = 'Не вдалося завантажити дані.');
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _logout() async {
+    await PushNotifications.instance.unregister();
+    await ApiClient.instance.logout();
+    if (!mounted) return;
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
+      (route) => false,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final user = _data?['user'] as Map<String, dynamic>?;
+    final bankCard = _data?['bankCard'] as Map<String, dynamic>?;
+
+    return Scaffold(
+      // Шапки тут немає — її роль виконує спільна верхня панель HomeShell
+      // (дзвіночок, MONSORY, меню ⋮), що плаває над вмістом.
+      body: RefreshIndicator(
+        onRefresh: _load,
+        edgeOffset: MediaQuery.paddingOf(context).top,
+        child: _loading
+            ? Padding(padding: navAwareListPadding(context), child: const _DashboardSkeleton())
+            : _error != null
+                ? _ErrorView(message: _error!, onRetry: _load)
+                : ListView(
+                    // Вміст іде під плаваючу навігацію (extendBody у
+                    // HomeShell) — знизу відступ на її висоту.
+                    padding: navAwareListPadding(context),
+                    children: [
+                      InkWell(
+                        borderRadius: BorderRadius.circular(8),
+                        onTap: user?['id'] == null
+                            ? null
+                            : () => Navigator.of(context).push(MaterialPageRoute(
+                                builder: (_) =>
+                                    MemberProfileScreen(userId: user!['id'] as int, isSelf: true))),
+                        child: Text(
+                          'Вітаємо, ${user?['name'] ?? ''}',
+                          style: const TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.w300,
+                              color: Colors.white),
+                        ),
+                      ),
+                      if (user?['position'] != null) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          user!['position'] as String,
+                          style:
+                              TextStyle(color: AppColors.gold300, fontSize: 14),
+                        ),
+                      ],
+                      const SizedBox(height: 24),
+                      FadeSlideIn(
+                        index: 0,
+                        child: bankCard != null
+                            ? MemberCardWidget(
+                                maskedNumber: bankCard['number'] as String,
+                                name: bankCard['name'] as String,
+                                balance: bankCard['balance'] as int,
+                              )
+                            : Container(
+                                padding: const EdgeInsets.all(20),
+                                decoration: glassPanelDecoration(),
+                                child: const Text(
+                                  'Банк ще не підключено для родини.',
+                                  style: TextStyle(color: Colors.white54),
+                                ),
+                              ),
+                      ),
+                      if (_profile != null) ...[
+                        const SizedBox(height: 24),
+                        FadeSlideIn(index: 1, child: _ProgressStats(profile: _profile!)),
+                      ],
+                      const SizedBox(height: 24),
+                      FadeSlideIn(
+                        index: 2,
+                        // IntrinsicHeight + stretch — щоб довший підпис
+                        // ("Перевірити звіти", у два рядки) не робив свою
+                        // кнопку вищою за сусідні: усі три рівняються на
+                        // найвищу, замість кожної під власний вміст.
+                        child: IntrinsicHeight(
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Expanded(
+                              child: _QuickActionButton(
+                                icon: Icons.forum_outlined,
+                                label: 'Чат',
+                                onTap: () => Navigator.of(context).push(
+                                    MaterialPageRoute(builder: (_) => const ConversationsScreen())),
+                              ),
+                            ),
+                            if (widget.reportsEnabled) ...[
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: _QuickActionButton(
+                                  icon: Icons.assignment_outlined,
+                                  label: 'Звіти',
+                                  onTap: () => Navigator.of(context)
+                                      .push(MaterialPageRoute(builder: (_) => const ReportsScreen())),
+                                ),
+                              ),
+                            ],
+                            if (_canManageReports) ...[
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: _QuickActionButton(
+                                  icon: Icons.fact_check_outlined,
+                                  label: 'Перевірити звіти',
+                                  onTap: () => Navigator.of(context)
+                                      .push(MaterialPageRoute(builder: (_) => const AdminReportsScreen())),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                        ),
+                      ),
+                    ],
+                  ),
+      ),
+    );
+  }
+}
+
+class _QuickActionButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  const _QuickActionButton({required this.icon, required this.label, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(16),
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        decoration: glassPanelDecoration(),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: AppColors.gold300),
+            const SizedBox(height: 6),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(color: Colors.white70, fontSize: 13),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ProgressStats extends StatelessWidget {
+  final Map<String, dynamic> profile;
+
+  const _ProgressStats({required this.profile});
+
+  @override
+  Widget build(BuildContext context) {
+    final tiles = [
+      ('Рівень', profile['level'] as num?),
+      ('Досвід', profile['xp'] as num? ?? 0),
+      ('Серія', profile['current_streak'] as num? ?? 0),
+      ('Контракти', profile['contracts_count'] as num? ?? 0),
+    ];
+
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: glassPanelDecoration(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Прогрес',
+              style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w500)),
+          const SizedBox(height: 14),
+          Row(
+            children: tiles
+                .map((t) => Expanded(
+                      child: Column(
+                        children: [
+                          t.$2 == null
+                              ? Text('—',
+                                  style: TextStyle(
+                                      color: AppColors.gold300, fontSize: 18, fontWeight: FontWeight.w600))
+                              : AnimatedCounter(
+                                  value: t.$2!,
+                                  formatter: (v) => '${v.round()}',
+                                  style: TextStyle(
+                                      color: AppColors.gold300, fontSize: 18, fontWeight: FontWeight.w600),
+                                ),
+                          const SizedBox(height: 2),
+                          Text(t.$1,
+                              style: const TextStyle(color: Colors.white38, fontSize: 11),
+                              textAlign: TextAlign.center),
+                        ],
+                      ),
+                    ))
+                .toList(),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DashboardSkeleton extends StatelessWidget {
+  const _DashboardSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return ShimmerLoader(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const ShimmerBox(width: 200, height: 22),
+          const SizedBox(height: 8),
+          const ShimmerBox(width: 100, height: 13),
+          const SizedBox(height: 24),
+          ShimmerBox(width: double.infinity, height: 170, radius: 20),
+          const SizedBox(height: 24),
+          Container(
+            padding: const EdgeInsets.all(18),
+            decoration: glassPanelDecoration(),
+            child: Row(
+              children: List.generate(
+                4,
+                (i) => Expanded(
+                  child: Padding(
+                    padding: EdgeInsets.only(right: i == 3 ? 0 : 8),
+                    child: const Column(children: [ShimmerBox(width: 36, height: 18), SizedBox(height: 6), ShimmerBox(width: 44, height: 10)]),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+          Row(
+            children: [
+              Expanded(child: ShimmerBox(height: 76, radius: 16)),
+              const SizedBox(width: 12),
+              Expanded(child: ShimmerBox(height: 76, radius: 16)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ErrorView extends StatelessWidget {
+  final String message;
+  final VoidCallback onRetry;
+
+  const _ErrorView({required this.message, required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(message,
+              style: const TextStyle(color: Colors.white70),
+              textAlign: TextAlign.center),
+          const SizedBox(height: 12),
+          TextButton(onPressed: onRetry, child: const Text('Повторити')),
+        ],
+      ),
+    );
+  }
+}

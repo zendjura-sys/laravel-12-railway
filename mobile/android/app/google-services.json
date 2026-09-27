@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "936644250685",
+    "firebase_url": "https://vags-188209.firebaseio.com",
+    "project_id": "vags-188209",
+    "storage_bucket": "vags-188209.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:936644250685:android:c5282708c1db367eef6e54",
+        "android_client_info": {
+          "package_name": "net.monsory.monsory_connect"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "936644250685-pk8dntd1diuehk8n0lq5t1n8056hpahn.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDPg1R3F0VJbCRR6bSjy6lYFpQhhn7FvYE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "936644250685-1cdkjtrj1beob7099nmlo1n510rthh59.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
